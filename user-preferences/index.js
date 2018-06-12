@@ -4,8 +4,8 @@ export const getUserPreferences = async (user_id, $models) => {
   // Find User Prefs
   const prefsdata = await UserPreference.findAll({
     where: {
-      user_id
-    }
+      user_id,
+    },
   });
 
   const prefs = {};
@@ -23,8 +23,8 @@ export const setUserPreferences = async (user_id, $models, newPrefs) => {
   // Find User Prefs
   const prefsdata = await UserPreference.findAll({
     where: {
-      user_id
-    }
+      user_id,
+    },
   });
 
   const oldPrefs = {};
@@ -34,6 +34,7 @@ export const setUserPreferences = async (user_id, $models, newPrefs) => {
   for (const pref of prefsdata) {
     oldPrefs[pref.name] = pref;
   }
+
 
   for (const key of Object.keys(newPrefs)) {
     const oldPref = oldPrefs[key];
