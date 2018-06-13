@@ -2,7 +2,7 @@ import React from 'react';
 import moment from 'moment';
 import { ActivityIndicator, View, Text, Button, styled } from 'bappo-components';
 import { AutoSizer, MultiGrid } from 'react-virtualized';
-import { setUserPreferences, getUserPreferences } from 'userpreferences';
+import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import {
   dateFormat,
   datesToArray,
