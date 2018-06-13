@@ -1,7 +1,7 @@
 import React from 'react';
 import moment from 'moment';
 import { styled, View, Button } from 'bappo-components';
-import { setUserPreferences, getUserPreferences } from 'userpreferences';
+import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import { dateFormat } from 'forecast-utils';
 import ForecastLayers from './ForecastLayers';
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import moment from 'moment';
 import { styled } from 'bappo-components';
-import { setUserPreferences, getUserPreferences } from 'userpreferences';
+import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import { getForecastEntryKey, getForecastEntryKeyByDate, calendarToFinancial } from 'forecast-utils';
 
 const forecastTypeLabelToValue = label => {

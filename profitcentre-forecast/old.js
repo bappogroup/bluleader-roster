@@ -1,5 +1,5 @@
 import React from 'react';
-import { setUserPreferences, getUserPreferences } from 'userpreferences';
+import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import { getFinancialTimeFromDate } from 'forecast-utils';
 import Forecast from 'forecast';
 
