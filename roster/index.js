@@ -231,6 +231,7 @@ class Roster extends React.Component {
       const consultantName = (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
       const labelStyle = {
         ...style,
+        position: 'fixed',
         width: this.CONSULTANT_CELL_WIDTH,
       };
       if (this.state.isMobile) labelStyle.fontSize = 8;
