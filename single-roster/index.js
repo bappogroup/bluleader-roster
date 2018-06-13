@@ -168,6 +168,8 @@ class SingleRoster extends React.Component {
     });
 
     // Update records in state
+    console.log(this.state.weeklyEntries);
+    console.log(updatedRecords);
     const newWeeklyEntries = this.state.weeklyEntries.slice();
     updatedRecords.forEach(entry => {
       const entryDate = moment(entry.date);
@@ -181,6 +183,7 @@ class SingleRoster extends React.Component {
         probability,
       };
     });
+    console.log(newWeeklyEntries);
 
     this.setState({ weeklyEntries: newWeeklyEntries });
 
