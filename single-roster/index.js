@@ -22,7 +22,10 @@ class SingleRoster extends React.Component {
     startDate: moment(this.props.startDate)
       .day(1)
       .startOf('day'),
-    endDate: null,
+    endDate: moment(this.props.startDate)
+      .day(1)
+      .startOf('day')
+      .add(WEEKS_PER_LOAD, 'weeks'),
     loading: false,
     weeklyEntries: [], // Array of array, containing entries of each week
     consultant: this.props.consultant,
@@ -34,55 +37,50 @@ class SingleRoster extends React.Component {
   async componentDidMount() {
     const { consultant, projectOptions, $models } = this.props;
 
-    if (!(consultant && projectOptions)) {
-      const { recordId } = this.props.$navigation.state.params;
-      const promises = [];
+    const { recordId } = this.props.$navigation.state.params;
+    const promises = [];
 
-      promises.push($models.Consultant.findById(recordId));
-      promises.push(
-        $models.ProjectAssignment.findAll({
-          where: {
-            consultant_id: recordId,
-          },
-          include: [{ as: 'project' }],
-          limit: 1000,
-        }),
-      );
-      promises.push(
-        $models.Project.findAll({
-          where: {
-            projectType: {
-              $in: ['4', '5', '6'],
-            },
-          },
-        }),
-      );
-      promises.push($models.Probability.findAll({}));
-
-      await Promise.all(promises).then(
-        ([currentConsultant, projectAssignments, leaveProjects, probabilities]) => {
-          const currentProjectOptions = projectAssignmentsToOptions(
-            projectAssignments,
-            leaveProjects,
-          );
-          const projectLookup = {};
-          projectAssignments.forEach(pa => (projectLookup[pa.project_id] = pa.project));
-          const probabilityLookup = {};
-          probabilities.forEach(p => (probabilityLookup[p.id] = p));
-
-          return this.setState({
-            consultant: currentConsultant,
-            projectOptions: currentProjectOptions,
-            projectLookup,
-            probabilityLookup,
-          });
+    promises.push(
+      $models.ProjectAssignment.findAll({
+        where: {
+          consultant_id: recordId,
         },
-      );
+        include: [{ as: 'project' }],
+        limit: 1000,
+      }),
+    );
+    promises.push(
+      $models.Project.findAll({
+        where: {
+          projectType: {
+            $in: ['4', '5', '6'],
+          },
+        },
+      }),
+    );
+    promises.push($models.Probability.findAll({}));
+
+    if (!consultant) {
+      promises.push($models.Consultant.findById(recordId));
     }
 
-    const { startDate } = this.state;
-    const endDate = startDate.clone().add(WEEKS_PER_LOAD, 'weeks');
-    this.loadRosterEntries(startDate, endDate);
+    const [projectAssignments, leaveProjects, probabilities, currentConsultant] = await Promise.all(
+      promises,
+    );
+    const currentProjectOptions = projectAssignmentsToOptions(projectAssignments, leaveProjects);
+    const projectLookup = {};
+    projectAssignments.forEach(pa => (projectLookup[pa.project_id] = pa.project));
+    const probabilityLookup = {};
+    probabilities.forEach(p => (probabilityLookup[p.id] = p));
+
+    await this.setState({
+      projectLookup,
+      probabilityLookup,
+      projectOptions: projectOptions || currentProjectOptions,
+      consultant: consultant || currentConsultant,
+    });
+
+    this.loadRosterEntries(this.state.startDate, this.state.endDate);
   }
 
   // fetch roster entries between two given dates and append current entry list in state
@@ -168,8 +166,6 @@ class SingleRoster extends React.Component {
     });
 
     // Update records in state
-    console.log(this.state.weeklyEntries);
-    console.log(updatedRecords);
     const newWeeklyEntries = this.state.weeklyEntries.slice();
     updatedRecords.forEach(entry => {
       const entryDate = moment(entry.date);
@@ -183,8 +179,6 @@ class SingleRoster extends React.Component {
         probability,
       };
     });
-    console.log(newWeeklyEntries);
-
     this.setState({ weeklyEntries: newWeeklyEntries });
 
     if (typeof this.props.onUpdate === 'function') {
