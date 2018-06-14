@@ -35,9 +35,16 @@ class SingleRoster extends React.Component {
   };
 
   async componentDidMount() {
-    const { consultant, projectOptions, $models } = this.props;
+    const { consultant, projectOptions, $models, consultantId } = this.props;
+    let recordId;
+    if (consultant) {
+      recordId = consultant.id;
+    } else if (consultantId) {
+      recordId = consultantId;
+    } else {
+      recordId = this.props.$navigation.state.params.recordId;
+    }
 
-    const { recordId } = this.props.$navigation.state.params;
     const promises = [];
 
     promises.push(

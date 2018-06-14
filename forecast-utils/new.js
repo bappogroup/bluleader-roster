@@ -3,23 +3,35 @@ import moment from 'moment';
 export const dateFormat = 'YYYY-MM-DD';
 
 /**
- * Get base data for forecasting.
+ * Get base data for company forecasting.
  * !! Should be performed on a dedicated calc server to avoid ping-pong.
  *
  * @param {object} $models
- * @param {array of string} profitCentreIds
+ * @param {object} startDate
+ * @param {object} endDate
+ * @param {string} companyId
  * @return {object} base data
  */
-export const getForecastBaseData = async ({ $models, profitCentreId, startDate, endDate }) => {
-  if (!($models && startDate && endDate)) return null;
+export const getForecastBaseData = async ({ $models, companyId, startDate, endDate }) => {
+  if (!($models && companyId && startDate && endDate)) return null;
 
   // if profitCentreId is not specified, fetch data for all profitCentreIds
+  const profitCentres = await $models.ProfitCentre.findAll({
+    where: {
+      company_id: companyId,
+    },
+    limit: 1000,
+  });
+  const profitCentreIds = profitCentres.map(pc => pc.id);
+
   const profitCentreQuery = {
-    where: {},
+    where: {
+      profitCentre_id: {
+        $in: profitCentreIds,
+      },
+    },
     limit: 1000,
   };
-
-  if (profitCentreId) profitCentreQuery.where.profitCentre_id = profitCentreId;
 
   // Find cost centers and consultants of all profit centres
   const costCenters = await $models.CostCenter.findAll(profitCentreQuery);

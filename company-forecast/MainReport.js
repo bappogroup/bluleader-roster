@@ -3,18 +3,46 @@ import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components'
 
 const ROW_HEIGHT = '30px';
 
-class ForecastMatrix extends React.Component {
+class MainReport extends React.Component {
   state = {
-    loading: false,
+    loading: true,
+    months: this.props.months,
   };
 
   componentDidMount() {
-    console.log(this.props);
+    console.log('Main report mount');
+    const { forecastElements } = this.props.rawData;
+
+    const costElements = [];
+    const revenueElements = [];
+    const overheadElements = [];
+
+    for (const element of forecastElements) {
+      switch (element.elementType) {
+        case '1':
+          costElements.push(element);
+          break;
+        case '2':
+          revenueElements.push(element);
+          break;
+        case '3':
+          overheadElements.push(element);
+          break;
+        default:
+      }
+    }
+
+    this.setState({
+      loading: false,
+      costElements,
+      revenueElements,
+      overheadElements,
+    });
   }
 
   // Renders the first column containing all forecast element labels
   renderLabelColumn = () => {
-    const { costElements, revenueElements, overheadElements } = this.props;
+    const { costElements, revenueElements, overheadElements } = this.state;
     const renderElementLabel = ({ name }) => (
       <Row key={name}>
         <Text>{name}</Text>
@@ -53,7 +81,7 @@ class ForecastMatrix extends React.Component {
   };
 
   renderDataTable = () => {
-    const { months, revenueElements, costElements, overheadElements } = this.props;
+    const { months, revenueElements, costElements, overheadElements } = this.state;
 
     return (
       <DataTableContainer>
@@ -115,7 +143,7 @@ class ForecastMatrix extends React.Component {
   }
 }
 
-export default ForecastMatrix;
+export default MainReport;
 
 const Container = styled(View)`
   flex-direction: row;

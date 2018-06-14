@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
 import { dateFormat, getForecastBaseData, getMonthArray } from 'forecast-utils';
-import ForecastMatrix from './ForecastMatrix';
+import MainReport from './MainReport';
 import MonthlyReport from './MonthlyReport';
 
 class Layers extends React.Component {
@@ -11,17 +11,16 @@ class Layers extends React.Component {
     loading: true,
     error: null,
     reports: [],
-    matrixData: {},
   };
 
   componentDidMount() {
-    // Set the first report to P&L matrix
+    // Set the first report to P&L main report
     this.setState(
       {
         reports: [
           {
             name: this.props.title,
-            component: 'Matrix',
+            component: 'Main',
           },
         ],
       },
@@ -46,53 +45,27 @@ class Layers extends React.Component {
   }
 
   loadData = async () => {
-    const { $models, startDate, endDate, profitCentre } = this.props;
+    const { $models, startDate, endDate, company } = this.props;
 
     this.setState({ loading: true });
+
+    const months = getMonthArray(startDate, endDate);
 
     const data = await getForecastBaseData({
       $models,
       startDate,
       endDate,
-      profitCentreId: profitCentre && profitCentre.id,
+      companyId: company.id,
     });
-
-    // Calculate data for matrix
-    const months = getMonthArray(startDate, endDate);
-    const costElements = [];
-    const revenueElements = [];
-    const overheadElements = [];
-
-    for (const element of data.forecastElements) {
-      switch (element.elementType) {
-        case '1':
-          costElements.push(element);
-          break;
-        case '2':
-          revenueElements.push(element);
-          break;
-        case '3':
-          overheadElements.push(element);
-          break;
-        default:
-      }
-    }
 
     this.data = {
       rawData: data,
-      startDate,
-      endDate,
-      profitCentre,
+      months,
+      company,
     };
 
     this.setState({
       loading: false,
-      matrixData: {
-        months,
-        costElements,
-        revenueElements,
-        overheadElements,
-      },
     });
 
     // if (startDate.isAfter(endDate)) {
@@ -125,56 +98,65 @@ class Layers extends React.Component {
     const months = getMonthArray(startDate, endDate);
 
     this.data.rawData.rosterEntries = rosterEntries;
-    this.data.startDate = startDate;
-    this.data.endDate = endDate;
+    this.data.months = months;
 
-    this.setState(({ matrixData }) => ({
+    this.setState({
       loading: false,
-      matrixData: {
-        ...matrixData,
-        months,
-      },
-    }));
+    });
   };
 
   openReport = report => {
     this.setState({ reports: [...this.state.reports, report] });
   };
 
-  renderCrumb = (report, index) => (
-    <Crumb key={index}>
-      <CrumbLabel>{report.name}</CrumbLabel>
-    </Crumb>
-  );
+  renderReport = (report, hidden) => {
+    let content;
+    if (this.state.loading) content = <ActivityIndicator />;
+    else {
+      const props = {
+        openReport: this.openReport,
+      };
 
-  renderHeader = report => (
-    <Header>
-      {this.state.reports.length > 1 && (
-        <CloseButton onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}>
-          X
-        </CloseButton>
-      )}
-      <Text>{report.name}</Text>
-      <Text />
-    </Header>
-  );
+      switch (report.component) {
+        case 'Main': {
+          content = <MainReport {...props} {...this.data} />;
+          break;
+        }
+        case 'Report':
+          content = <MonthlyReport />;
+          break;
+        default:
+      }
+    }
 
-  renderReport = report => {
-    if (this.state.loading) return <ActivityIndicator />;
-
-    const props = {
-      openReport: this.openReport,
+    const hiddenStyle = {
+      visibility: 'hidden',
+      width: 0,
+      height: 0,
     };
 
-    switch (report.component) {
-      case 'Matrix': {
-        return <ForecastMatrix {...props} {...this.state.matrixData} />;
-      }
-      case 'Report':
-        return <MonthlyReport />;
-      default:
-        return null;
-    }
+    return (
+      <ReportContainer>
+        {hidden ? (
+          <Crumb>
+            <CrumbLabel>{report.name}</CrumbLabel>
+          </Crumb>
+        ) : (
+          <Header>
+            {this.state.reports.length > 1 && (
+              <CloseButton
+                onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
+              >
+                X
+              </CloseButton>
+            )}
+            <Text>{report.name}</Text>
+            <Text />
+          </Header>
+        )}
+        <View style={hidden ? hiddenStyle : {}}>{content}</View>
+      </ReportContainer>
+    );
   };
 
   render() {
@@ -184,14 +166,9 @@ class Layers extends React.Component {
 
     if (!reports.length) return null;
 
-    const crumbs = [...reports];
-    const report = crumbs.pop();
-
     return (
       <Container>
-        {crumbs.map(this.renderCrumb)}
-        {this.renderHeader(report)}
-        {this.renderReport(report)}
+        {reports.map((report, index) => this.renderReport(report, index < reports.length - 1))}
       </Container>
     );
   }
@@ -237,3 +214,5 @@ const CloseButton = styled(Button)`
   top: 10px;
   outline: none;
 `;
+
+const ReportContainer = styled(View)``;

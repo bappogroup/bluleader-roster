@@ -5,5 +5,23 @@
     "react",
     "jsx-a11y",
     "import"
-  ]
+  ],
+  "rules": {
+    "arrow-parens": ["off"],
+    "camelcase": "off",
+    "function-paren-newline": "off",
+    "max-len": "off",
+    "react/jsx-filename-extension": ["off"],
+    "react/prop-types": ["off"],
+    "react/sort-comp": "off",
+    "import/no-unresolved": ["off"],
+    "import/extensions": ["off"],
+    "no-plusplus": "off",
+    "no-restricted-syntax": "off",
+    "no-did-mount-set-state": "off",
+    "no-did-update-set-state": "off",
+    "no-loop-func":"off",
+    "no-return-assign": "off",
+    "object-curly-newline":"off"
+  }
 }
