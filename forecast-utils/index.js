@@ -199,54 +199,54 @@ export const getServiceRevenueRosterEntries = async ({
  * @param {string} financialMonth
  * @return {array} array of object containing consultant and salary
  */
-export const getConsultantSalariesByMonth = ({ consultants, financialYear, financialMonth }) => {
-  const consultantSalaries = [];
+// export const getConsultantSalariesByMonth = ({ consultants, financialYear, financialMonth }) => {
+//   const consultantSalaries = [];
 
-  for (const consultant of consultants) {
-    // Exclude contractors
-    if (consultant.consultantType !== '2') {
-      const monthlySalary = consultant.annualSalary ? +consultant.annualSalary / 12 : 0;
+//   for (const consultant of consultants) {
+//     // Exclude contractors
+//     if (consultant.consultantType !== '2') {
+//       const monthlySalary = consultant.annualSalary ? +consultant.annualSalary / 12 : 0;
 
-      // Convert financial to calendar
-      const { calendarYear, calendarMonth } = time.financialToCalendar({
-        financialYear,
-        financialMonth,
-      });
-      const prefixedMonth = `0${calendarMonth}`.slice(-2);
-      const calendarDate = `${calendarYear}-${prefixedMonth}-01`;
+//       // Convert financial to calendar
+//       const { calendarYear, calendarMonth } = time.financialToCalendar({
+//         financialYear,
+//         financialMonth,
+//       });
+//       const prefixedMonth = `0${calendarMonth}`.slice(-2);
+//       const calendarDate = `${calendarYear}-${prefixedMonth}-01`;
 
-      // Calculate partial monthly salary: how many days of this month is with in consultant's start/end date
-      // Consultant start date is required, while end date is optional
-      let validDays = 0;
-      const totalDays = moment(calendarDate).daysInMonth();
-      const monthStart = moment(calendarDate).startOf('month');
-      const monthEnd = moment(calendarDate).endOf('month');
-      const consultantStart = moment(consultant.startDate);
-      const consultantEnd = consultant.endDate && moment(consultant.endDate);
+//       // Calculate partial monthly salary: how many days of this month is with in consultant's start/end date
+//       // Consultant start date is required, while end date is optional
+//       let validDays = 0;
+//       const totalDays = moment(calendarDate).daysInMonth();
+//       const monthStart = moment(calendarDate).startOf('month');
+//       const monthEnd = moment(calendarDate).endOf('month');
+//       const consultantStart = moment(consultant.startDate);
+//       const consultantEnd = consultant.endDate && moment(consultant.endDate);
 
-      for (let m = monthStart; m.isBefore(monthEnd); m.add(1, 'days')) {
-        if (consultantEnd) {
-          if (m.isSameOrAfter(consultantStart) && m.isSameOrBefore(consultantEnd)) {
-            validDays++;
-          }
-        } else if (m.isSameOrAfter(consultantStart)) {
-          validDays++;
-        }
-      }
+//       for (let m = monthStart; m.isBefore(monthEnd); m.add(1, 'days')) {
+//         if (consultantEnd) {
+//           if (m.isSameOrAfter(consultantStart) && m.isSameOrBefore(consultantEnd)) {
+//             validDays++;
+//           }
+//         } else if (m.isSameOrAfter(consultantStart)) {
+//           validDays++;
+//         }
+//       }
 
-      const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
+//       const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
 
-      if (salary > 0) {
-        consultantSalaries.push({
-          consultant,
-          salary,
-        });
-      }
-    }
-  }
+//       if (salary > 0) {
+//         consultantSalaries.push({
+//           consultant,
+//           salary,
+//         });
+//       }
+//     }
+//   }
 
-  return consultantSalaries;
-};
+//   return consultantSalaries;
+// };
 
 /**
  * Calculate bonuses of a given month

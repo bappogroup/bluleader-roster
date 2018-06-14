@@ -1,6 +1,7 @@
 import moment from 'moment';
 
 export const dateFormat = 'YYYY-MM-DD';
+const payrollTaxRate = 0.06;
 
 /**
  * Get base data for company forecasting.
@@ -113,9 +114,100 @@ export const getMonthArray = (rawStartDate, rawEndDate) => {
   for (const start = startDate.clone(); start.isSameOrBefore(endDate); start.add(1, 'month')) {
     monthArray.push({
       label: start.format('MMM YYYY'),
-      firstDay: start,
+      firstDay: start.clone(),
     });
   }
 
   return monthArray;
 };
+
+/**
+ * Start of salculations of main report
+ * Each function will reassign original 'cells' in MainReport
+ */
+
+/**
+ * Calculate permanent consultant salaries of given months
+ */
+export const calculatePermConsultantSalariesAndTax = ({ consultants, months, cells }) => {
+  for (const month of months) {
+    for (const consultant of consultants) {
+      const monthlySalary = consultant.annualSalary ? +consultant.annualSalary / 12 : 0;
+
+      // Calculate partial monthly salary: how many days of this month is with in consultant's start/end date
+      // Consultant start date is required, while end date is optional
+      let validDays = 0;
+      const { firstDay } = month;
+      const totalDays = moment(firstDay).daysInMonth();
+      const monthStart = moment(firstDay).startOf('month');
+      const monthEnd = moment(firstDay).endOf('month');
+      const consultantStart = moment(consultant.startDate);
+      const consultantEnd = consultant.endDate && moment(consultant.endDate);
+
+      for (let m = monthStart; m.isBefore(monthEnd); m.add(1, 'days')) {
+        if (consultantEnd) {
+          if (m.isSameOrAfter(consultantStart) && m.isSameOrBefore(consultantEnd)) {
+            validDays++;
+          }
+        } else if (m.isSameOrAfter(consultantStart)) {
+          validDays++;
+        }
+      }
+
+      const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
+
+      if (salary > 0) {
+        const salaryCellKey = `SAL-${month.label}`;
+        if (!cells[salaryCellKey]) cells[salaryCellKey] = { value: 0 };
+        cells[salaryCellKey][consultant.id] = salary;
+        cells[salaryCellKey].value += +salary;
+
+        const taxCellKey = `PTAX-${month.label}`;
+        const tax = (+salary * payrollTaxRate).toFixed(2);
+        if (!cells[taxCellKey]) cells[taxCellKey] = { value: 0 };
+        cells[taxCellKey][consultant.id] = tax;
+        cells[taxCellKey].value += +tax;
+      }
+    }
+  }
+};
+
+/**
+ * Calculate Payroll Tax
+ * For permanents and contractors with 'incursPayrollTax' flag on
+ */
+// export const calculatePayrollTaxes = ({ permConsultants, contractConsultants, months, cells }) => {
+//   for (const month of months) {
+//     const cellKey = `PTAX-${month.label}`;
+
+//     // Perms
+//     for (const consultant of permConsultants) {
+//       const monthlyTax = consultant.annualSalary
+//         ? (+consultant.annualSalary / 12) * payrollTaxRate
+//         : 0;
+
+//       if (monthlyTax > 0) {
+//         if (!cells[cellKey]) cells[cellKey] = { value: 0 };
+//         cells[cellKey][consultant.id] = monthlyTax;
+//         cells[cellKey].value += monthlyTax;
+//       }
+//     }
+
+//     // Contractors
+//     for (const consultant of contractConsultants) {
+//       // TODO
+//       // if (consultant.incursPayrollTax) {
+//       //   const monthlyTax = consultant.annualSalary
+//       //     ? (+consultant.annualSalary / 12) * payrollTaxRate
+//       //     : 0;
+//       //   if (monthlyTax > 0) {
+//       //     if (!cells[cellKey]) cells[cellKey] = { value: 0 };
+//       //     cells[cellKey][consultant.id] = monthlyTax;
+//       //     cells[cellKey].value += monthlyTax;
+//       //   }
+//       // }
+//     }
+//   }
+// };
+
+export const calculateBonusProvision = ({ months, cells }) => {};

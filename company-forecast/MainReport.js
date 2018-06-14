@@ -1,16 +1,21 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
+import { calculatePermConsultantSalariesAndTax } from 'forecast-utils';
 
 const ROW_HEIGHT = '30px';
+
+const getCellKey = (elementKey, monthLabel) => `${elementKey}-${monthLabel}`;
 
 class MainReport extends React.Component {
   state = {
     loading: true,
     months: this.props.months,
+    cells: {},
   };
 
   componentDidMount() {
     console.log('Main report mount');
+    console.log(this.props);
     const { forecastElements } = this.props.rawData;
 
     const costElements = [];
@@ -32,7 +37,19 @@ class MainReport extends React.Component {
       }
     }
 
+    // Calculate cells
+    const cells = {};
+    const { permConsultants, contractConsultants, months } = this.props;
+    calculatePermConsultantSalariesAndTax({
+      consultants: permConsultants,
+      months,
+      cells,
+    });
+
+    console.log(cells);
+
     this.setState({
+      cells,
       loading: false,
       costElements,
       revenueElements,
@@ -113,10 +130,12 @@ class MainReport extends React.Component {
   };
 
   renderDataCell = (month, element) => {
-    const key = `${month.label}${element.name}`;
+    const cellKey = getCellKey(element.key || element.name, month.label);
+    const cellValue = this.state.cells[cellKey] && this.state.cells[cellKey].value;
+
     return (
       <ButtonCell
-        key={key}
+        key={cellKey}
         onPress={() =>
           this.props.openReport({
             name: `Report on ${month.label}, ${element.name}`,
@@ -124,7 +143,7 @@ class MainReport extends React.Component {
           })
         }
       >
-        data
+        {cellValue || 'data'}
       </ButtonCell>
     );
   };

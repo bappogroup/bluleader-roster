@@ -44,6 +44,7 @@ class Layers extends React.Component {
     }
   }
 
+  // Reload everything when user updated company in the filters
   loadData = async () => {
     const { $models, startDate, endDate, company } = this.props;
 
@@ -58,10 +59,32 @@ class Layers extends React.Component {
       companyId: company.id,
     });
 
+    const permConsultants = [];
+    const contractConsultants = [];
+    const casualConsultants = [];
+
+    data.consultants.forEach(c => {
+      switch (c.consultantType) {
+        case '1':
+          permConsultants.push(c);
+          break;
+        case '2':
+          contractConsultants.push(c);
+          break;
+        case '3':
+          casualConsultants.push(c);
+          break;
+        default:
+      }
+    });
+
     this.data = {
       rawData: data,
       months,
       company,
+      permConsultants,
+      contractConsultants,
+      casualConsultants,
     };
 
     this.setState({
@@ -76,6 +99,7 @@ class Layers extends React.Component {
     // }
   };
 
+  // Reload RosterEntries only when user only updated time range in the filters
   loadRosterEntriesOnly = async () => {
     this.setState({ loading: true });
 
@@ -105,10 +129,12 @@ class Layers extends React.Component {
     });
   };
 
+  // Append a report to state
   openReport = report => {
     this.setState({ reports: [...this.state.reports, report] });
   };
 
+  // Render a report, and apply hidden styles if needed
   renderReport = (report, hidden) => {
     let content;
     if (this.state.loading) content = <ActivityIndicator />;

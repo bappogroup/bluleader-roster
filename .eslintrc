@@ -22,6 +22,7 @@
     "no-did-update-set-state": "off",
     "no-loop-func":"off",
     "no-return-assign": "off",
+    "no-param-reassign": "off",
     "object-curly-newline":"off"
   }
 }
