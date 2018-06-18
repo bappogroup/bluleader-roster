@@ -129,7 +129,6 @@ export default CompanyForecast;
 const Container = styled(View)``;
 
 const FilterButton = styled(Button)`
-  outline: none;
   margin-top: 15px;
   margin-left: 20px;
 `;

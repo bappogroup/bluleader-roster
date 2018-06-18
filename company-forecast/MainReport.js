@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import { calculatePermConsultantSalariesAndTax } from 'forecast-utils';
+import {
+  calculatePermConsultants,
+  calculateContractConsultants,
+  calculateServiceRevenue,
+} from 'forecast-utils';
 
 const ROW_HEIGHT = '30px';
 
@@ -9,57 +13,90 @@ const getCellKey = (elementKey, monthLabel) => `${elementKey}-${monthLabel}`;
 class MainReport extends React.Component {
   state = {
     loading: true,
-    months: this.props.months,
     cells: {},
+    totals: {},
   };
 
   componentDidMount() {
     console.log('Main report mount');
     console.log(this.props);
-    const { forecastElements } = this.props.rawData;
-
-    const costElements = [];
-    const revenueElements = [];
-    const overheadElements = [];
-
-    for (const element of forecastElements) {
-      switch (element.elementType) {
-        case '1':
-          costElements.push(element);
-          break;
-        case '2':
-          revenueElements.push(element);
-          break;
-        case '3':
-          overheadElements.push(element);
-          break;
-        default:
-      }
-    }
+    const { forecastElements, rosterEntries, projectAssignmentLookup } = this.props.rawData;
+    const { permConsultants, contractConsultants, months } = this.props;
 
     // Calculate cells
     const cells = {};
-    const { permConsultants, contractConsultants, months } = this.props;
-    calculatePermConsultantSalariesAndTax({
+    // initialize cells
+    for (const element of forecastElements) {
+      for (const month of months) {
+        const cellKey = `${element.key || element.name}-${month.label}`;
+        cells[cellKey] = { value: 0 };
+      }
+    }
+
+    calculatePermConsultants({
       consultants: permConsultants,
       months,
       cells,
     });
+    calculateContractConsultants({
+      consultants: contractConsultants,
+      cells,
+      rosterEntries,
+    });
+    calculateServiceRevenue({
+      cells,
+      rosterEntries,
+      projectAssignmentLookup,
+    });
 
-    console.log(cells);
+    const totals = this.calculateTotals(cells);
 
     this.setState({
+      totals,
       cells,
       loading: false,
-      costElements,
-      revenueElements,
-      overheadElements,
     });
   }
 
+  calculateTotals = cells => {
+    const { costElements, revenueElements, overheadElements, months } = this.props;
+    const totals = {};
+
+    months.forEach(({ label }) => {
+      totals[`Revenue-${label}`] = 0;
+      totals[`Cost-${label}`] = 0;
+      totals[`Overheads-${label}`] = 0;
+      totals[`GrossProfit-${label}`] = 0;
+      totals[`NetProfit-${label}`] = 0;
+
+      costElements.forEach(ele => {
+        const cellKey = `${ele.key || ele.name}-${label}`;
+        totals[`Cost-${label}`] += +cells[cellKey].value;
+      });
+
+      revenueElements.forEach(ele => {
+        const cellKey = `${ele.key || ele.name}-${label}`;
+        totals[`Revenue-${label}`] += +cells[cellKey].value;
+      });
+
+      overheadElements.forEach(ele => {
+        const cellKey = `${ele.key || ele.name}-${label}`;
+        totals[`Overheads-${label}`] += +cells[cellKey].value;
+      });
+
+      totals[`Cost-${label}`] = +totals[`Cost-${label}`].toFixed(2);
+      totals[`Revenue-${label}`] = +totals[`Revenue-${label}`].toFixed(2);
+      totals[`Overheads-${label}`] = +totals[`Overheads-${label}`].toFixed(2);
+      totals[`GrossProfit-${label}`] = totals[`Revenue-${label}`] - totals[`Cost-${label}`];
+      totals[`NetProfit-${label}`] = totals[`GrossProfit-${label}`] - totals[`Overheads-${label}`];
+    });
+
+    return totals;
+  };
+
   // Renders the first column containing all forecast element labels
   renderLabelColumn = () => {
-    const { costElements, revenueElements, overheadElements } = this.state;
+    const { costElements, revenueElements, overheadElements } = this.props;
     const renderElementLabel = ({ name }) => (
       <Row key={name}>
         <Text>{name}</Text>
@@ -97,24 +134,33 @@ class MainReport extends React.Component {
     );
   };
 
+  renderTotalRow = category => (
+    <Row>{this.props.months.map(({ label }) => this.renderTotalCell(category, label))}</Row>
+  );
+
+  renderTotalCell = (category, monthLabel) => {
+    const key = `${category}-${monthLabel}`;
+    return <TextCell key={key}>{this.state.totals[key]}</TextCell>;
+  };
+
   renderDataTable = () => {
-    const { months, revenueElements, costElements, overheadElements } = this.state;
+    const { months, revenueElements, costElements, overheadElements } = this.props;
 
     return (
       <DataTableContainer>
         <MonthsRow>{months.map(({ label }) => <TextCell key={label}>{label}</TextCell>)}</MonthsRow>
         {revenueElements.map(this.renderDataRow)}
-        {this.renderTotals('revenue')}
+        {this.renderTotalRow('Revenue')}
         <Row />
         {costElements.map(this.renderDataRow)}
-        {this.renderTotals('cost')}
+        {this.renderTotalRow('Cost')}
         <Row />
-        {this.renderTotals('grossProfit')}
+        {this.renderTotalRow('GrossProfit')}
         <Row />
         {overheadElements.map(this.renderDataRow)}
-        {this.renderTotals('overhead')}
+        {this.renderTotalRow('Overheads')}
         <Row />
-        {this.renderTotals('netProfit')}
+        {this.renderTotalRow('NetProfit')}
       </DataTableContainer>
     );
   };
@@ -133,8 +179,6 @@ class MainReport extends React.Component {
     const cellKey = getCellKey(element.key || element.name, month.label);
     const cellValue = this.state.cells[cellKey] && this.state.cells[cellKey].value;
     let onPress = null;
-
-    console.log(element);
 
     switch (element.key) {
       case 'SAL':
@@ -162,15 +206,14 @@ class MainReport extends React.Component {
 
     return (
       <ButtonCell key={cellKey} onPress={onPress}>
-        {cellValue || 'data'}
+        <Text>{cellValue}</Text>
       </ButtonCell>
     );
   };
 
-  renderTotals = key => <Row>{key}</Row>;
-
   render() {
     if (this.state.loading) return <ActivityIndicator />;
+    console.log(this.state.cells);
 
     return (
       <Container>
@@ -186,9 +229,6 @@ export default MainReport;
 const Container = styled(View)`
   flex-direction: row;
   padding: 30px;
-  border-left: 1px solid #eee;
-  border-bottom: 1px solid #eee;
-  border-right: 1px solid #eee;
 `;
 
 const LabelColumnContainer = styled(View)`
@@ -211,7 +251,6 @@ const ButtonCell = styled(Button)`
 
 const DataTableContainer = styled(View)`
   flex: 1;
-  overflow-x: scroll;
 `;
 
 const MonthsRow = styled(Row)`

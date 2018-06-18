@@ -6,7 +6,7 @@ export * from './new';
 
 const dateFormat = 'YYYY-MM-DD';
 
-const billableProbabilities = ['50%', '90%', '100%'];
+// const billableProbabilities = ['50%', '90%', '100%'];
 const payrollTaxRate = 0.06;
 
 /**
@@ -57,18 +57,18 @@ export const getForecastEntryKey = (
  * @param {object} roster entry
  * @return {boolean}
  */
-const rosterEntryIncursContractorWages = rosterEntry => {
-  const probability = rosterEntry.probability.name;
+// const rosterEntryIncursContractorWages = rosterEntry => {
+//   const probability = rosterEntry.probability.name;
 
-  if (
-    rosterEntry.consultant.consultantType === '2' &&
-    rosterEntry.project.projectType === '2' &&
-    billableProbabilities.includes(probability)
-  ) {
-    return true;
-  }
-  return false;
-};
+//   if (
+//     rosterEntry.consultant.consultantType === '2' &&
+//     rosterEntry.project.projectType === '2' &&
+//     billableProbabilities.includes(probability)
+//   ) {
+//     return true;
+//   }
+//   return false;
+// };
 
 /**
  * Get contractor wages of a given month
@@ -1073,15 +1073,15 @@ const calculatePayrollTax = async (
  */
 export const calculateForecastForProfitCentre = async params => {
   const [contractorTaxEntries, permanentTaxEntries] = await Promise.all([
-    calculateContractorWagesAndTax(params),
-    calculateConsultantSalaries(params),
-    calculateServiceRevenue(params),
-    calculateBonusProvision(params),
+    // calculateContractorWagesAndTax(params),
+    // calculateConsultantSalaries(params),
+    // calculateServiceRevenue(params),
+    // calculateBonusProvision(params),
     calculateInternalRates(params),
     calculateFixPriceRevenues(params),
   ]);
 
-  await calculatePayrollTax(params, contractorTaxEntries, permanentTaxEntries);
+  // await calculatePayrollTax(params, contractorTaxEntries, permanentTaxEntries);
 };
 
 /**

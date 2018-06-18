@@ -1,11 +1,38 @@
 import moment from 'moment';
 
 export const dateFormat = 'YYYY-MM-DD';
+const billableProbabilities = ['50%', '90%', '100%'];
 const payrollTaxRate = 0.06;
+
+/**
+ * Determine whether a roster entry incurs contractor wage
+ * Conditions are:
+ * 1. prob >= 50%
+ * 2. project type === 2 ('T&M')
+ * 3. consultant type === 2 ('Contractor')
+ *
+ * @param {object} roster entry
+ * @return {boolean}
+ */
+const rosterEntryIncursContractorWages = rosterEntry => {
+  const probability = rosterEntry.probability.name;
+
+  if (
+    rosterEntry.consultant.consultantType === '2' &&
+    rosterEntry.project.projectType === '2' &&
+    billableProbabilities.includes(probability)
+  ) {
+    return true;
+  }
+  return false;
+};
 
 /**
  * Get base data for company forecasting.
  * !! Should be performed on a dedicated calc server to avoid ping-pong.
+ * 1. Currently, fetch all RosterEntries (as there are only 1 company)
+ * 2. for company-level, fetch by consultantIds or by projectIds should have the same results
+ * 3. for profitcentre-level, should fetch separately
  *
  * @param {object} $models
  * @param {object} startDate
@@ -84,16 +111,30 @@ export const getForecastBaseData = async ({ $models, companyId, startDate, endDa
         date: {
           $between: [moment(startDate).format(dateFormat), moment(endDate).format(dateFormat)],
         },
-        consultant_id: {
-          $in: consultantIds,
-        },
+        // consultant_id: {
+        //   $in: consultantIds,
+        // },
       },
       include: [{ as: 'consultant' }, { as: 'project' }, { as: 'probability' }],
       limit: 100000,
     }),
   );
 
-  const [forecastElements, rosterEntries] = await Promise.all(promises);
+  // Fetch forecast entries (rent etc)
+  // TODO: now fetch yearly entries then filter
+  // promises.push(
+  //   $models.ForecastEntry.findAll({
+  //     where: {
+  //       year: {
+  //         $in: [moment(startDate).year(), moment(endDate).year()],
+  //       }
+  //     },
+  //     include: [{ as: 'forecastElement' }],
+  //     limit: 100000,
+  //   }),
+  // );
+
+  const [forecastElements, rosterEntries, forecastEntries] = await Promise.all(promises);
 
   return {
     costCenters,
@@ -127,12 +168,19 @@ export const getMonthArray = (rawStartDate, rawEndDate) => {
  */
 
 /**
- * Calculate permanent consultant salaries of given months
+ * Calculate permanent consultant data of given months
+ * Includes: 'salary', 'payroll tax' and 'bonus provision'
+ *
+ * Condition for bonus provision:
+ * 1. is permanent
+ * 2. has bonusProvision
+ * 3. startDate - endDate includes this month
  */
-export const calculatePermConsultantSalariesAndTax = ({ consultants, months, cells }) => {
+export const calculatePermConsultants = ({ consultants, months, cells }) => {
   for (const month of months) {
     for (const consultant of consultants) {
       const monthlySalary = consultant.annualSalary ? +consultant.annualSalary / 12 : 0;
+      const monthlyBonus = consultant.bonusProvision ? +consultant.bonusProvision / 12 : 0;
 
       // Calculate partial monthly salary: how many days of this month is with in consultant's start/end date
       // Consultant start date is required, while end date is optional
@@ -155,59 +203,85 @@ export const calculatePermConsultantSalariesAndTax = ({ consultants, months, cel
       }
 
       const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
+      const bonus = (monthlyBonus * (validDays / totalDays)).toFixed(2);
 
+      // Salary and tax
       if (salary > 0) {
         const salaryCellKey = `SAL-${month.label}`;
-        if (!cells[salaryCellKey]) cells[salaryCellKey] = { value: 0 };
         cells[salaryCellKey][consultant.id] = salary;
         cells[salaryCellKey].value += +salary;
 
         const taxCellKey = `PTAX-${month.label}`;
         const tax = (+salary * payrollTaxRate).toFixed(2);
-        if (!cells[taxCellKey]) cells[taxCellKey] = { value: 0 };
         cells[taxCellKey][consultant.id] = tax;
         cells[taxCellKey].value += +tax;
+      }
+
+      // bonus
+      if (bonus > 0) {
+        const bonusCellKey = `BON-${month.label}`;
+        cells[bonusCellKey][consultant.id] = bonus;
+        cells[bonusCellKey].value += +bonus;
       }
     }
   }
 };
 
 /**
- * Calculate Payroll Tax
- * For permanents and contractors with 'incursPayrollTax' flag on
+ * Calculate permanent consultant data of given months
+ * Includes: 'wages' and 'payroll tax'
+ *
+ * Conditions for wage: see the util function at top
+ *
+ * Condition for payroll tax:
+ * 1. if contractor, he/she should have the flag 'incursPayrollTax' true
  */
-// export const calculatePayrollTaxes = ({ permConsultants, contractConsultants, months, cells }) => {
-//   for (const month of months) {
-//     const cellKey = `PTAX-${month.label}`;
+export const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => {
+  // Find rosterEntries that are assigned to contractors
+  const contractorIds = consultants.map(c => c.id);
+  const contractorRosterEntries = rosterEntries.filter(e =>
+    contractorIds.includes(e.consultant_id),
+  );
 
-//     // Perms
-//     for (const consultant of permConsultants) {
-//       const monthlyTax = consultant.annualSalary
-//         ? (+consultant.annualSalary / 12) * payrollTaxRate
-//         : 0;
+  for (const entry of contractorRosterEntries) {
+    if (rosterEntryIncursContractorWages(entry)) {
+      // Wages
+      const monthLabel = moment(entry.data).format('MMM YYYY');
+      const wageCellKey = `CWAGES-${monthLabel}`;
+      const taxCellKey = `PTAX-${monthLabel}`;
 
-//       if (monthlyTax > 0) {
-//         if (!cells[cellKey]) cells[cellKey] = { value: 0 };
-//         cells[cellKey][consultant.id] = monthlyTax;
-//         cells[cellKey].value += monthlyTax;
-//       }
-//     }
+      if (!cells[wageCellKey][entry.consultant_id]) cells[wageCellKey][entry.consultant_id] = 0;
 
-//     // Contractors
-//     for (const consultant of contractConsultants) {
-//       // TODO
-//       // if (consultant.incursPayrollTax) {
-//       //   const monthlyTax = consultant.annualSalary
-//       //     ? (+consultant.annualSalary / 12) * payrollTaxRate
-//       //     : 0;
-//       //   if (monthlyTax > 0) {
-//       //     if (!cells[cellKey]) cells[cellKey] = { value: 0 };
-//       //     cells[cellKey][consultant.id] = monthlyTax;
-//       //     cells[cellKey].value += monthlyTax;
-//       //   }
-//       // }
-//     }
-//   }
-// };
+      const dailyRate = +entry.consultant.dailyRate || 0;
 
-export const calculateBonusProvision = ({ months, cells }) => {};
+      if (dailyRate > 0) {
+        cells[wageCellKey][entry.consultant_id] += dailyRate;
+        cells[wageCellKey].value += dailyRate;
+
+        // Payroll Taxes
+        const tax = +(dailyRate * payrollTaxRate).toFixed(2);
+        if (!cells[taxCellKey][entry.consultant_id]) cells[taxCellKey][entry.consultant_id] = 0;
+        cells[taxCellKey][entry.consultant_id] += tax;
+        cells[taxCellKey].value += tax;
+      }
+    }
+  }
+};
+
+/**
+ * Calculate and update 'Service Revenue' row in a financial year by:
+ * accumulating revenue gained from roster entries. Revenue comes from ProjectAssignment.dayRate
+ */
+export const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
+  for (const entry of rosterEntries) {
+    // This project assignment must exist!
+    const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+
+    const monthLabel = moment(entry.data).format('MMM YYYY');
+    const cellKey = `TMREV-${monthLabel}`;
+
+    if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
+    cells[cellKey][entry.consultant_id] += +dayRate;
+    cells[cellKey].value += +dayRate;
+  }
+};

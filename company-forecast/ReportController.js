@@ -30,10 +30,10 @@ class Layers extends React.Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    const prevPcId = prevProps.profitCentre && prevProps.profitCentre.id;
-    const currentPcId = this.props.profitCentre && this.props.profitCentre.id;
+    const prevCompanyId = prevProps.company && prevProps.company.id;
+    const currentCompanyId = this.props.company && this.props.company.id;
     // Reload data when filters are changed
-    if (prevPcId !== currentPcId) {
+    if (prevCompanyId !== currentCompanyId) {
       // if profitCentre changed, refetch everything
       this.loadData();
     } else if (
@@ -55,6 +55,7 @@ class Layers extends React.Component {
 
     const data = await getForecastBaseData({
       $models,
+      months,
       startDate,
       endDate,
       companyId: company.id,
@@ -79,6 +80,30 @@ class Layers extends React.Component {
       }
     });
 
+    // Process forecast elements
+    data.forecastElements = data.forecastElements.filter(
+      ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
+    );
+
+    const costElements = [];
+    const revenueElements = [];
+    const overheadElements = [];
+
+    for (const element of data.forecastElements) {
+      switch (element.elementType) {
+        case '1':
+          costElements.push(element);
+          break;
+        case '2':
+          revenueElements.push(element);
+          break;
+        case '3':
+          overheadElements.push(element);
+          break;
+        default:
+      }
+    }
+
     this.data = {
       rawData: data,
       months,
@@ -86,6 +111,9 @@ class Layers extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
+      costElements,
+      revenueElements,
+      overheadElements,
     };
 
     this.setState({
@@ -159,15 +187,26 @@ class Layers extends React.Component {
     }
 
     const hiddenStyle = {
-      visibility: 'hidden',
+      display: 'none',
       width: 0,
       height: 0,
     };
 
+    const activeStyle = {
+      display: 'flex',
+      flex: 1,
+    };
+
     return (
-      <ReportContainer>
+      <ReportContainer key={report.name} shouldGrow={!hidden}>
         {hidden ? (
-          <Crumb>
+          <Crumb
+            style={{
+              borderRadius: 3,
+              borderWidth: 1,
+              borderColor: '#ddd',
+            }}
+          >
             <CrumbLabel>{report.name}</CrumbLabel>
           </Crumb>
         ) : (
@@ -176,14 +215,14 @@ class Layers extends React.Component {
               <CloseButton
                 onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
               >
-                X
+                <Text>X</Text>
               </CloseButton>
             )}
             <Text>{report.name}</Text>
             <Text />
           </Header>
         )}
-        <View style={hidden ? hiddenStyle : {}}>{content}</View>
+        <ReportBody hidden={hidden}>{content}</ReportBody>
       </ReportContainer>
     );
   };
@@ -206,33 +245,41 @@ class Layers extends React.Component {
 export default Layers;
 
 const Container = styled(View)`
-  padding-top: 40px;
+  padding-top: 10px;
+  display: flex;
+  height: 80%;
+  flex: 1;
+
+  .fixed {
+    flex: none;
+  }
+  .flex {
+    flex: 1;
+  }
 `;
 
 const Header = styled(View)`
   position: relative;
-  border-radius: 3px 3px 0 0;
   background-color: #eee;
   height: 40px;
   justify-content: center;
   align-items: center;
+  flex: none;
 `;
 
 const Crumb = styled(View)`
-  border-top: 1px solid #ddd;
-  border-left: 1px solid #ddd;
-  border-right: 1px solid #ddd;
   justify-content: center;
   align-items: center;
   margin-left: 20px;
   margin-right: 20px;
   margin-bottom: 2px;
-  border-radius: 3px 3px 0 0;
+  flex: none;
 `;
 
-const CrumbLabel = styled(View)`
-  font-size: 8pt;
+const CrumbLabel = styled(Text)`
+  font-size: 8;
   color: #ccc;
+  flex: none;
 `;
 
 const CloseButton = styled(Button)`
@@ -241,7 +288,16 @@ const CloseButton = styled(Button)`
   position: absolute;
   left: 10px;
   top: 10px;
-  outline: none;
+  color: black;
 `;
 
-const ReportContainer = styled(View)``;
+const ReportContainer = styled(View)`
+  ${props => (props.shouldGrow ? 'flex: 1;' : 'flex : none;')} display: flex;
+`;
+
+const ReportBody = styled(View)`
+  flex: 1;
+  display: flex;
+
+  ${props => props.hidden && 'display: none; width: 0; height: 0;'};
+`;
