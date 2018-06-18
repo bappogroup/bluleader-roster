@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
 import { dateFormat, getForecastBaseData, getMonthArray } from 'forecast-utils';
 import MainReport from './MainReport';
-import MonthlyReport from './MonthlyReport';
+import DrilldownConsultants from './DrilldownConsultants';
+import DrilldownContractors from './DrilldownContractors';
 
 class Layers extends React.Component {
   data = {};
@@ -144,12 +145,14 @@ class Layers extends React.Component {
       };
 
       switch (report.component) {
-        case 'Main': {
+        case 'Main':
           content = <MainReport {...props} {...this.data} />;
           break;
-        }
-        case 'Report':
-          content = <MonthlyReport />;
+        case 'DrilldownConsultants':
+          content = <DrilldownConsultants {...props} report={report} data={this.data} />;
+          break;
+        case 'DrilldownContractors':
+          content = <DrilldownContractors {...props} report={report} data={this.data} />;
           break;
         default:
       }

@@ -3,7 +3,7 @@ import moment from 'moment';
 import { styled, View, Button } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import { dateFormat } from 'forecast-utils';
-import ForecastLayers from './ForecastLayers';
+import ReportController from './ReportController';
 
 class CompanyForecast extends React.Component {
   data = {
@@ -112,7 +112,7 @@ class CompanyForecast extends React.Component {
     return (
       <Container>
         <FilterButton onPress={this.setFilters}>change company or time</FilterButton>
-        <ForecastLayers
+        <ReportController
           title={title}
           company={company}
           startDate={forecastStartDate}

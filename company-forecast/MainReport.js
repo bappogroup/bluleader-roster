@@ -132,17 +132,36 @@ class MainReport extends React.Component {
   renderDataCell = (month, element) => {
     const cellKey = getCellKey(element.key || element.name, month.label);
     const cellValue = this.state.cells[cellKey] && this.state.cells[cellKey].value;
+    let onPress = null;
 
-    return (
-      <ButtonCell
-        key={cellKey}
-        onPress={() =>
+    console.log(element);
+
+    switch (element.key) {
+      case 'SAL':
+      case 'BON':
+        onPress = () =>
           this.props.openReport({
             name: `Report on ${month.label}, ${element.name}`,
-            component: 'Report',
-          })
-        }
-      >
+            component: 'DrilldownConsultants',
+            params: { month },
+          });
+        break;
+      case 'CWAGES':
+        onPress = () =>
+          this.props.openReport({
+            name: `Report on ${month.label}, ${element.name}`,
+            component: 'DrilldownContractors',
+            params: { month },
+          });
+        break;
+      default:
+        onPress = function() {
+          alert(`No drilldown yet, key is ${element.key}`);
+        };
+    }
+
+    return (
+      <ButtonCell key={cellKey} onPress={onPress}>
         {cellValue || 'data'}
       </ButtonCell>
     );

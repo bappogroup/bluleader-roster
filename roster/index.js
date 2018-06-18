@@ -277,7 +277,6 @@ class Roster extends React.Component {
     this.props.$popup.open(
       <SingleRoster
         {...this.props}
-        startDate={moment(this.state.startDate).weekday(1)}
         consultant={consultant}
         projectOptions={projectOptions}
         onUpdate={() => this.reloadConsultantData(consultant.id)}

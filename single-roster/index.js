@@ -19,10 +19,10 @@ function truncString(str, max = 18, add = '...') {
 
 class SingleRoster extends React.Component {
   state = {
-    startDate: moment(this.props.startDate)
+    startDate: moment()
       .day(1)
       .startOf('day'),
-    endDate: moment(this.props.startDate)
+    endDate: moment()
       .day(1)
       .startOf('day')
       .add(WEEKS_PER_LOAD, 'weeks'),
@@ -286,7 +286,6 @@ const StyledList = styled(FlatList)`
 `;
 
 const Row = styled(View)`
-  flex: 1;
   flex-direction: row;
   height: 40px;
 `;
@@ -299,7 +298,7 @@ const ButtonRow = styled(View)`
 
 const HeaderRow = styled(View)`
   flex-direction: row;
-  text-align: center;
+  justify-content: center;
   height: 40px;
 `;
 
@@ -320,9 +319,8 @@ const Cell = styled(Button)`
   background-color: ${props => props.backgroundColor};
 `;
 
-const LoadPreviousButton = styled(Button)`
-  outline: none;
-`;
+// TODO: alternate for outline
+const LoadPreviousButton = styled(Button)``;
 
 const CellText = styled(Text)`
   font-size: 12px;
