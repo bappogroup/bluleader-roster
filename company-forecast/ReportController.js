@@ -1,6 +1,11 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import { dateFormat, getForecastBaseData, getMonthArray } from 'forecast-utils';
+import {
+  dateFormat,
+  getForecastBaseData,
+  getMonthArray,
+  calculateMainReport,
+} from 'forecast-utils';
 import MainReport from './MainReport';
 import DrilldownConsultants from './DrilldownConsultants';
 import DrilldownContractors from './DrilldownContractors';
@@ -47,25 +52,26 @@ class Layers extends React.Component {
 
   // Reload everything when user updated company in the filters
   loadData = async () => {
-    const { $models, startDate, endDate, company } = this.props;
+    const { $models, startDate, endDate, company, periodIds } = this.props;
 
     this.setState({ loading: true });
 
     const months = getMonthArray(startDate, endDate);
 
-    const data = await getForecastBaseData({
+    const rawData = await getForecastBaseData({
       $models,
-      months,
+      periodIds,
       startDate,
       endDate,
       companyId: company.id,
     });
 
+    // Process consultants
     const permConsultants = [];
     const contractConsultants = [];
     const casualConsultants = [];
 
-    data.consultants.forEach(c => {
+    rawData.consultants.forEach(c => {
       switch (c.consultantType) {
         case '1':
           permConsultants.push(c);
@@ -81,40 +87,52 @@ class Layers extends React.Component {
     });
 
     // Process forecast elements
-    data.forecastElements = data.forecastElements.filter(
+    rawData.forecastElements = rawData.forecastElements.filter(
       ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
     );
 
-    const costElements = [];
-    const revenueElements = [];
-    const overheadElements = [];
+    // const costElements = [];
+    // const revenueElements = [];
+    // const overheadElements = [];
 
-    for (const element of data.forecastElements) {
-      switch (element.elementType) {
-        case '1':
-          costElements.push(element);
-          break;
-        case '2':
-          revenueElements.push(element);
-          break;
-        case '3':
-          overheadElements.push(element);
-          break;
-        default:
-      }
-    }
+    // for (const element of rawData.forecastElements) {
+    //   switch (element.elementType) {
+    //     case '1':
+    //       costElements.push(element);
+    //       break;
+    //     case '2':
+    //       revenueElements.push(element);
+    //       break;
+    //     case '3':
+    //       overheadElements.push(element);
+    //       break;
+    //     default:
+    //   }
+    // }
 
     this.data = {
-      rawData: data,
+      rawData,
       months,
       company,
       permConsultants,
       contractConsultants,
       casualConsultants,
-      costElements,
-      revenueElements,
-      overheadElements,
+      // costElements,
+      // revenueElements,
+      // overheadElements,
     };
+
+    const mainReportData = calculateMainReport({
+      months,
+      permConsultants,
+      contractConsultants,
+      rosterEntries: rawData.rosterEntries,
+      projectAssignmentLookup: rawData.projectAssignmentLookup,
+      forecastElements: rawData.forecastElements,
+      forecastEntries: rawData.forecastEntries,
+    });
+
+    this.data.mainReportData = mainReportData;
 
     this.setState({
       loading: false,
@@ -165,6 +183,21 @@ class Layers extends React.Component {
 
   // Render a report, and apply hidden styles if needed
   renderReport = (report, hidden) => {
+    if (hidden) {
+      return (
+        <Crumb
+          key={report.name}
+          style={{
+            borderRadius: 3,
+            borderWidth: 1,
+            borderColor: '#ddd',
+          }}
+        >
+          <CrumbLabel>{report.name}</CrumbLabel>
+        </Crumb>
+      );
+    }
+
     let content;
     if (this.state.loading) content = <ActivityIndicator />;
     else {
@@ -177,52 +210,29 @@ class Layers extends React.Component {
           content = <MainReport {...props} {...this.data} />;
           break;
         case 'DrilldownConsultants':
-          content = <DrilldownConsultants {...props} report={report} data={this.data} />;
+          content = <DrilldownConsultants {...props} report={report} {...this.data} />;
           break;
         case 'DrilldownContractors':
-          content = <DrilldownContractors {...props} report={report} data={this.data} />;
+          content = <DrilldownContractors {...props} report={report} {...this.data} />;
           break;
         default:
       }
     }
 
-    const hiddenStyle = {
-      display: 'none',
-      width: 0,
-      height: 0,
-    };
-
-    const activeStyle = {
-      display: 'flex',
-      flex: 1,
-    };
-
     return (
-      <ReportContainer key={report.name} shouldGrow={!hidden}>
-        {hidden ? (
-          <Crumb
-            style={{
-              borderRadius: 3,
-              borderWidth: 1,
-              borderColor: '#ddd',
-            }}
-          >
-            <CrumbLabel>{report.name}</CrumbLabel>
-          </Crumb>
-        ) : (
-          <Header>
-            {this.state.reports.length > 1 && (
-              <CloseButton
-                onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
-              >
-                <Text>X</Text>
-              </CloseButton>
-            )}
-            <Text>{report.name}</Text>
-            <Text />
-          </Header>
-        )}
-        <ReportBody hidden={hidden}>{content}</ReportBody>
+      <ReportContainer key={report.name}>
+        <Header>
+          {this.state.reports.length > 1 && (
+            <CloseButton
+              onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
+            >
+              <Text>X</Text>
+            </CloseButton>
+          )}
+          <Text>{report.name}</Text>
+          <Text />
+        </Header>
+        {content}
       </ReportContainer>
     );
   };
@@ -292,12 +302,5 @@ const CloseButton = styled(Button)`
 `;
 
 const ReportContainer = styled(View)`
-  ${props => (props.shouldGrow ? 'flex: 1;' : 'flex : none;')} display: flex;
-`;
-
-const ReportBody = styled(View)`
   flex: 1;
-  display: flex;
-
-  ${props => props.hidden && 'display: none; width: 0; height: 0;'};
 `;

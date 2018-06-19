@@ -1,3 +1,4 @@
+/* eslint no-param-reassign: "off" */
 import moment from 'moment';
 
 export const dateFormat = 'YYYY-MM-DD';
@@ -40,7 +41,13 @@ const rosterEntryIncursContractorWages = rosterEntry => {
  * @param {string} companyId
  * @return {object} base data
  */
-export const getForecastBaseData = async ({ $models, companyId, startDate, endDate }) => {
+export const getForecastBaseData = async ({
+  $models,
+  companyId,
+  startDate,
+  endDate,
+  periodIds,
+}) => {
   if (!($models && companyId && startDate && endDate)) return null;
 
   // if profitCentreId is not specified, fetch data for all profitCentreIds
@@ -105,6 +112,7 @@ export const getForecastBaseData = async ({ $models, companyId, startDate, endDa
   promises.push($models.ForecastElement.findAll({}));
 
   // Fetch roster entries
+  // TODO: improve query
   promises.push(
     $models.RosterEntry.findAll({
       where: {
@@ -121,18 +129,17 @@ export const getForecastBaseData = async ({ $models, companyId, startDate, endDa
   );
 
   // Fetch forecast entries (rent etc)
-  // TODO: now fetch yearly entries then filter
-  // promises.push(
-  //   $models.ForecastEntry.findAll({
-  //     where: {
-  //       year: {
-  //         $in: [moment(startDate).year(), moment(endDate).year()],
-  //       }
-  //     },
-  //     include: [{ as: 'forecastElement' }],
-  //     limit: 100000,
-  //   }),
-  // );
+  promises.push(
+    $models.ForecastEntry.findAll({
+      where: {
+        period_id: {
+          $in: periodIds,
+        },
+      },
+      include: [{ as: 'forecastElement' }, { as: 'period' }],
+      limit: 100000,
+    }),
+  );
 
   const [forecastElements, rosterEntries, forecastEntries] = await Promise.all(promises);
 
@@ -142,6 +149,7 @@ export const getForecastBaseData = async ({ $models, companyId, startDate, endDa
     consultants,
     projects,
     forecastElements,
+    forecastEntries,
     projectAssignmentLookup,
     rosterEntries,
   };
@@ -176,7 +184,7 @@ export const getMonthArray = (rawStartDate, rawEndDate) => {
  * 2. has bonusProvision
  * 3. startDate - endDate includes this month
  */
-export const calculatePermConsultants = ({ consultants, months, cells }) => {
+const calculatePermConsultants = ({ consultants, months, cells }) => {
   for (const month of months) {
     for (const consultant of consultants) {
       const monthlySalary = consultant.annualSalary ? +consultant.annualSalary / 12 : 0;
@@ -236,7 +244,7 @@ export const calculatePermConsultants = ({ consultants, months, cells }) => {
  * Condition for payroll tax:
  * 1. if contractor, he/she should have the flag 'incursPayrollTax' true
  */
-export const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => {
+const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => {
   // Find rosterEntries that are assigned to contractors
   const contractorIds = consultants.map(c => c.id);
   const contractorRosterEntries = rosterEntries.filter(e =>
@@ -272,16 +280,212 @@ export const calculateContractConsultants = ({ consultants, cells, rosterEntries
  * Calculate and update 'Service Revenue' row in a financial year by:
  * accumulating revenue gained from roster entries. Revenue comes from ProjectAssignment.dayRate
  */
-export const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
+const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
   for (const entry of rosterEntries) {
     // This project assignment must exist!
+    if (!projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`])
+      console.log('non-exist project assignment', entry);
+
     const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
 
     const monthLabel = moment(entry.data).format('MMM YYYY');
     const cellKey = `TMREV-${monthLabel}`;
 
     if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
-    cells[cellKey][entry.consultant_id] += +dayRate;
-    cells[cellKey].value += +dayRate;
+    const rate = dayRate ? +dayRate : 0;
+    cells[cellKey][entry.consultant_id] += rate;
+    cells[cellKey].value += rate;
   }
+};
+
+/**
+ * Calculate read-only forecast entries, e.g. 'rent', 'software licence'
+ */
+const calculateForecastEntries = ({ cells, forecastEntries }) => {
+  for (const entry of forecastEntries) {
+    const forecastElementKey = entry.forecastElement.key || entry.forecastElement.name;
+    const monthLabel = moment(entry.period.name).format('MMM YYYY');
+    const cellKey = `${forecastElementKey}-${monthLabel}`;
+
+    const amount = +entry.amount;
+    cells[cellKey][forecastElementKey] = amount;
+    cells[cellKey].value += amount;
+  }
+};
+
+export const calculateMainReport = ({
+  months,
+  permConsultants,
+  contractConsultants,
+  rosterEntries,
+  projectAssignmentLookup,
+  forecastElements,
+  forecastEntries,
+}) => {
+  // initialize cells
+  const cells = {};
+  for (const element of forecastElements) {
+    for (const month of months) {
+      const cellKey = `${element.key || element.name}-${month.label}`;
+      cells[cellKey] = { value: 0 };
+    }
+  }
+
+  calculatePermConsultants({
+    consultants: permConsultants,
+    months,
+    cells,
+  });
+  calculateContractConsultants({
+    consultants: contractConsultants,
+    cells,
+    rosterEntries,
+  });
+  calculateServiceRevenue({
+    cells,
+    rosterEntries,
+    projectAssignmentLookup,
+  });
+  calculateForecastEntries({
+    cells,
+    forecastEntries,
+  });
+
+  // Process forecast elements
+  const costElements = [];
+  const revenueElements = [];
+  const overheadElements = [];
+
+  for (const element of forecastElements) {
+    switch (element.elementType) {
+      case '1':
+        costElements.push(element);
+        break;
+      case '2':
+        revenueElements.push(element);
+        break;
+      case '3':
+        overheadElements.push(element);
+        break;
+      default:
+    }
+  }
+
+  // Calculate totals
+  const totals = {};
+  months.forEach(({ label }) => {
+    totals[`Revenue-${label}`] = 0;
+    totals[`Cost-${label}`] = 0;
+    totals[`Overheads-${label}`] = 0;
+    totals[`GrossProfit-${label}`] = 0;
+    totals[`NetProfit-${label}`] = 0;
+
+    costElements.forEach(ele => {
+      const cellKey = `${ele.key || ele.name}-${label}`;
+      totals[`Cost-${label}`] += +cells[cellKey].value;
+    });
+
+    revenueElements.forEach(ele => {
+      const cellKey = `${ele.key || ele.name}-${label}`;
+      totals[`Revenue-${label}`] += +cells[cellKey].value;
+    });
+
+    overheadElements.forEach(ele => {
+      const cellKey = `${ele.key || ele.name}-${label}`;
+      totals[`Overheads-${label}`] += +cells[cellKey].value;
+    });
+
+    totals[`Cost-${label}`] = +totals[`Cost-${label}`].toFixed(2);
+    totals[`Revenue-${label}`] = +totals[`Revenue-${label}`].toFixed(2);
+    totals[`Overheads-${label}`] = +totals[`Overheads-${label}`].toFixed(2);
+    totals[`GrossProfit-${label}`] = totals[`Revenue-${label}`] - totals[`Cost-${label}`];
+    totals[`NetProfit-${label}`] = totals[`GrossProfit-${label}`] - totals[`Overheads-${label}`];
+  });
+
+  // Generate bappo-table data from cells
+  const dataForTable = [];
+
+  // Month row
+  const monthRow = [''];
+  months.forEach(month => monthRow.push(month.label));
+  dataForTable.push(monthRow);
+
+  // Revenue elements
+  revenueElements.forEach(ele => {
+    const row = {
+      elementKey: ele.key || ele.name,
+      data: [ele.name],
+    };
+    months.forEach(month => row.data.push(cells[`${ele.key || ele.name}-${month.label}`].value));
+    dataForTable.push(row);
+  });
+
+  const totalRevenueRow = {
+    rowStyle: 'total',
+    data: ['Total Revenue'],
+  };
+  months.forEach(month => totalRevenueRow.data.push(totals[`Revenue-${month.label}`]));
+  dataForTable.push(totalRevenueRow);
+  dataForTable.push([]);
+
+  // Cost elements
+  costElements.forEach(ele => {
+    const row = {
+      elementKey: ele.key || ele.name,
+      data: [ele.name],
+    };
+    months.forEach(month => row.data.push(cells[`${ele.key || ele.name}-${month.label}`].value));
+    dataForTable.push(row);
+  });
+
+  const totalCostRow = {
+    rowStyle: 'total',
+    data: ['Total Cost'],
+  };
+  months.forEach(month => totalCostRow.data.push(totals[`Cost-${month.label}`]));
+  dataForTable.push(totalCostRow);
+  dataForTable.push([]);
+
+  // Gross Profit
+  const grossProfitRow = {
+    rowStyle: 'total',
+    data: ['Gross Profit'],
+  };
+  months.forEach(month => grossProfitRow.data.push(totals[`GrossProfit-${month.label}`]));
+  dataForTable.push(grossProfitRow);
+  dataForTable.push([]);
+
+  // Overhead elements
+  overheadElements.forEach(ele => {
+    const row = {
+      elementKey: ele.key || ele.name,
+      data: [ele.name],
+    };
+    months.forEach(month => row.data.push(cells[`${ele.key || ele.name}-${month.label}`].value));
+    dataForTable.push(row);
+  });
+
+  const totalOverheadsRow = {
+    rowStyle: 'total',
+    data: ['Total Overheads'],
+  };
+  months.forEach(month => totalOverheadsRow.data.push(totals[`Overheads-${month.label}`]));
+  dataForTable.push(totalOverheadsRow);
+  dataForTable.push([]);
+
+  // Net Profit
+  const netProfitRow = {
+    rowStyle: 'total',
+    data: ['Net Profit'],
+  };
+  months.forEach(month => netProfitRow.data.push(totals[`NetProfit-${month.label}`]));
+  dataForTable.push(netProfitRow);
+
+  return {
+    cells,
+    dataForTable,
+    costElements,
+    revenueElements,
+    overheadElements,
+  };
 };

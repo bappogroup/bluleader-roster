@@ -1,63 +1,10 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import {
-  calculatePermConsultants,
-  calculateContractConsultants,
-  calculateServiceRevenue,
-} from 'forecast-utils';
+import BappoTable from 'bappo-table';
 
 const ROW_HEIGHT = '30px';
 
-const getCellKey = (elementKey, monthLabel) => `${elementKey}-${monthLabel}`;
-
 class MainReport extends React.Component {
-  state = {
-    loading: true,
-    cells: {},
-    totals: {},
-  };
-
-  componentDidMount() {
-    console.log('Main report mount');
-    console.log(this.props);
-    const { forecastElements, rosterEntries, projectAssignmentLookup } = this.props.rawData;
-    const { permConsultants, contractConsultants, months } = this.props;
-
-    // Calculate cells
-    const cells = {};
-    // initialize cells
-    for (const element of forecastElements) {
-      for (const month of months) {
-        const cellKey = `${element.key || element.name}-${month.label}`;
-        cells[cellKey] = { value: 0 };
-      }
-    }
-
-    calculatePermConsultants({
-      consultants: permConsultants,
-      months,
-      cells,
-    });
-    calculateContractConsultants({
-      consultants: contractConsultants,
-      cells,
-      rosterEntries,
-    });
-    calculateServiceRevenue({
-      cells,
-      rosterEntries,
-      projectAssignmentLookup,
-    });
-
-    const totals = this.calculateTotals(cells);
-
-    this.setState({
-      totals,
-      cells,
-      loading: false,
-    });
-  }
-
   calculateTotals = cells => {
     const { costElements, revenueElements, overheadElements, months } = this.props;
     const totals = {};
@@ -134,91 +81,59 @@ class MainReport extends React.Component {
     );
   };
 
-  renderTotalRow = category => (
-    <Row>{this.props.months.map(({ label }) => this.renderTotalCell(category, label))}</Row>
-  );
+  renderCell = (data, params) => {
+    const { elementKey, index } = params;
 
-  renderTotalCell = (category, monthLabel) => {
-    const key = `${category}-${monthLabel}`;
-    return <TextCell key={key}>{this.state.totals[key]}</TextCell>;
-  };
+    const month = this.props.months[index];
 
-  renderDataTable = () => {
-    const { months, revenueElements, costElements, overheadElements } = this.props;
-
-    return (
-      <DataTableContainer>
-        <MonthsRow>{months.map(({ label }) => <TextCell key={label}>{label}</TextCell>)}</MonthsRow>
-        {revenueElements.map(this.renderDataRow)}
-        {this.renderTotalRow('Revenue')}
-        <Row />
-        {costElements.map(this.renderDataRow)}
-        {this.renderTotalRow('Cost')}
-        <Row />
-        {this.renderTotalRow('GrossProfit')}
-        <Row />
-        {overheadElements.map(this.renderDataRow)}
-        {this.renderTotalRow('Overheads')}
-        <Row />
-        {this.renderTotalRow('NetProfit')}
-      </DataTableContainer>
-    );
-  };
-
-  renderDataRow = forecastElement => {
-    const { months } = this.props;
-
-    return (
-      <Row key={forecastElement.name}>
-        {months.map(month => this.renderDataCell(month, forecastElement))}
-      </Row>
-    );
-  };
-
-  renderDataCell = (month, element) => {
-    const cellKey = getCellKey(element.key || element.name, month.label);
-    const cellValue = this.state.cells[cellKey] && this.state.cells[cellKey].value;
-    let onPress = null;
-
-    switch (element.key) {
+    switch (elementKey) {
       case 'SAL':
       case 'BON':
-        onPress = () =>
-          this.props.openReport({
-            name: `Report on ${month.label}, ${element.name}`,
-            component: 'DrilldownConsultants',
-            params: { month },
-          });
-        break;
+      case 'PTAX':
+      case 'LEA':
+        return (
+          <ButtonCell
+            onPress={() =>
+              this.props.openReport({
+                name: `Report on ${month.label}`,
+                component: 'DrilldownConsultants',
+                params: { month },
+              })
+            }
+          >
+            <Text>{data}</Text>
+          </ButtonCell>
+        );
       case 'CWAGES':
-        onPress = () =>
-          this.props.openReport({
-            name: `Report on ${month.label}, ${element.name}`,
-            component: 'DrilldownContractors',
-            params: { month },
-          });
-        break;
+        return (
+          <ButtonCell
+            onPress={() =>
+              this.props.openReport({
+                name: `Report on ${month.label}`,
+                component: 'DrilldownContractors',
+                params: { month },
+              })
+            }
+          >
+            <Text>{data}</Text>
+          </ButtonCell>
+        );
       default:
-        onPress = function() {
-          alert(`No drilldown yet, key is ${element.key}`);
-        };
+        return (
+          <Cell>
+            <Text>{data}</Text>
+          </Cell>
+        );
     }
-
-    return (
-      <ButtonCell key={cellKey} onPress={onPress}>
-        <Text>{cellValue}</Text>
-      </ButtonCell>
-    );
   };
 
   render() {
-    if (this.state.loading) return <ActivityIndicator />;
-    console.log(this.state.cells);
+    const { dataForTable } = this.props.mainReportData;
+    if (!dataForTable) return <ActivityIndicator />;
 
     return (
       <Container>
-        {this.renderLabelColumn()}
-        {this.renderDataTable()}
+        <BappoTable renderCell={this.renderCell} data={dataForTable} />
       </Container>
     );
   }
@@ -227,8 +142,7 @@ class MainReport extends React.Component {
 export default MainReport;
 
 const Container = styled(View)`
-  flex-direction: row;
-  padding: 30px;
+  flex: 1;
 `;
 
 const LabelColumnContainer = styled(View)`
@@ -241,18 +155,14 @@ const Row = styled(View)`
   flex-direction: row;
 `;
 
-const TextCell = styled(Text)`
+const Cell = styled(View)`
+  justify-content: center;
+  align-items: center;
   flex: 1;
 `;
 
 const ButtonCell = styled(Button)`
   flex: 1;
-`;
-
-const DataTableContainer = styled(View)`
-  flex: 1;
-`;
-
-const MonthsRow = styled(Row)`
-  flex-direction: row;
+  justify-content: center;
+  align-items: center;
 `;
