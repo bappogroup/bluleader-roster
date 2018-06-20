@@ -1,6 +1,6 @@
 import React from 'react';
 import moment from 'moment';
-import { styled, View, Button } from 'bappo-components';
+import { styled, View, Button, Text } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import ReportController from './ReportController';
 
@@ -13,6 +13,7 @@ class CompanyForecast extends React.Component {
     company: null,
     forecastStartDate: null,
     forecastEndDate: null,
+    currentAction: 'select',
   };
 
   async componentDidMount() {
@@ -162,19 +163,33 @@ class CompanyForecast extends React.Component {
     if (!(company && forecastStartDate && forecastEndDate && periodIds.length)) return null;
 
     const title = `Company: ${company.name}`;
-    return (
-      <Container>
-        <FilterButton onPress={this.setFilters}>change company or time</FilterButton>
-        <ReportController
-          title={title}
-          company={company}
-          startDate={forecastStartDate}
-          endDate={forecastEndDate}
-          periodIds={periodIds}
-          $models={this.props.$models}
-        />
-      </Container>
-    );
+    if (this.state.currentAction === 'select') {
+      return (
+        <Container>
+          <FilterButton onPress={this.setFilters}>
+            <Text>change company or time </Text>
+          </FilterButton>
+          <RunButton onPress={() => this.setState({ currentAction: 'run' })}>
+            <RunButtonText> Run </RunButtonText>
+          </RunButton>
+        </Container>
+      );
+    }
+
+    if (this.state.currentAction === 'run') {
+      return (
+        <Container>
+          <ReportController
+            title={title}
+            company={company}
+            startDate={forecastStartDate}
+            endDate={forecastEndDate}
+            periodIds={periodIds}
+            $models={this.props.$models}
+          />
+        </Container>
+      );
+    }
   }
 }
 
@@ -187,4 +202,17 @@ const Container = styled(View)`
 const FilterButton = styled(Button)`
   margin-top: 15px;
   margin-left: 20px;
+`;
+
+const RunButton = styled(Button)`
+  height: 50px;
+  margin: 20px;
+  background-color: orange;
+  border-radius: 3px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const RunButtonText = styled(Text)`
+  color: white;
 `;

@@ -45,7 +45,6 @@ class DrilldownConsultants extends React.Component {
       rowStyle: 'total',
       data: ['Total', total.salary, total.payrolltax, total.bonus, total.leave],
     });
-    reportRows.push([]);
 
     this.setState({
       loading: false,

@@ -39,13 +39,13 @@ class Layers extends React.Component {
     const currentCompanyId = this.props.company && this.props.company.id;
     // Reload data when filters are changed
     if (prevCompanyId !== currentCompanyId) {
-      // profitCentre is changed, refetch everything
+      // if profitCentre changed, refetch everything
       this.loadData();
     } else if (
       prevProps.startDate !== this.props.startDate ||
       prevProps.endDate !== this.props.endDate
     ) {
-      // only startDate/endDate are changed, only refetch roster entries
+      // if only startDate/endDate changed, only refetch roster entries
       this.loadRosterEntriesOnly();
     }
   }
@@ -91,6 +91,25 @@ class Layers extends React.Component {
       ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
     );
 
+    // const costElements = [];
+    // const revenueElements = [];
+    // const overheadElements = [];
+
+    // for (const element of rawData.forecastElements) {
+    //   switch (element.elementType) {
+    //     case '1':
+    //       costElements.push(element);
+    //       break;
+    //     case '2':
+    //       revenueElements.push(element);
+    //       break;
+    //     case '3':
+    //       overheadElements.push(element);
+    //       break;
+    //     default:
+    //   }
+    // }
+
     this.data = {
       rawData,
       months,
@@ -98,6 +117,9 @@ class Layers extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
+      // costElements,
+      // revenueElements,
+      // overheadElements,
     };
 
     const mainReportData = calculateMainReport({
@@ -115,6 +137,13 @@ class Layers extends React.Component {
     this.setState({
       loading: false,
     });
+
+    // if (startDate.isAfter(endDate)) {
+    //   return this.setState({
+    //     loading: false,
+    //     error: 'Start Month cannot be later than End Month',
+    //   });
+    // }
   };
 
   // Reload RosterEntries only when user only updated time range in the filters
@@ -197,7 +226,7 @@ class Layers extends React.Component {
             <CloseButton
               onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
             >
-              <Text>X</Text>
+              <Text> ← back </Text>
             </CloseButton>
           )}
           <Text>{report.name}</Text>
@@ -226,7 +255,6 @@ class Layers extends React.Component {
 export default Layers;
 
 const Container = styled(View)`
-  padding-top: 10px;
   display: flex;
   height: 80%;
   flex: 1;
@@ -241,7 +269,7 @@ const Container = styled(View)`
 
 const Header = styled(View)`
   position: relative;
-  background-color: #eee;
+  background-color: #f9f9f9;
   height: 40px;
   justify-content: center;
   align-items: center;
@@ -249,6 +277,7 @@ const Header = styled(View)`
 `;
 
 const Crumb = styled(View)`
+  display: none;
   justify-content: center;
   align-items: center;
   margin-left: 20px;
@@ -264,7 +293,7 @@ const CrumbLabel = styled(Text)`
 `;
 
 const CloseButton = styled(Button)`
-  width: 40px;
+  width: 100px;
   height: 40px;
   position: absolute;
   left: 10px;
