@@ -6,31 +6,50 @@ const Header = ['Consultant', 'SAL', 'PTAX', 'BON', 'LEA'];
 
 class DrilldownConsultants extends React.Component {
   state = {
-    consultantRows: [],
+    reportRows: [],
     loading: true,
   };
 
   componentDidMount() {
-    console.log(this.props);
     const { permConsultants } = this.props;
     const monthLabel = this.props.report.params.month.label;
     const { cells } = this.props.mainReportData;
 
-    const consultantRows = [Header];
+    const records = [];
     permConsultants.forEach(consultant => {
-      const dataRow = [
-        consultant.name,
-        cells[`SAL-${monthLabel}`][consultant.id] || 0,
-        cells[`PTAX-${monthLabel}`][consultant.id] || 0,
-        cells[`BON-${monthLabel}`][consultant.id] || 0,
-        cells[`LEA-${monthLabel}`][consultant.id] || 0,
-      ];
-      consultantRows.push(dataRow);
+      records.push({
+        consultant,
+        salary: Number(cells[`SAL-${monthLabel}`][consultant.id] || 0.0),
+        payrolltax: Number(cells[`PTAX-${monthLabel}`][consultant.id] || 0.0),
+        bonus: Number(cells[`BON-${monthLabel}`][consultant.id] || 0.0),
+        leave: Number(cells[`LEA-${monthLabel}`][consultant.id] || 0.0),
+      });
     });
+
+    // calculate totals
+    const total = { salary: 0.0, payrolltax: 0.0, bonus: 0.0, leave: 0.0 };
+    records.forEach(r => {
+      total.salary += r.salary;
+      total.payrolltax += r.payrolltax;
+      total.bonus += r.bonus;
+      total.leave += r.leave;
+    });
+
+    const reportRows = [Header];
+    records.forEach(r => {
+      const dataRow = [r.consultant.name, r.salary, r.payrolltax, r.bonus, r.leave];
+      reportRows.push(dataRow);
+    });
+
+    reportRows.push({
+      rowStyle: 'total',
+      data: ['Total', total.salary, total.payrolltax, total.bonus, total.leave],
+    });
+    reportRows.push([]);
 
     this.setState({
       loading: false,
-      consultantRows,
+      reportRows,
     });
   }
 
@@ -41,12 +60,12 @@ class DrilldownConsultants extends React.Component {
   );
 
   render() {
-    const { loading, consultantRows } = this.state;
+    const { loading, reportRows } = this.state;
     if (loading) return null;
 
     return (
       <View style={{ flex: 1 }}>
-        <Table data={consultantRows} renderCell={this.renderCell} />
+        <Table data={reportRows} renderCell={this.renderCell} />
       </View>
     );
   }

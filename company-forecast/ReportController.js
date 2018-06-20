@@ -39,13 +39,13 @@ class Layers extends React.Component {
     const currentCompanyId = this.props.company && this.props.company.id;
     // Reload data when filters are changed
     if (prevCompanyId !== currentCompanyId) {
-      // if profitCentre changed, refetch everything
+      // profitCentre is changed, refetch everything
       this.loadData();
     } else if (
       prevProps.startDate !== this.props.startDate ||
       prevProps.endDate !== this.props.endDate
     ) {
-      // if only startDate/endDate changed, only refetch roster entries
+      // only startDate/endDate are changed, only refetch roster entries
       this.loadRosterEntriesOnly();
     }
   }
@@ -91,25 +91,6 @@ class Layers extends React.Component {
       ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
     );
 
-    // const costElements = [];
-    // const revenueElements = [];
-    // const overheadElements = [];
-
-    // for (const element of rawData.forecastElements) {
-    //   switch (element.elementType) {
-    //     case '1':
-    //       costElements.push(element);
-    //       break;
-    //     case '2':
-    //       revenueElements.push(element);
-    //       break;
-    //     case '3':
-    //       overheadElements.push(element);
-    //       break;
-    //     default:
-    //   }
-    // }
-
     this.data = {
       rawData,
       months,
@@ -117,9 +98,6 @@ class Layers extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
-      // costElements,
-      // revenueElements,
-      // overheadElements,
     };
 
     const mainReportData = calculateMainReport({
@@ -137,13 +115,6 @@ class Layers extends React.Component {
     this.setState({
       loading: false,
     });
-
-    // if (startDate.isAfter(endDate)) {
-    //   return this.setState({
-    //     loading: false,
-    //     error: 'Start Month cannot be later than End Month',
-    //   });
-    // }
   };
 
   // Reload RosterEntries only when user only updated time range in the filters

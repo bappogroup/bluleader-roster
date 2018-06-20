@@ -231,7 +231,6 @@ class Roster extends React.Component {
       const consultantName = (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
       const labelStyle = {
         ...style,
-        position: 'fixed',
         width: this.CONSULTANT_CELL_WIDTH,
       };
       if (this.state.isMobile) labelStyle.fontSize = 8;
@@ -287,7 +286,6 @@ class Roster extends React.Component {
           height: Infinity,
         },
         title: `${consultant.name}'s Roster`,
-        header: false,
         headerLeftTitle: 'Back',
       },
     );
@@ -500,7 +498,7 @@ class Roster extends React.Component {
           {({ height, width }) => (
             <MultiGrid
               width={width}
-              height={height - this.CELL_DIMENSION - 10}
+              height={height - this.CELL_DIMENSION - 30}
               fixedColumnCount={1}
               fixedRowCount={1}
               cellRenderer={this.cellRenderer}
