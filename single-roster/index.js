@@ -20,12 +20,13 @@ function truncString(str, max = 18, add = '...') {
 class SingleRoster extends React.Component {
   state = {
     startDate: moment()
-      .day(1)
-      .startOf('day'),
+      .startOf('week')
+      .add(1, 'day'),
     endDate: moment()
-      .day(1)
-      .startOf('day')
+      .startOf('week')
+      .add(1, 'day')
       .add(WEEKS_PER_LOAD, 'weeks'),
+    firstLoaded: false,
     loading: false,
     weeklyEntries: [], // Array of array, containing entries of each week
     consultant: this.props.consultant,
@@ -87,14 +88,15 @@ class SingleRoster extends React.Component {
       consultant: consultant || currentConsultant,
     });
 
-    this.loadRosterEntries(this.state.startDate, this.state.endDate);
+    await this.loadRosterEntries(this.state.startDate, this.state.endDate);
+    this.setState({ firstLoaded: true });
   }
 
   // fetch roster entries between two given dates and append current entry list in state
   loadRosterEntries = async (startDate, endDate, isPrevious = false) => {
     if (this.state.loading) return;
     const { consultant } = this.state;
-    this.setState({ loading: true });
+    await this.setState({ loading: true });
 
     const newRosterEntries = await this.props.$models.RosterEntry.findAll({
       where: {
@@ -128,7 +130,7 @@ class SingleRoster extends React.Component {
       newWeeklyEntries.push(newEntriesByDate.slice(i, i + 7));
     }
 
-    this.setState(({ weeklyEntries }) => {
+    await this.setState(({ weeklyEntries }) => {
       const newState = {
         loading: false,
       };
@@ -194,7 +196,8 @@ class SingleRoster extends React.Component {
   };
 
   handleLoadMore = () => {
-    const { endDate } = this.state;
+    const { endDate, firstLoaded } = this.state;
+    if (!firstLoaded) return;
     this.loadRosterEntries(endDate, moment(endDate).add(WEEKS_PER_LOAD, 'weeks'));
   };
 
@@ -252,8 +255,8 @@ class SingleRoster extends React.Component {
   };
 
   render() {
-    const { consultant, weeklyEntries } = this.state;
-    if (!consultant) return <ActivityIndicator style={{ flex: 1 }} />;
+    const { consultant, weeklyEntries, firstLoaded } = this.state;
+    if (!(consultant && firstLoaded)) return <ActivityIndicator style={{ flex: 1 }} />;
 
     return (
       <Container>

@@ -288,6 +288,7 @@ class Roster extends React.Component {
         },
         title: `${consultant.name}'s Roster`,
         header: false,
+        headerLeftTitle: 'Back',
       },
     );
   };
