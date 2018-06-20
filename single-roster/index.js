@@ -29,8 +29,8 @@ class SingleRoster extends React.Component {
     firstLoaded: false,
     loading: false,
     weeklyEntries: [], // Array of array, containing entries of each week
-    consultant: this.props.consultant,
-    projectOptions: this.props.projectOptions,
+    consultant: null,
+    projectOptions: [],
     projectLookup: {}, // Find a project by id
     probabilityLookup: {}, // Find a probability by id
   };
@@ -230,14 +230,22 @@ class SingleRoster extends React.Component {
     let projectName = entry && entry.project && entry.project.name;
     if (projectName) projectName = truncString(projectName);
 
+    if (this.props.readOnly) {
+      return (
+        <TextCell key={entry.date} backgroundColor={backgroundColor}>
+          <CellText>{projectName}</CellText>
+        </TextCell>
+      );
+    }
+
     return (
-      <Cell
+      <ButtonCell
         key={entry.date}
         onPress={() => this.openEntryForm(entry)}
         backgroundColor={backgroundColor}
       >
         <CellText>{projectName}</CellText>
-      </Cell>
+      </ButtonCell>
     );
   };
 
@@ -317,7 +325,12 @@ const HeaderCell = styled(Text)`
   align-self: center;
 `;
 
-const Cell = styled(Button)`
+const ButtonCell = styled(Button)`
+  ${cellStyle} border: 1px solid #eee;
+  background-color: ${props => props.backgroundColor};
+`;
+
+const TextCell = styled(View)`
   ${cellStyle} border: 1px solid #eee;
   background-color: ${props => props.backgroundColor};
 `;
