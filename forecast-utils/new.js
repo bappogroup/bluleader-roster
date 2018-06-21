@@ -171,7 +171,7 @@ export const getMonthArray = (rawStartDate, rawEndDate) => {
 };
 
 /**
- * Start of salculations of main report
+ * Start of calculations of main report
  * Each function will reassign original 'cells' in MainReport
  */
 
@@ -219,7 +219,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         cells[salaryCellKey][consultant.id] = salary;
         cells[salaryCellKey].value += +salary;
 
-        const taxCellKey = `PTAX-${month.label}`;
+        const taxCellKey = `PTAXP-${month.label}`;
         const tax = (+salary * payrollTaxRate).toFixed(2);
         cells[taxCellKey][consultant.id] = tax;
         cells[taxCellKey].value += +tax;
@@ -256,7 +256,7 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
       // Wages
       const monthLabel = moment(entry.data).format('MMM YYYY');
       const wageCellKey = `CWAGES-${monthLabel}`;
-      const taxCellKey = `PTAX-${monthLabel}`;
+      const taxCellKey = `PTAXC-${monthLabel}`;
 
       if (!cells[wageCellKey][entry.consultant_id]) cells[wageCellKey][entry.consultant_id] = 0;
 
@@ -283,9 +283,6 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
 const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
   for (const entry of rosterEntries) {
     // This project assignment must exist!
-    if (!projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`])
-      console.log('non-exist project assignment', entry);
-
     const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
 
     const monthLabel = moment(entry.data).format('MMM YYYY');
@@ -308,7 +305,7 @@ const calculateForecastEntries = ({ cells, forecastEntries }) => {
     const cellKey = `${forecastElementKey}-${monthLabel}`;
 
     const amount = +entry.amount;
-    cells[cellKey][forecastElementKey] = amount;
+    cells[cellKey][entry.id] = entry;
     cells[cellKey].value += amount;
   }
 };
@@ -489,3 +486,7 @@ export const calculateMainReport = ({
     overheadElements,
   };
 };
+
+/**
+ * End of calculations of main report
+ */

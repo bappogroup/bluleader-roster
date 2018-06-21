@@ -9,6 +9,7 @@ import {
 import MainReport from './MainReport';
 import DrilldownConsultants from './DrilldownConsultants';
 import DrilldownContractors from './DrilldownContractors';
+import DrilldownPlain from './DrilldownPlain';
 
 class Layers extends React.Component {
   data = {};
@@ -91,25 +92,6 @@ class Layers extends React.Component {
       ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
     );
 
-    // const costElements = [];
-    // const revenueElements = [];
-    // const overheadElements = [];
-
-    // for (const element of rawData.forecastElements) {
-    //   switch (element.elementType) {
-    //     case '1':
-    //       costElements.push(element);
-    //       break;
-    //     case '2':
-    //       revenueElements.push(element);
-    //       break;
-    //     case '3':
-    //       overheadElements.push(element);
-    //       break;
-    //     default:
-    //   }
-    // }
-
     this.data = {
       rawData,
       months,
@@ -117,9 +99,6 @@ class Layers extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
-      // costElements,
-      // revenueElements,
-      // overheadElements,
     };
 
     const mainReportData = calculateMainReport({
@@ -178,7 +157,7 @@ class Layers extends React.Component {
 
   // Append a report to state
   openReport = report => {
-    this.setState({ reports: [...this.state.reports, report] });
+    if (report.component) this.setState({ reports: [...this.state.reports, report] });
   };
 
   // Render a report, and apply hidden styles if needed
@@ -214,6 +193,9 @@ class Layers extends React.Component {
           break;
         case 'DrilldownContractors':
           content = <DrilldownContractors {...props} report={report} {...this.data} />;
+          break;
+        case 'DrilldownPlain':
+          content = <DrilldownPlain {...props} report={report} {...this.data} />;
           break;
         default:
       }

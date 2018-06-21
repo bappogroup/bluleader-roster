@@ -85,46 +85,53 @@ class MainReport extends React.Component {
     const { elementKey, index } = params;
 
     const month = this.props.months[index];
+    let component;
+    const otherParams = {};
+
+    if (!elementKey) {
+      // Totals
+      return (
+        <Cell>
+          <Text>{data}</Text>
+        </Cell>
+      );
+    }
 
     switch (elementKey) {
       case 'SAL':
       case 'BON':
-      case 'PTAX':
+      case 'PTAXP':
       case 'LEA':
-        return (
-          <ButtonCell
-            onPress={() =>
-              this.props.openReport({
-                name: `Report on ${month.label}`,
-                component: 'DrilldownConsultants',
-                params: { month },
-              })
-            }
-          >
-            <Text>{data}</Text>
-          </ButtonCell>
-        );
+        component = 'DrilldownConsultants';
+        break;
+      case 'PTAXC':
       case 'CWAGES':
-        return (
-          <ButtonCell
-            onPress={() =>
-              this.props.openReport({
-                name: `Report on ${month.label}`,
-                component: 'DrilldownContractors',
-                params: { month },
-              })
-            }
-          >
-            <Text>{data}</Text>
-          </ButtonCell>
-        );
+        component = 'DrilldownContractors';
+        break;
+      case 'FIXREV':
+        // TODO
+        break;
+      case 'TMREV':
+        // TODO
+        break;
       default:
-        return (
-          <Cell>
-            <Text>{data}</Text>
-          </Cell>
-        );
+        component = 'DrilldownPlain';
+        otherParams.elementKey = elementKey;
     }
+
+    return (
+      <ButtonCell
+        onPress={() =>
+          this.props.openReport({
+            name: `Report on ${month.label}`,
+            component,
+            params: { month, ...otherParams },
+          })
+        }
+      >
+        <Text>{data}</Text>
+      </ButtonCell>
+    );
   };
 
   render() {

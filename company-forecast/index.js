@@ -31,8 +31,13 @@ class CompanyForecast extends React.Component {
     );
     const [companies, periods] = await Promise.all(promises);
 
-    this.data.periods = periods;
-    this.data.monthOptions = periods.map((p, index) => ({
+    // Sort periods
+    this.data.periods = periods.sort((p1, p2) => {
+      if (p1.year !== p2.year) return +p1.year - p2.year;
+      return +p1.period - +p2.period;
+    });
+
+    this.data.monthOptions = this.data.periods.map((p, index) => ({
       id: p.id,
       label: p.name,
       pos: index,
@@ -166,9 +171,15 @@ class CompanyForecast extends React.Component {
     if (this.state.currentAction === 'select') {
       return (
         <Container>
-          <FilterButton onPress={this.setFilters}>
-            <Text>change company or time </Text>
-          </FilterButton>
+          <TitleContainer>
+            <Title>
+              Run report for {company.name}, from {forecastStartDate.format('MMM YY')} to{' '}
+              {forecastEndDate.format('MMM YY')}
+            </Title>
+            <FilterButton onPress={this.setFilters}>
+              <Text>change</Text>
+            </FilterButton>
+          </TitleContainer>
           <RunButton onPress={() => this.setState({ currentAction: 'run' })}>
             <RunButtonText> Run </RunButtonText>
           </RunButton>
@@ -190,6 +201,8 @@ class CompanyForecast extends React.Component {
         </Container>
       );
     }
+
+    return null;
   }
 }
 
@@ -200,13 +213,13 @@ const Container = styled(View)`
 `;
 
 const FilterButton = styled(Button)`
-  margin-top: 15px;
-  margin-left: 20px;
+  margin-left: 15px;
 `;
 
 const RunButton = styled(Button)`
   height: 50px;
-  margin: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
   background-color: orange;
   border-radius: 3px;
   justify-content: center;
@@ -216,3 +229,10 @@ const RunButton = styled(Button)`
 const RunButtonText = styled(Text)`
   color: white;
 `;
+
+const TitleContainer = styled(View)`
+  margin: 20px;
+  flex-direction: row;
+`;
+
+const Title = styled(Text)``;

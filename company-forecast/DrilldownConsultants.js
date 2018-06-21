@@ -2,25 +2,22 @@ import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 import Table from 'bappo-table';
 
-const Header = ['Consultant', 'SAL', 'PTAX', 'BON', 'LEA'];
+const Header = ['Consultant', 'Salary', 'Payroll Tax', 'Bonus', 'Leave'];
 
 class DrilldownConsultants extends React.Component {
-  state = {
-    reportRows: [],
-    loading: true,
-  };
+  constructor(props) {
+    super(props);
 
-  componentDidMount() {
-    const { permConsultants } = this.props;
-    const monthLabel = this.props.report.params.month.label;
-    const { cells } = this.props.mainReportData;
+    const { permConsultants } = props;
+    const monthLabel = props.report.params.month.label;
+    const { cells } = props.mainReportData;
 
     const records = [];
     permConsultants.forEach(consultant => {
       records.push({
         consultant,
         salary: Number(cells[`SAL-${monthLabel}`][consultant.id] || 0.0),
-        payrolltax: Number(cells[`PTAX-${monthLabel}`][consultant.id] || 0.0),
+        payrolltax: Number(cells[`PTAXP-${monthLabel}`][consultant.id] || 0.0),
         bonus: Number(cells[`BON-${monthLabel}`][consultant.id] || 0.0),
         leave: Number(cells[`LEA-${monthLabel}`][consultant.id] || 0.0),
       });
@@ -46,10 +43,7 @@ class DrilldownConsultants extends React.Component {
       data: ['Total', total.salary, total.payrolltax, total.bonus, total.leave],
     });
 
-    this.setState({
-      loading: false,
-      reportRows,
-    });
+    this.state = { reportRows };
   }
 
   renderCell = data => (
@@ -59,12 +53,9 @@ class DrilldownConsultants extends React.Component {
   );
 
   render() {
-    const { loading, reportRows } = this.state;
-    if (loading) return null;
-
     return (
       <View style={{ flex: 1 }}>
-        <Table data={reportRows} renderCell={this.renderCell} />
+        <Table data={this.state.reportRows} renderCell={this.renderCell} />
       </View>
     );
   }
