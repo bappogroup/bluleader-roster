@@ -10,19 +10,27 @@ class Table extends React.Component {
     screenWidth: 300,
   };
 
-  renderHeaderCell =
-    this.props.renderHeaderCell ||
+  renderFixedHeaderCell =
+    this.props.renderFixedHeaderCell ||
     ((data, { rowStyle, key }) => (
-      <Cell key={key}>
+      <FixedCell key={key}>
         <HeaderText>{data}</HeaderText>
-      </Cell>
+      </FixedCell>
     ));
 
   renderFixedCell =
     this.props.renderFixedCell ||
     ((data, { rowStyle, key }) => (
-      <Cell key={key}>
+      <FixedCell key={key}>
         <LabelText>{data}</LabelText>
+      </FixedCell>
+    ));
+
+  renderHeaderCell =
+    this.props.renderHeaderCell ||
+    ((data, { rowStyle, key }) => (
+      <Cell key={key}>
+        <HeaderText>{data}</HeaderText>
       </Cell>
     ));
 
@@ -38,7 +46,7 @@ class Table extends React.Component {
 
   onLayout = params => {
     const screenWidth = params.nativeEvent.layout.width;
-    const colCount = Math.round((screenWidth - 120) / 100);
+    const colCount = Math.round((screenWidth - 150) / 100);
     this.setState({
       screenWidth,
       colCount,
@@ -69,7 +77,8 @@ class Table extends React.Component {
     }
 
     const renderCell = rowStyle === 'header' ? this.renderHeaderCell : this.renderCell;
-    const renderFixedCell = rowStyle === 'header' ? this.renderHeaderCell : this.renderFixedCell;
+    const renderFixedCell =
+      rowStyle === 'header' ? this.renderFixedHeaderCell : this.renderFixedCell;
 
     return (
       <Row rowStyle={rowStyle} key={i}>
@@ -87,6 +96,10 @@ class Table extends React.Component {
     );
   };
 
+  renderBlankRow = () => {
+    return <Row />;
+  };
+
   render() {
     if (!this.state.data || this.state.data.length < 1) {
       return (
@@ -102,18 +115,21 @@ class Table extends React.Component {
           {this.screenWidth}
           <NavButton onPress={() => this.scrollHorizontally(-1)}>
             {' '}
-            <Text>←</Text>
+            <NavButtonText>←</NavButtonText>
           </NavButton>
           <NavButton onPress={() => this.scrollHorizontally(1)}>
             {' '}
-            <Text>→</Text>
+            <NavButtonText>→</NavButtonText>
           </NavButton>
         </NavBar>
         <TableContainer>
           <TableHeader>
             {this.renderRow({ data: this.state.data[0], rowStyle: 'header' })}
           </TableHeader>
-          <TableBody>{this.state.data.slice(1).map(this.renderRow)}</TableBody>
+          <TableBody>
+            {this.state.data.slice(1).map(this.renderRow)}
+            {this.renderBlankRow()}
+          </TableBody>
         </TableContainer>
       </Container>
     );
@@ -151,6 +167,8 @@ const cssForHeader = `
 
 const TableContainer = styled(View)`
   flex: 1;
+  margin-left: 10px;
+  margin-right: 10px;
 `;
 
 const TableHeader = styled(View)`
@@ -174,6 +192,13 @@ const Row = styled(View)`
   }
 `;
 
+const FixedCell = styled(View)`
+  justify-content: center;
+  align-items: center;
+  flex: none;
+  width: 150px;
+`;
+
 const Cell = styled(View)`
   justify-content: center;
   align-items: center;
@@ -188,10 +213,15 @@ const HeaderText = styled(Text)`
   color: white;
 `;
 
+const NavButtonText = styled(Text)`
+  font-size: 28px;
+`;
+
 const NavBar = styled(View)`
   height: 50px;
   flex-direction: row;
   justify-content: center;
+  color: #ccc;
 `;
 
 const NavButton = styled(Button)`

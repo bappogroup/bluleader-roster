@@ -1,11 +1,6 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import {
-  dateFormat,
-  getForecastBaseData,
-  getMonthArray,
-  calculateMainReport,
-} from 'forecast-utils';
+import { getForecastBaseData, getMonthArray, calculateMainReport } from 'forecast-utils';
 import MainReport from './MainReport';
 import DrilldownConsultants from './DrilldownConsultants';
 import DrilldownContractors from './DrilldownContractors';
@@ -14,41 +9,22 @@ import DrilldownPlain from './DrilldownPlain';
 class Layers extends React.Component {
   data = {};
 
-  state = {
-    loading: true,
-    error: null,
-    reports: [],
-  };
+  constructor(props) {
+    super(props);
 
-  componentDidMount() {
-    // Set the first report to P&L main report
-    this.setState(
-      {
-        reports: [
-          {
-            name: this.props.title,
-            component: 'Main',
-          },
-        ],
-      },
-      () => this.loadData(),
-    );
+    this.state = {
+      loading: true,
+      reports: [
+        {
+          name: this.props.title,
+          component: 'Main',
+        },
+      ],
+    };
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    const prevCompanyId = prevProps.company && prevProps.company.id;
-    const currentCompanyId = this.props.company && this.props.company.id;
-    // Reload data when filters are changed
-    if (prevCompanyId !== currentCompanyId) {
-      // if profitCentre changed, refetch everything
-      this.loadData();
-    } else if (
-      prevProps.startDate !== this.props.startDate ||
-      prevProps.endDate !== this.props.endDate
-    ) {
-      // if only startDate/endDate changed, only refetch roster entries
-      this.loadRosterEntriesOnly();
-    }
+  componentDidMount() {
+    this.loadData();
   }
 
   // Reload everything when user updated company in the filters
@@ -125,36 +101,6 @@ class Layers extends React.Component {
     // }
   };
 
-  // Reload RosterEntries only when user only updated time range in the filters
-  loadRosterEntriesOnly = async () => {
-    this.setState({ loading: true });
-
-    const { $models, startDate, endDate } = this.props;
-    const consultantIds = this.data.rawData.consultants.map(c => c.id);
-
-    const rosterEntries = await $models.RosterEntry.findAll({
-      where: {
-        date: {
-          $between: [startDate.format(dateFormat), endDate.format(dateFormat)],
-        },
-        consultant_id: {
-          $in: consultantIds,
-        },
-      },
-      include: [{ as: 'consultant' }, { as: 'project' }, { as: 'probability' }],
-      limit: 100000,
-    });
-
-    const months = getMonthArray(startDate, endDate);
-
-    this.data.rawData.rosterEntries = rosterEntries;
-    this.data.months = months;
-
-    this.setState({
-      loading: false,
-    });
-  };
-
   // Append a report to state
   openReport = report => {
     if (report.component) this.setState({ reports: [...this.state.reports, report] });
@@ -201,18 +147,23 @@ class Layers extends React.Component {
       }
     }
 
+    let onPress;
+
+    if (this.state.reports.length > 1) {
+      // Close drilldown
+      onPress = () => this.setState({ reports: this.state.reports.slice(0, -1) });
+    } else {
+      // Back to reset filter
+      onPress = () => this.props.setCurrentAction('select');
+    }
+
     return (
       <ReportContainer key={report.name}>
         <Header>
-          {this.state.reports.length > 1 && (
-            <CloseButton
-              onPress={() => this.setState({ reports: this.state.reports.slice(0, -1) })}
-            >
-              <Text> ← back </Text>
-            </CloseButton>
-          )}
+          <CloseButton onPress={onPress}>
+            <Text> ← back </Text>
+          </CloseButton>
           <Text>{report.name}</Text>
-          <Text />
         </Header>
         {content}
       </ReportContainer>
@@ -223,8 +174,6 @@ class Layers extends React.Component {
     const { reports, loading } = this.state;
 
     if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
-
-    if (!reports.length) return null;
 
     return (
       <Container>

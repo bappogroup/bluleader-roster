@@ -107,7 +107,7 @@ class CompanyForecast extends React.Component {
         },
       ],
       initialValues: {
-        forecastCompanyId: this.state.comapny && this.state.comapny.id,
+        forecastCompanyId: this.state.company && this.state.company.id,
         forecastStartMonthId: this.state.forecastStartMonthId,
         forecastEndMonthId: this.state.forecastEndMonthId,
       },
@@ -196,6 +196,7 @@ class CompanyForecast extends React.Component {
             startDate={forecastStartDate}
             endDate={forecastEndDate}
             periodIds={periodIds}
+            setCurrentAction={currentAction => this.setState({ currentAction })}
             $models={this.props.$models}
           />
         </Container>
