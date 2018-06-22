@@ -34,68 +34,53 @@ class Roster extends React.Component {
   CELL_DIMENSION_LARGE = 120;
   CONSULTANT_CELL_WIDTH = 160;
 
-  state = {
-    costCenter: null,
-    weeks: '12',
-    startDate: moment().startOf('week'),
-    endDate: moment()
-      .startOf('week')
-      .add(12, 'weeks'),
-    loading: true,
-    mode: 'small',
-    entryList: [],
-    leaveProjects: [],
-    consultants: [],
-    projectAssignments: {},
-    consultantOffset: 0,
-    isMobile: false,
-  };
-
   highestRowIndex = 0;
   isLoading = false;
+
+  constructor(props) {
+    super(props);
+
+    let isMobile = false;
+    if (window.innerWidth < 500) {
+      // Mobile
+      this.CONSULTANT_CELL_WIDTH = this.CELL_DIMENSION;
+      isMobile = true;
+    }
+
+    this.state = {
+      isMobile,
+      costCenter: null,
+      weeks: '12',
+      startDate: moment().startOf('week'),
+      endDate: moment()
+        .startOf('week')
+        .add(12, 'weeks'),
+      initializing: true,
+      mode: 'small',
+      entryList: [],
+      leaveProjects: [],
+      consultants: [],
+      projectAssignments: {},
+      consultantOffset: 0,
+    };
+  }
 
   async componentDidMount() {
     const prefs = await getUserPreferences(this.props.$global.currentUser.id, this.props.$models);
     const { costCenter_id } = prefs;
     this.initialize(costCenter_id, this.state.startDate);
-
-    if (window.innerWidth < 500) {
-      // Mobile
-      this.CONSULTANT_CELL_WIDTH = this.CELL_DIMENSION;
-      this.setState({ isMobile: true });
-    }
   }
 
   reload = () =>
     this.initialize(this.state.costCenter && this.state.costCenter.id, this.state.startDate);
 
-  // Initial data loading and configuration
+  // Initial data initializing and configuration
   initialize = async (costCenter_id, startDate, endDate = moment(startDate).add(12, 'weeks')) => {
     const { $models } = this.props;
 
-    await this.setState({
-      projectAssignments: {},
-      consultantOffset: 0,
-      entryList: [],
-      loading: true,
-    });
+    if (!this.state.initializing) await this.setState({ initializing: true });
 
-    const consultantQuery = {
-      active: true,
-    };
-    if (costCenter_id) consultantQuery.costCenter_id = costCenter_id;
-
-    const consultants = await $models.Consultant.findAll({
-      where: consultantQuery,
-    });
-
-    consultants.sort((a, b) => {
-      if (a.name < b.name) return -1;
-      if (a.name > b.name) return 1;
-      return 0;
-    });
-
-    // Insert date array at first
+    // Get date array, to put at first of entryList
     const dateArray = datesToArray(startDate, endDate).map(date => {
       let labelFormat = 'DD';
       if (date.day() === 1) labelFormat = 'MMM DD';
@@ -109,29 +94,152 @@ class Roster extends React.Component {
     });
     dateArray.unshift('');
 
-    const leaveProjects = await $models.Project.findAll({
-      where: {
-        projectType: {
-          $in: ['4', '5', '6'],
+    const consultantQuery = {
+      active: true,
+    };
+    if (costCenter_id) consultantQuery.costCenter_id = costCenter_id;
+
+    const promises = [
+      $models.Consultant.findAll({
+        where: consultantQuery,
+      }),
+      $models.Project.findAll({
+        where: {
+          projectType: {
+            $in: ['4', '5', '6'],
+          },
         },
-      },
+      }),
+    ];
+
+    if (costCenter_id) promises.push($models.CostCenter.findById(costCenter_id));
+
+    const [consultants, leaveProjects, costCenter] = await Promise.all(promises);
+
+    consultants.sort((a, b) => {
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      return 0;
     });
 
     this.setState(
       {
         entryList: [dateArray],
+        costCenter,
         consultants,
         consultantCount: consultants.length,
+        consultantOffset: 0,
         leaveProjects,
         startDate,
         endDate,
       },
-      async () => {
-        if (costCenter_id) {
-          const costCenter = await $models.CostCenter.findById(costCenter_id);
-          this.setState({ costCenter }, () => this.loadData());
-        } else {
-          this.setState({ costCenter: null }, () => this.loadData());
+      () => this.loadData(),
+    );
+  };
+
+  loadData = async () => {
+    const {
+      costCenter,
+      startDate,
+      endDate,
+      consultants,
+      consultantOffset,
+      projectAssignments,
+      entryList,
+    } = this.state;
+    const { RosterEntry, ProjectAssignment } = this.props.$models;
+
+    if (this.isLoading) return;
+    this.isLoading = true;
+
+    const consultantQuery = {
+      active: true,
+    };
+    const newConsultantOffset = consultantOffset + 10;
+
+    if (costCenter) consultantQuery.costCenter_id = costCenter.id;
+
+    const newConsultants = consultants.slice(consultantOffset, newConsultantOffset);
+
+    // Build map between id and consultant
+    const consultantMap = {};
+    newConsultants.forEach(c => {
+      consultantMap[c.id] = c;
+    });
+    const newConsultantIds = newConsultants.map(c => c.id);
+
+    const promises = [];
+
+    // Fetch Project Assignments
+    promises.push(
+      ProjectAssignment.findAll({
+        where: {
+          consultant_id: {
+            $in: newConsultantIds,
+          },
+        },
+        include: [{ as: 'project' }],
+        limit: 1000,
+      }),
+    );
+
+    // Fetch roster entries
+    promises.push(
+      RosterEntry.findAll({
+        where: {
+          date: {
+            $between: [startDate.format(dateFormat), endDate.format(dateFormat)],
+          },
+          consultant_id: {
+            $in: newConsultantIds,
+          },
+        },
+        include: [{ as: 'project' }, { as: 'probability' }],
+        limit: 1000,
+      }).then(rosterEntries => {
+        const tempMap = {};
+        newConsultantIds.forEach(cid => {
+          tempMap[cid] = [];
+        });
+
+        rosterEntries.forEach(entry => {
+          const entryIndex = moment(entry.date).diff(startDate, 'days');
+          tempMap[entry.consultant_id][entryIndex] = entry;
+        });
+
+        // Insert consultant name at first of roster entry array
+        const newEntryList = Object.entries(tempMap).map(([key, value]) => {
+          const consultant = consultantMap[key];
+          return [consultant, ...value];
+        });
+
+        // Sorting based on consultant name
+        newEntryList.sort((a, b) => {
+          if (a[0].name < b[0].name) return -1;
+          if (a[0].name > b[0].name) return 1;
+          return 0;
+        });
+
+        return newEntryList;
+      }),
+    );
+
+    const [newProjectAssignments, newEntryList] = await Promise.all(promises);
+
+    this.setState(
+      {
+        initializing: false,
+        entryList: [...entryList, ...newEntryList],
+        projectAssignments: [...projectAssignments, ...newProjectAssignments],
+        consultantOffset: newConsultantOffset,
+      },
+      () => {
+        // Fetch data of next 10 consultants if needed
+        this.isLoading = false;
+
+        this.gridRef.recomputeGridSize();
+        if (newConsultantOffset < this.highestRowIndex) {
+          this.loadData();
         }
       },
     );
@@ -191,6 +299,8 @@ class Roster extends React.Component {
       onSubmit: async ({ costCenterId, startDate, weeks }) => {
         const endDate = moment(startDate).add(weeks, 'weeks');
         this.setState({ weeks });
+        this.highestRowIndex = 0;
+        this.isLoading = false;
         this.initialize(costCenterId, moment(startDate), endDate);
 
         setUserPreferences(this.props.$global.currentUser.id, $models, {
@@ -209,7 +319,9 @@ class Roster extends React.Component {
       this.highestRowIndex = rowIndex;
     }
 
-    if (!entryList[rowIndex]) this.loadData();
+    if (!entryList[rowIndex]) {
+      this.loadData();
+    }
 
     const entry = entryList[rowIndex] && entryList[rowIndex][columnIndex];
 
@@ -326,114 +438,6 @@ class Roster extends React.Component {
     await this.reloadConsultantData(data.consultant_id);
   };
 
-  loadData = async () => {
-    const {
-      costCenter,
-      startDate,
-      endDate,
-      consultants,
-      consultantOffset,
-      projectAssignments,
-      entryList,
-    } = this.state;
-    const { RosterEntry, ProjectAssignment } = this.props.$models;
-
-    if (this.isLoading) return;
-    this.isLoading = true;
-
-    const consultantQuery = {
-      active: true,
-    };
-    const newConsultantOffset = consultantOffset + 10;
-
-    if (costCenter) consultantQuery.costCenter_id = costCenter.id;
-
-    const newConsultants = consultants.slice(consultantOffset, newConsultantOffset);
-
-    // Build map between id and consultant
-    const consultantMap = {};
-    newConsultants.forEach(c => {
-      consultantMap[c.id] = c;
-    });
-    const newConsultantIds = newConsultants.map(c => c.id);
-
-    const promises = [];
-
-    // Fetch Project Assignments
-    promises.push(
-      ProjectAssignment.findAll({
-        where: {
-          consultant_id: {
-            $in: newConsultantIds,
-          },
-        },
-        include: [{ as: 'project' }],
-        limit: 1000,
-      }),
-    );
-
-    // Fetch roster entries
-    promises.push(
-      RosterEntry.findAll({
-        where: {
-          date: {
-            $between: [startDate.format(dateFormat), endDate.format(dateFormat)],
-          },
-          consultant_id: {
-            $in: newConsultantIds,
-          },
-        },
-        include: [{ as: 'project' }, { as: 'probability' }],
-        limit: 1000,
-      }).then(rosterEntries => {
-        const tempMap = {};
-        newConsultantIds.forEach(cid => {
-          tempMap[cid] = [];
-        });
-
-        rosterEntries.forEach(entry => {
-          const entryIndex = moment(entry.date).diff(startDate, 'days');
-          tempMap[entry.consultant_id][entryIndex] = entry;
-        });
-
-        // Insert consultant name at first of roster entry array
-        const newEntryList = Object.entries(tempMap).map(([key, value]) => {
-          const consultant = consultantMap[key];
-          return [consultant, ...value];
-        });
-
-        // Sorting based on consultant name
-        newEntryList.sort((a, b) => {
-          if (a[0].name < b[0].name) return -1;
-          if (a[0].name > b[0].name) return 1;
-          return 0;
-        });
-
-        return newEntryList;
-      }),
-    );
-
-    const [newProjectAssignments, newEntryList] = await Promise.all(promises);
-
-    this.setState(
-      {
-        loading: false,
-        entryList: [...entryList, ...newEntryList],
-        projectAssignments: [...projectAssignments, ...newProjectAssignments],
-        consultantOffset: newConsultantOffset,
-      },
-      () => {
-        // Fetch data of next 10 consultants if needed
-        this.isLoading = false;
-
-        this.gridRef.recomputeGridSize();
-        if (newConsultantOffset < this.highestRowIndex) {
-          this.loadData();
-        }
-      },
-    );
-  };
-
   reloadConsultantData = async consultant_id => {
     const { startDate, endDate, consultants } = this.state;
 
@@ -462,15 +466,15 @@ class Roster extends React.Component {
       ({ entryList }) => {
         const newEntryList = entryList.slice();
         newEntryList[rowIndex + 1] = newEntriesArr;
-        return { entryList: newEntryList, loading: false };
+        return { entryList: newEntryList, initializing: false };
       },
       () => this.gridRef.recomputeGridSize({ rowIndex }),
     );
   };
 
   render() {
-    const { loading, consultantCount, costCenter, entryList, mode } = this.state;
-    if (loading) {
+    const { initializing, consultantCount, costCenter, entryList, mode } = this.state;
+    if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
 
