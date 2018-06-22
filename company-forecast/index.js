@@ -112,14 +112,14 @@ class CompanyForecast extends React.Component {
         forecastEndMonthId: this.state.forecastEndMonthId,
       },
       onSubmit: ({ forecastCompanyId, forecastStartMonthId, forecastEndMonthId }) => {
-        const comapny = companies.find(c => c.id === forecastCompanyId);
+        const company = companies.find(c => c.id === forecastCompanyId);
         const { forecastStartDate, forecastEndDate, periodIds } = this.processPeriods(
           forecastStartMonthId,
           forecastEndMonthId,
         );
 
         this.setState({
-          comapny,
+          company,
           forecastStartMonthId,
           forecastEndMonthId,
           forecastStartDate,

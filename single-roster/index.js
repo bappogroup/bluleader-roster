@@ -256,7 +256,7 @@ class SingleRoster extends React.Component {
     return (
       <ButtonRow>
         <LoadPreviousButton onPress={() => this.loadRosterEntries(startDate, endDate, true)}>
-          load previous
+          <Text>load previous</Text>
         </LoadPreviousButton>
       </ButtonRow>
     );
