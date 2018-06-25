@@ -96,9 +96,7 @@ class Table extends React.Component {
     );
   };
 
-  renderBlankRow = () => {
-    return <Row />;
-  };
+  renderBlankRow = () => <Row />;
 
   render() {
     if (!this.state.data || this.state.data.length < 1) {
@@ -114,11 +112,9 @@ class Table extends React.Component {
         <NavBar>
           {this.screenWidth}
           <NavButton onPress={() => this.scrollHorizontally(-1)}>
-            {' '}
             <NavButtonText>←</NavButtonText>
           </NavButton>
           <NavButton onPress={() => this.scrollHorizontally(1)}>
-            {' '}
             <NavButtonText>→</NavButtonText>
           </NavButton>
         </NavBar>
@@ -215,13 +211,13 @@ const HeaderText = styled(Text)`
 
 const NavButtonText = styled(Text)`
   font-size: 28px;
+  color: #ccc;
 `;
 
 const NavBar = styled(View)`
   height: 50px;
   flex-direction: row;
   justify-content: center;
-  color: #ccc;
 `;
 
 const NavButton = styled(Button)`

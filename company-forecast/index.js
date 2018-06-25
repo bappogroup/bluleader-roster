@@ -66,6 +66,14 @@ class CompanyForecast extends React.Component {
     }
   }
 
+  timeRangeValidator = (value, formValues) => {
+    if (!value) return 'Required';
+    const startOption = this.data.monthOptions.find(m => m.id === formValues.forecastStartMonthId);
+    const endOption = this.data.monthOptions.find(m => m.id === formValues.forecastEndMonthId);
+    if (endOption.pos < startOption.pos) return 'Invalid time range';
+    return undefined;
+  };
+
   setFilters = () => {
     const { $models, $popup } = this.props;
     const { companies, monthOptions } = this.data;
@@ -94,7 +102,7 @@ class CompanyForecast extends React.Component {
           properties: {
             options: monthOptions,
           },
-          validate: [value => (value ? undefined : 'Required')],
+          validate: this.timeRangeValidator,
         },
         {
           name: 'forecastEndMonthId',
@@ -103,7 +111,7 @@ class CompanyForecast extends React.Component {
           properties: {
             options: monthOptions,
           },
-          validate: [value => (value ? undefined : 'Required')],
+          validate: this.timeRangeValidator,
         },
       ],
       initialValues: {

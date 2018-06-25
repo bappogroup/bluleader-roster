@@ -189,13 +189,6 @@ const Container = styled(View)`
   display: flex;
   height: 80%;
   flex: 1;
-
-  .fixed {
-    flex: none;
-  }
-  .flex {
-    flex: 1;
-  }
 `;
 
 const Header = styled(View)`
@@ -229,7 +222,6 @@ const CloseButton = styled(Button)`
   position: absolute;
   left: 10px;
   top: 10px;
-  color: black;
 `;
 
 const ReportContainer = styled(View)`
