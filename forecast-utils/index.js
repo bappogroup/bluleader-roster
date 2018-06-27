@@ -238,7 +238,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
 };
 
 /**
- * Calculate permanent consultant data of given months
+ * Calculate contractor consultant data of given months
  * Includes: 'wages' and 'payroll tax'
  *
  * Conditions for wage: see the util function at top
@@ -256,7 +256,7 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
   for (const entry of contractorRosterEntries) {
     if (rosterEntryIncursContractorWages(entry)) {
       // Wages
-      const monthLabel = moment(entry.data).format('MMM YYYY');
+      const monthLabel = moment(entry.date).format('MMM YYYY');
       const wageCellKey = `CWAGES-${monthLabel}`;
       const taxCellKey = `PTAXC-${monthLabel}`;
 
@@ -287,7 +287,7 @@ const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup
     // This project assignment must exist!
     const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
 
-    const monthLabel = moment(entry.data).format('MMM YYYY');
+    const monthLabel = moment(entry.date).format('MMM YYYY');
     const cellKey = `TMREV-${monthLabel}`;
 
     if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;

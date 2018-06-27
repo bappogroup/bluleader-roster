@@ -1,9 +1,9 @@
-import moment from "moment";
+import moment from 'moment';
 
 export const getMonday = (date = moment()) => moment(date).day(1);
 
 export const daysDisplayed = 82;
-export const dateFormat = "YYYY-MM-DD";
+export const dateFormat = 'YYYY-MM-DD';
 
 export const datesToArray = (from, to) => {
   const list = [];
@@ -11,14 +11,14 @@ export const datesToArray = (from, to) => {
 
   do {
     list.push(day);
-    day = day.clone().add(1, "d");
+    day = day.clone().add(1, 'd');
   } while (day < to);
   return list;
 };
 
 export const datesToArrayByStart = start => {
   const startDate = moment(start);
-  return datesToArray(startDate, startDate.clone().add(daysDisplayed, "d"));
+  return datesToArray(startDate, startDate.clone().add(daysDisplayed, 'd'));
 };
 
 export const datesEqual = (time1, time2) => {
@@ -29,136 +29,103 @@ export const datesEqual = (time1, time2) => {
 
 const weekdayOptions = [
   {
-    id: "1",
-    label: "Monday"
+    id: '1',
+    label: 'Monday',
   },
   {
-    id: "2",
-    label: "Tuesday"
+    id: '2',
+    label: 'Tuesday',
   },
   {
-    id: "3",
-    label: "Wednesday"
+    id: '3',
+    label: 'Wednesday',
   },
   {
-    id: "4",
-    label: "Thursday"
+    id: '4',
+    label: 'Thursday',
   },
   {
-    id: "5",
-    label: "Friday"
+    id: '5',
+    label: 'Friday',
   },
   {
-    id: "6",
-    label: "Saturday"
+    id: '6',
+    label: 'Saturday',
   },
   {
-    id: "7",
-    label: "Sunday"
-  }
+    id: '7',
+    label: 'Sunday',
+  },
 ];
 
-export const getEntryFormFields = projectOptions => [
+export const getEntryFormFields = (projectOptions, probabilityOptions) => [
   {
-    name: "project_id",
-    label: "Project",
-    type: "FixedList",
+    name: 'project_id',
+    label: 'Project',
+    type: 'FixedList',
     properties: {
-      options: projectOptions
+      options: projectOptions,
     },
-    validate: [value => (value ? undefined : "Required")]
+    validate: [value => (value ? undefined : 'Required')],
   },
   {
-    path: "date",
-    name: "startDate",
-    label: "From"
+    path: 'date',
+    name: 'startDate',
+    label: 'From',
   },
   {
-    path: "date",
-    name: "endDate",
-    label: "Until"
+    path: 'date',
+    name: 'endDate',
+    label: 'Until',
   },
   {
-    name: "weekdayFrom",
-    label: "Weekday From",
-    type: "FixedList",
+    name: 'weekdayFrom',
+    label: 'Weekday From',
+    type: 'FixedList',
     properties: {
-      options: weekdayOptions
+      options: weekdayOptions,
     },
-    validate: [value => (value ? undefined : "Required")]
+    validate: [value => (value ? undefined : 'Required')],
   },
   {
-    name: "weekdayTo",
-    label: "Weekday To",
-    type: "FixedList",
+    name: 'weekdayTo',
+    label: 'Weekday To',
+    type: 'FixedList',
     properties: {
-      options: weekdayOptions
+      options: weekdayOptions,
     },
-    validate: [value => (value ? undefined : "Required")]
+    validate: [value => (value ? undefined : 'Required')],
   },
-  // {
-  //   name: 'mon',
-  //   type: 'Checkbox',
-  //   label: 'Monday',
-  // },
-  // {
-  //   name: 'tue',
-  //   type: 'Checkbox',
-  //   label: 'Tuesday',
-  // },
-  // {
-  //   name: 'wed',
-  //   type: 'Checkbox',
-  //   label: 'Wednesday',
-  // },
-  // {
-  //   name: 'thu',
-  //   type: 'Checkbox',
-  //   label: 'Thursday',
-  // },
-  // {
-  //   name: 'fri',
-  //   type: 'Checkbox',
-  //   label: 'Friday',
-  // },
-  // {
-  //   name: 'sat',
-  //   type: 'Checkbox',
-  //   label: 'Saturday',
-  // },
-  // {
-  //   name: 'sun',
-  //   type: 'Checkbox',
-  //   label: 'Sunday',
-  // },
-  "probability_id",
   {
-    name: "shouldOverrideLeaves",
-    type: "Checkbox",
-    label: "Overwrite Leave"
+    name: 'probability_id',
+    label: 'Probability',
+    type: 'FixedList',
+    properties: {
+      options: probabilityOptions,
+    },
+    validate: [value => (value ? undefined : 'Required')],
   },
-
   {
-    name: "comment",
-    type: "TextArea",
-    label: "Comments"
-  }
+    name: 'shouldOverrideLeaves',
+    type: 'Checkbox',
+    label: 'Overwrite Leave',
+  },
+  {
+    name: 'comment',
+    type: 'TextArea',
+    label: 'Comments',
+  },
 ];
 
-export const updateRosterEntryRecords = async ({
-  data,
-  consultant,
-  operatorName,
-  $models
-}) => {
+export const updateRosterEntryRecords = async ({ data, consultant, operatorName, $models }) => {
   const { RosterEntry, RosterChange } = $models;
 
   const leaveProjects = await $models.Project.findAll({
     where: {
       projectType: {
-        $in: ["4", "5", "6"]
-      }
-    }
+        $in: ['4', '5', '6'],
+      },
+    },
   });
 
   // Generate new entries
@@ -166,7 +133,7 @@ export const updateRosterEntryRecords = async ({
   for (
     let d = moment(data.startDate).clone();
     d.isSameOrBefore(moment(data.endDate));
-    d.add(1, "day")
+    d.add(1, 'day')
   ) {
     let weekdayIndex = d.day();
     // Sunday's index is 7
@@ -174,10 +141,10 @@ export const updateRosterEntryRecords = async ({
     if (weekdayIndex >= +data.weekdayFrom && weekdayIndex <= +data.weekdayTo) {
       // Only pick chosen weekdays
       newEntries.push({
-        date: d.format("YYYY-MM-DD"),
+        date: d.format('YYYY-MM-DD'),
         consultant_id: data.consultant_id,
         project_id: data.project_id,
-        probability_id: data.probability_id
+        probability_id: data.probability_id,
       });
     }
   }
@@ -190,29 +157,29 @@ export const updateRosterEntryRecords = async ({
     where: {
       consultant_id: data.consultant_id,
       date: {
-        $in: dates
+        $in: dates,
       },
       project_id: {
-        $in: leaveProjects.map(p => p.id)
-      }
-    }
+        $in: leaveProjects.map(p => p.id),
+      },
+    },
   });
 
   const destroyQuery = {
     consultant_id: data.consultant_id,
     date: {
-      $in: dates
-    }
+      $in: dates,
+    },
   };
 
   if (!data.shouldOverrideLeaves) {
     destroyQuery.id = {
-      $notIn: leaveEntries.map(e => e.id)
+      $notIn: leaveEntries.map(e => e.id),
     };
   }
 
   await RosterEntry.destroy({
-    where: destroyQuery
+    where: destroyQuery,
   });
 
   // Create change log
@@ -226,7 +193,7 @@ export const updateRosterEntryRecords = async ({
     project_id: data.project_id,
     probability_id: data.probability_id,
     weekdayFrom: data.weekdayFrom,
-    weekdayTo: data.weekdayTo
+    weekdayTo: data.weekdayTo,
   });
 
   const leaveEntryDates = leaveEntries.map(e => e.date);
@@ -237,20 +204,17 @@ export const updateRosterEntryRecords = async ({
   return RosterEntry.bulkCreate(entriesToCreate);
 };
 
-export const projectAssignmentsToOptions = (
-  projectAssignments,
-  leaveProjects = []
-) =>
+export const projectAssignmentsToOptions = (projectAssignments, leaveProjects = []) =>
   projectAssignments
     .map(pa => ({
       id: pa.project_id,
-      label: pa.project.name
+      label: pa.project.name,
     }))
     .concat(
       leaveProjects.map(p => ({
         id: p.id,
-        label: p.name
-      }))
+        label: p.name,
+      })),
     )
     .sort((a, b) => {
       if (a.label < b.label) return -1;
@@ -259,5 +223,5 @@ export const projectAssignmentsToOptions = (
     })
     .map((op, index) => ({
       ...op,
-      pos: index
+      pos: index,
     }));

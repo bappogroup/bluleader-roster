@@ -8,6 +8,7 @@ class Table extends React.Component {
     firstCol: 1,
     colCount: 3,
     screenWidth: 300,
+    cellWidth: this.props.cellWidth || 100,
   };
 
   renderFixedHeaderCell =
@@ -46,7 +47,7 @@ class Table extends React.Component {
 
   onLayout = params => {
     const screenWidth = params.nativeEvent.layout.width;
-    const colCount = Math.round((screenWidth - 150) / 100);
+    const colCount = Math.round((screenWidth - 150) / this.state.cellWidth);
     this.setState({
       screenWidth,
       colCount,
@@ -109,15 +110,16 @@ class Table extends React.Component {
 
     return (
       <Container onLayout={this.onLayout}>
-        <NavBar>
-          {this.screenWidth}
-          <NavButton onPress={() => this.scrollHorizontally(-1)}>
-            <NavButtonText>←</NavButtonText>
-          </NavButton>
-          <NavButton onPress={() => this.scrollHorizontally(1)}>
-            <NavButtonText>→</NavButtonText>
-          </NavButton>
-        </NavBar>
+        {this.state.data[0].length > 1 && (
+          <NavBar>
+            <NavButton onPress={() => this.scrollHorizontally(-1)}>
+              <NavButtonText>←</NavButtonText>
+            </NavButton>
+            <NavButton onPress={() => this.scrollHorizontally(1)}>
+              <NavButtonText>→</NavButtonText>
+            </NavButton>
+          </NavBar>
+        )}
         <TableContainer>
           <TableHeader>
             {this.renderRow({ data: this.state.data[0], rowStyle: 'header' })}
@@ -179,7 +181,7 @@ const TableBody = styled(ScrollView)`
 const Row = styled(View)`
   display: flex;
   flex-direction: row;
-  height: 50px;
+  min-height: 40px;
   justify-content: space-between;
   align-items: center;
     ${props => props.rowStyle === 'data' && cssForData}

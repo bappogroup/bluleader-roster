@@ -2,10 +2,12 @@ import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
 import {
   getForecastBaseDataForProfitCentre,
+  calculateProfitCentreMainReport,
   getMonthArray,
-  calculateMainReport,
 } from 'forecast-utils';
 import MainReport from './MainReport';
+import DrilldownTable from './DrilldownTable';
+import DrilldownCards from './DrilldownCards';
 
 class ReportController extends React.Component {
   constructor(props) {
@@ -19,6 +21,7 @@ class ReportController extends React.Component {
           component: 'Main',
         },
       ],
+      drilldownMode: null,
     };
   }
 
@@ -39,6 +42,11 @@ class ReportController extends React.Component {
       startDate,
       endDate,
       profitCentreId: profitCentre.id,
+    });
+
+    const mainReportData = calculateProfitCentreMainReport({
+      months,
+      ...rawData,
     });
 
     // Process consultants
@@ -68,6 +76,7 @@ class ReportController extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
+      mainReportData,
     };
 
     this.setState({ loading: false });
@@ -78,7 +87,20 @@ class ReportController extends React.Component {
     if (report.component) this.setState({ reports: [...this.state.reports, report] });
   };
 
+  renderSwitchButton = () => (
+    <SwitchButtonContainer>
+      <Button onPress={() => this.setState({ drilldownMode: 'Cards' })} style={{ marginRight: 7 }}>
+        <Text>cards</Text>
+      </Button>
+      <Button onPress={() => this.setState({ drilldownMode: 'Table' })}>
+        <Text>table</Text>
+      </Button>
+    </SwitchButtonContainer>
+  );
+
   renderReport = (report, hidden) => {
+    const { loading, drilldownMode } = this.state;
+
     if (hidden) {
       return (
         <Crumb
@@ -95,7 +117,7 @@ class ReportController extends React.Component {
     }
 
     let content;
-    if (this.state.loading) content = <ActivityIndicator />;
+    if (loading) content = <ActivityIndicator />;
     else {
       const props = {
         openReport: this.openReport,
@@ -105,15 +127,14 @@ class ReportController extends React.Component {
         case 'Main':
           content = <MainReport {...props} {...this.data} />;
           break;
-        // case 'DrilldownConsultants':
-        //   content = <DrilldownConsultants {...props} report={report} {...this.data} />;
-        //   break;
-        // case 'DrilldownContractors':
-        //   content = <DrilldownContractors {...props} report={report} {...this.data} />;
-        //   break;
-        // case 'DrilldownPlain':
-        //   content = <DrilldownPlain {...props} report={report} {...this.data} />;
-        //   break;
+        case 'Drilldown': {
+          if (drilldownMode === 'Cards' || (!drilldownMode && !window)) {
+            content = <DrilldownCards {...props} report={report} {...this.data} />;
+          } else {
+            content = <DrilldownTable {...props} report={report} {...this.data} />;
+          }
+          break;
+        }
         default:
       }
     }
@@ -125,7 +146,7 @@ class ReportController extends React.Component {
       onPress = () => this.setState({ reports: this.state.reports.slice(0, -1) });
     } else {
       // Back to reset filter
-      // onPress = () => this.props.setCurrentAction('select');
+      onPress = () => this.props.setCurrentAction('select');
     }
 
     return (
@@ -135,6 +156,7 @@ class ReportController extends React.Component {
             <Text> ← back </Text>
           </CloseButton>
           <Text>{report.name}</Text>
+          {report.component === 'Drilldown' && this.renderSwitchButton()}
         </Header>
         {content}
       </ReportContainer>
@@ -191,6 +213,13 @@ const CloseButton = styled(Button)`
   height: 40px;
   position: absolute;
   left: 10px;
+  top: 10px;
+`;
+
+const SwitchButtonContainer = styled(View)`
+  flex-direction: row;
+  position: absolute;
+  right: 10px;
   top: 10px;
 `;
 

@@ -36,6 +36,7 @@ class Roster extends React.Component {
 
   highestRowIndex = 0;
   isLoading = false;
+  data = {};
 
   constructor(props) {
     super(props);
@@ -110,11 +111,18 @@ class Roster extends React.Component {
           },
         },
       }),
+      $models.Probability.findAll({}),
     ];
 
     if (costCenter_id) promises.push($models.CostCenter.findById(costCenter_id));
 
-    const [consultants, leaveProjects, costCenter] = await Promise.all(promises);
+    const [consultants, leaveProjects, probabilities, costCenter] = await Promise.all(promises);
+
+    this.data.probabilityOptions = probabilities.map((p, index) => ({
+      id: p.id,
+      label: p.name,
+      pos: index,
+    }));
 
     consultants.sort((a, b) => {
       if (a.name < b.name) return -1;
@@ -411,7 +419,7 @@ class Roster extends React.Component {
 
     this.props.$popup.form({
       objectKey: 'RosterEntry',
-      fields: getEntryFormFields(projectOptions),
+      fields: getEntryFormFields(projectOptions, this.data.probabilityOptions),
       title: `${consultant.name}, ${date}`,
       initialValues: {
         ...entry,
@@ -578,9 +586,7 @@ const ClickLabel = styled(Label)`
 
 const Cell = styled(Button)`
   ${baseStyle} 
-  background-color: ${props => {
-    return props.isWeekend ? 'white' : props.backgroundColor;
-  }};
+  background-color: ${props => (props.isWeekend ? 'white' : props.backgroundColor)};
    
   border: 1px solid #eee;
    

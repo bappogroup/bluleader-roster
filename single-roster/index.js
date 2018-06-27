@@ -18,6 +18,8 @@ function truncString(str, max = 18, add = '...') {
 }
 
 class SingleRoster extends React.Component {
+  data = {};
+
   state = {
     startDate: moment()
       .startOf('week')
@@ -80,6 +82,11 @@ class SingleRoster extends React.Component {
     projectAssignments.forEach(pa => (projectLookup[pa.project_id] = pa.project));
     const probabilityLookup = {};
     probabilities.forEach(p => (probabilityLookup[p.id] = p));
+    this.data.probabilityOptions = probabilities.map((p, index) => ({
+      id: p.id,
+      label: p.name,
+      pos: index,
+    }));
 
     await this.setState({
       projectLookup,
@@ -150,7 +157,7 @@ class SingleRoster extends React.Component {
   openEntryForm = entry => {
     this.props.$popup.form({
       objectKey: 'RosterEntry',
-      fields: getEntryFormFields(this.state.projectOptions),
+      fields: getEntryFormFields(this.state.projectOptions, this.data.probabilityOptions),
       title: `${entry.date}`,
       initialValues: {
         ...entry,

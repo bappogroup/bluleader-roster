@@ -92,13 +92,6 @@ class Layers extends React.Component {
     this.setState({
       loading: false,
     });
-
-    // if (startDate.isAfter(endDate)) {
-    //   return this.setState({
-    //     loading: false,
-    //     error: 'Start Month cannot be later than End Month',
-    //   });
-    // }
   };
 
   // Append a report to state

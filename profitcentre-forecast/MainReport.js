@@ -1,27 +1,14 @@
 import React from 'react';
 import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
 import BappoTable from 'bappo-table';
-import { calculateProfitCentreMainReport } from 'forecast-utils';
-
-const forecastElements = [
-  'T&M Project Revenue',
-  'T&M Project Cost',
-  'People Cost Recovery',
-  'People Cost',
-  'Overheads',
-];
+import { pcForecastElements } from 'forecast-utils';
 
 class MainReport extends React.Component {
   constructor(props) {
     super(props);
 
-    const { months, rawData } = props;
-
-    const { cells } = calculateProfitCentreMainReport({
-      months,
-      ...rawData,
-    });
-    console.log(cells);
+    const { months } = props;
+    const { cells } = props.mainReportData;
 
     // Calculate data for table
     const data = [];
@@ -31,18 +18,49 @@ class MainReport extends React.Component {
     months.forEach(month => monthRow.push(month.label));
     data.push(monthRow);
 
-    forecastElements.forEach(ele => {
+    pcForecastElements.forEach(ele => {
       const row = {
-        elementName: ele,
+        elementKey: ele,
         data: [ele],
       };
       months.forEach(month => row.data.push(cells[`${ele}-${month.label}`].value));
       data.push(row);
     });
 
-    // Project Revenue
-    // const revenueRow = ['T&M Project Revenue'];
-    // months.forEach(month => revenueRow)
+    const projectMarginRow = {
+      rowStyle: 'total',
+      data: ['Project Margin'],
+    };
+    months.forEach(month =>
+      projectMarginRow.data.push(
+        cells[`T&M Project Revenue-${month.label}`].value -
+          cells[`T&M Project Cost-${month.label}`].value,
+      ),
+    );
+    data.splice(3, 0, projectMarginRow, []);
+
+    const peopleMarginRow = {
+      rowStyle: 'total',
+      data: ['People Margin'],
+    };
+    const netProfitRow = {
+      rowStyle: 'total',
+      data: ['Net Profit'],
+    };
+    months.forEach((month, index) => {
+      peopleMarginRow.data.push(
+        cells[`People Cost Recovery-${month.label}`].value -
+          cells[`Consultant Cost(permanent)-${month.label}`].value -
+          cells[`Consultant Cost(contractor)-${month.label}`].value,
+      );
+      netProfitRow.data.push(
+        projectMarginRow.data[index + 1] +
+          peopleMarginRow.data[index + 1] -
+          cells[`Overheads-${month.label}`].value,
+      );
+    });
+    data.splice(8, 0, peopleMarginRow, []);
+    data.push([], netProfitRow);
 
     this.state = { data };
   }
@@ -51,7 +69,7 @@ class MainReport extends React.Component {
     const { key, elementKey, index } = params;
 
     const month = this.props.months[index];
-    let component;
+    // let component;
     const otherParams = {};
 
     if (!elementKey) {
@@ -63,27 +81,27 @@ class MainReport extends React.Component {
       );
     }
 
-    switch (elementKey) {
-      case 'SAL':
-      case 'BON':
-      case 'PTAXP':
-      case 'LEA':
-        component = 'DrilldownConsultants';
-        break;
-      case 'PTAXC':
-      case 'CWAGES':
-        component = 'DrilldownContractors';
-        break;
-      case 'FIXREV':
-        // TODO
-        break;
-      case 'TMREV':
-        // TODO
-        break;
-      default:
-        component = 'DrilldownPlain';
-        otherParams.elementKey = elementKey;
-    }
+    // switch (elementKey) {
+    //   case 'SAL':
+    //   case 'BON':
+    //   case 'PTAXP':
+    //   case 'LEA':
+    //     component = 'DrilldownConsultants';
+    //     break;
+    //   case 'PTAXC':
+    //   case 'CWAGES':
+    //     component = 'DrilldownContractors';
+    //     break;
+    //   case 'FIXREV':
+    //     // TODO
+    //     break;
+    //   case 'TMREV':
+    //     // TODO
+    //     break;
+    //   default:
+    //     component = 'DrilldownPlain';
+    //     otherParams.elementKey = elementKey;
+    // }
 
     return (
       <ButtonCell
@@ -91,7 +109,7 @@ class MainReport extends React.Component {
         onPress={() =>
           this.props.openReport({
             name: `Report on ${month.label}`,
-            component,
+            component: 'Drilldown',
             params: { month, ...otherParams },
           })
         }
