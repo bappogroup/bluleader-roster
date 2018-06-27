@@ -78,7 +78,7 @@ class DrilldownCards extends React.Component {
 
     // Overheads
     const { value, ...properties } = cells[`Overheads-${monthLabel}`];
-    const overheadsCard = { properties, title: 'Overheads', total: value };
+    const overheadsCard = { properties, title: 'Overheads', total: value || 0 };
 
     const netProfit = totalProjectMargin + totalConsultantMargin - overheadsCard.total;
 

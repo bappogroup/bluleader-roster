@@ -15,7 +15,7 @@ const Card = ({ title, properties, total }) => {
       <Title>{title}</Title>
       <PropertyContainer>
         {Object.entries(properties).map(renderProperty)}
-        {!!total && (
+        {typeof total !== 'undefined' && (
           <PropertyRow>
             <Text>Total: {total}</Text>
           </PropertyRow>
