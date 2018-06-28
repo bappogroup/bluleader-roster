@@ -70,8 +70,6 @@ class MainReport extends React.Component {
     const { key, elementKey, index } = params;
 
     const month = this.props.months[index];
-    // let component;
-    const otherParams = {};
 
     if (!elementKey) {
       // Totals
@@ -82,28 +80,6 @@ class MainReport extends React.Component {
       );
     }
 
-    // switch (elementKey) {
-    //   case 'SAL':
-    //   case 'BON':
-    //   case 'PTAXP':
-    //   case 'LEA':
-    //     component = 'DrilldownConsultants';
-    //     break;
-    //   case 'PTAXC':
-    //   case 'CWAGES':
-    //     component = 'DrilldownContractors';
-    //     break;
-    //   case 'FIXREV':
-    //     // TODO
-    //     break;
-    //   case 'TMREV':
-    //     // TODO
-    //     break;
-    //   default:
-    //     component = 'DrilldownPlain';
-    //     otherParams.elementKey = elementKey;
-    // }
-
     return (
       <ButtonCell
         key={key}
@@ -111,7 +87,7 @@ class MainReport extends React.Component {
           this.props.openReport({
             name: `Report on ${month.label}`,
             component: 'Drilldown',
-            params: { month, ...otherParams },
+            params: { month },
           })
         }
       >

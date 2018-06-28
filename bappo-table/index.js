@@ -91,7 +91,12 @@ class Table extends React.Component {
         {cells
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
           .map((data, index) =>
-            renderCell(data, { rowStyle, key: `c${index}`, index, ...otherProperties }),
+            renderCell(data, {
+              rowStyle,
+              key: `c${index}`,
+              index: index + this.state.firstCol - 1,
+              ...otherProperties,
+            }),
           )}
       </Row>
     );
@@ -110,16 +115,14 @@ class Table extends React.Component {
 
     return (
       <Container onLayout={this.onLayout}>
-        {this.state.data[0].length > 1 && (
-          <NavBar>
-            <NavButton onPress={() => this.scrollHorizontally(-1)}>
-              <NavButtonText>←</NavButtonText>
-            </NavButton>
-            <NavButton onPress={() => this.scrollHorizontally(1)}>
-              <NavButtonText>→</NavButtonText>
-            </NavButton>
-          </NavBar>
-        )}
+        <NavBar>
+          <NavButton onPress={() => this.scrollHorizontally(-1)}>
+            <NavButtonText>←</NavButtonText>
+          </NavButton>
+          <NavButton onPress={() => this.scrollHorizontally(1)}>
+            <NavButtonText>→</NavButtonText>
+          </NavButton>
+        </NavBar>
         <TableContainer>
           <TableHeader>
             {this.renderRow({ data: this.state.data[0], rowStyle: 'header' })}

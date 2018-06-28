@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 import Table from 'bappo-table';
 
-const Header = ['Consultant', 'Date', 'Revenue', 'Cost', 'Expense'];
+const Header = ['Consultant', 'Date', 'Revenue', 'Cost', 'Expense', 'Margin'];
 
 class DrilldownProjectTm extends React.Component {
   constructor(props) {
@@ -24,22 +24,23 @@ class DrilldownProjectTm extends React.Component {
         const revenue = +dayRate;
         const cost = +entry.consultant.internalRate;
         const expense = +projectExpense;
+        const margin = revenue - cost - expense;
         totalRevenue += revenue;
         totalCost += cost;
         totalExpense += expense;
-        const row = [entry.consultant.name, entry.date, revenue, cost, expense];
+        const row = [entry.consultant.name, entry.date, revenue, cost, expense, margin];
         reportRows.push(row);
       }
     });
 
-    const margin = totalRevenue - totalCost - totalExpense;
+    const totalMargin = totalRevenue - totalCost - totalExpense;
 
     reportRows.push({
       rowStyle: 'total',
-      data: ['Total', '', totalRevenue, totalCost, totalExpense],
+      data: ['Total', '', totalRevenue, totalCost, totalExpense, totalMargin],
     });
 
-    this.state = { reportRows, margin };
+    this.state = { reportRows };
   }
 
   renderCell = data => (
@@ -49,16 +50,7 @@ class DrilldownProjectTm extends React.Component {
   );
 
   render() {
-    const { reportRows, margin } = this.state;
-
-    return (
-      <View style={{ flex: 1 }}>
-        <Table data={reportRows} renderCell={this.renderCell} />
-        <MarginContainer>
-          <Text>Margin: {margin}</Text>
-        </MarginContainer>
-      </View>
-    );
+    return <Table data={this.state.reportRows} renderCell={this.renderCell} />;
   }
 }
 
@@ -68,9 +60,4 @@ const Cell = styled(View)`
   justify-content: center;
   align-items: center;
   flex: 1;
-`;
-
-const MarginContainer = styled(View)`
-  magin-left: 30px;
-  margin-bottom: 30px;
 `;
