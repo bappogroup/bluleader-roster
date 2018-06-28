@@ -8,6 +8,8 @@ import {
 import MainReport from './MainReport';
 import DrilldownTable from './DrilldownTable';
 import DrilldownCards from './DrilldownCards';
+import DrilldownConsultant from './DrilldownConsultant';
+import DrilldownProjectTm from './DrilldownProjectTm';
 
 class ReportController extends React.Component {
   constructor(props) {
@@ -120,21 +122,28 @@ class ReportController extends React.Component {
     if (loading) content = <ActivityIndicator />;
     else {
       const props = {
+        ...this.data,
         openReport: this.openReport,
+        report,
       };
 
       switch (report.component) {
         case 'Main':
-          content = <MainReport {...props} {...this.data} />;
+          content = <MainReport {...props} />;
           break;
         case 'Drilldown': {
           if (drilldownMode === 'Cards' || (!drilldownMode && !window)) {
-            content = <DrilldownCards {...props} report={report} {...this.data} />;
+            content = <DrilldownCards {...props} />;
           } else {
-            content = <DrilldownTable {...props} report={report} {...this.data} />;
+            content = <DrilldownTable {...props} />;
           }
           break;
         }
+        case 'DrilldownConsultant':
+          content = <DrilldownConsultant {...props} />;
+          break;
+        case 'DrilldownProjectTm':
+          content = <DrilldownProjectTm {...props} />;
         default:
       }
     }

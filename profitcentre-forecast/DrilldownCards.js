@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, Text, styled } from 'bappo-components';
+import { ScrollView, View, Text, Button, styled } from 'bappo-components';
 import Card from 'card';
 
 class DrilldownCards extends React.Component {
@@ -17,6 +17,8 @@ class DrilldownCards extends React.Component {
 
       return {
         title: project.name,
+        type: `project-${project.projectType}`,
+        id: project.id,
         properties: {
           Revenue,
           Cost,
@@ -30,6 +32,7 @@ class DrilldownCards extends React.Component {
     const totalProjectMargin = totalProjectRevenue - totalProjectCost;
     projectCards.push({
       title: 'Totals',
+      type: 'totals',
       properties: {
         Revenue: totalProjectRevenue,
         Cost: totalProjectCost,
@@ -54,6 +57,8 @@ class DrilldownCards extends React.Component {
 
       return {
         title: consultant.name,
+        type: 'consultant',
+        id: consultant.id,
         properties: {
           'Cost Recovery': Recovery,
           Cost,
@@ -69,6 +74,7 @@ class DrilldownCards extends React.Component {
     const totalConsultantMargin = totalConsultantRecovery - totalConsultantCost;
     consultantCards.push({
       title: 'Totals',
+      type: 'totals',
       properties: {
         'Cost Recovery': totalConsultantRecovery,
         Cost: totalConsultantCost,
@@ -78,7 +84,7 @@ class DrilldownCards extends React.Component {
 
     // Overheads
     const { value, ...properties } = cells[`Overheads-${monthLabel}`];
-    const overheadsCard = { properties, title: 'Overheads', total: value || 0 };
+    const overheadsCard = { properties, title: 'Overheads', type: 'totals', total: value || 0 };
 
     const netProfit = totalProjectMargin + totalConsultantMargin - overheadsCard.total;
 
@@ -92,13 +98,47 @@ class DrilldownCards extends React.Component {
   );
 
   renderCards = cards => {
+    const { month } = this.props.report.params;
+
+    const content = cards.map(card => {
+      if (card.type === 'totals') return <Card {...card} />;
+
+      let component;
+      switch (card.type) {
+        case 'project-2':
+          component = 'DrilldownProjectTm';
+          break;
+        case 'project-3':
+          component = 'DrilldownProjectFixedPrice';
+          break;
+        case 'consultant':
+          component = 'DrilldownConsultant';
+          break;
+        default:
+      }
+
+      return (
+        <Button
+          onPress={() =>
+            this.props.openReport({
+              name: `Report of ${card.title}, ${month.label}`,
+              component,
+              params: { month, resourceId: card.id },
+            })
+          }
+        >
+          <Card {...card} />
+        </Button>
+      );
+    });
+
     if (!window || window.innerWidth < 500) {
       // Native or narrow screen
-      return cards.map(card => <Card {...card} />);
+      return content;
     }
 
     // Wide desktop
-    return <CardsContainer>{cards.map(card => <Card {...card} />)}</CardsContainer>;
+    return <CardsContainer>{content}</CardsContainer>;
   };
 
   render() {

@@ -12,6 +12,23 @@ export const pcForecastElements = [
   'Overheads',
 ];
 
+export const getDaysInMonth = month => {
+  const startDate = moment(month).startOf('month');
+  const endDate = moment(month).endOf('month');
+  const days = [];
+
+  for (const start = startDate.clone(); start.isSameOrBefore(endDate); start.add(1, 'day')) {
+    days.push({
+      date: start.format(dateFormat),
+      displayDate: start.format('DD/MM'),
+      day: start.format('ddd'),
+      // moment: start.clone()
+    });
+  }
+
+  return days;
+};
+
 /**
  * Similar, but only get base data for one profit centre
  */
@@ -141,6 +158,13 @@ export const getForecastBaseDataForProfitCentre = async ({
     promises,
   );
 
+  // build roster entry lookup, key is `consultantId-date`
+  const rosterEntryLookupByConsultant = {};
+  rosterEntriesByConsultant.forEach(entry => {
+    const key = `${entry.consultant_id}-${entry.date}`;
+    rosterEntryLookupByConsultant[key] = entry;
+  });
+
   return {
     costCenters,
     allConsultants,
@@ -153,6 +177,7 @@ export const getForecastBaseDataForProfitCentre = async ({
     projectAssignmentLookup,
     rosterEntriesByProject,
     rosterEntriesByConsultant,
+    rosterEntryLookupByConsultant,
   };
 };
 
