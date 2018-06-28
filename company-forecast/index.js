@@ -181,11 +181,11 @@ class CompanyForecast extends React.Component {
         <Container>
           <TitleContainer>
             <Title>
-              Run report for {company.name}, from {forecastStartDate.format('MMM YY')} to{' '}
+              {company.name}, {forecastStartDate.format('MMM YY')} to{' '}
               {forecastEndDate.format('MMM YY')}
             </Title>
             <FilterButton onPress={this.setFilters}>
-              <Text>change</Text>
+              <Text style={{ fontSize: 18 }}>✎</Text>
             </FilterButton>
           </TitleContainer>
           <RunButton onPress={() => this.setState({ currentAction: 'run' })}>

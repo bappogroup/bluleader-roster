@@ -30,6 +30,22 @@ const rosterEntryIncursContractorWages = rosterEntry => {
   return false;
 };
 
+export const getMonthArray = (rawStartDate, rawEndDate) => {
+  const startDate = moment(rawStartDate).startOf('month');
+  const endDate = moment(rawEndDate).startOf('month');
+  const monthArray = [];
+
+  for (const start = startDate.clone(); start.isSameOrBefore(endDate); start.add(1, 'month')) {
+    monthArray.push({
+      label: start.format('MMM YYYY'),
+      monthNumber: start.month(),
+      firstDay: start.clone(),
+    });
+  }
+
+  return monthArray;
+};
+
 /**
  * Get base data for company forecasting.
  * !! Should be performed on a dedicated calc server to avoid ping-pong.
@@ -155,21 +171,6 @@ export const getForecastBaseData = async ({
     projectAssignmentLookup,
     rosterEntries,
   };
-};
-
-export const getMonthArray = (rawStartDate, rawEndDate) => {
-  const startDate = moment(rawStartDate).startOf('month');
-  const endDate = moment(rawEndDate).startOf('month');
-  const monthArray = [];
-
-  for (const start = startDate.clone(); start.isSameOrBefore(endDate); start.add(1, 'month')) {
-    monthArray.push({
-      label: start.format('MMM YYYY'),
-      firstDay: start.clone(),
-    });
-  }
-
-  return monthArray;
 };
 
 /**

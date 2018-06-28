@@ -6,6 +6,7 @@ const payrollTaxRate = 0.06;
 export const pcForecastElements = [
   'T&M Project Revenue',
   'T&M Project Cost',
+  'T&M Project Expense',
   'People Cost Recovery',
   'Consultant Cost(permanent)',
   'Consultant Cost(contractor)',
@@ -193,16 +194,27 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
       console.log(projectAssignmentLookup, entry);
     }
 
-    const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+    // Revenue
+    const { dayRate, projectExpense } = projectAssignmentLookup[
+      `${entry.consultant_id}.${entry.project_id}`
+    ];
     const rate = dayRate ? +dayRate : 0;
     cells[revenueCellKey][entry.project_id] += rate;
     cells[revenueCellKey].value += rate;
 
+    // Cost
     const costCellKey = `T&M Project Cost-${monthLabel}`;
     if (!cells[costCellKey][entry.project_id]) cells[costCellKey][entry.project_id] = 0;
     const { internalRate } = entry.consultant;
     cells[costCellKey][entry.project_id] += +internalRate;
     cells[costCellKey].value += +internalRate;
+
+    // Expense
+    const expenseCellKey = `T&M Project Expense-${monthLabel}`;
+    if (!cells[expenseCellKey][entry.project_id]) cells[expenseCellKey][entry.project_id] = 0;
+    const expense = projectExpense ? +projectExpense : 0;
+    cells[expenseCellKey][entry.project_id] += expense;
+    cells[expenseCellKey].value += expense;
   }
 };
 

@@ -180,11 +180,11 @@ class ProfitCentreForecast extends React.Component {
         <Container>
           <TitleContainer>
             <Title>
-              Run report for {profitCentre.name}, from {forecastStartDate.format('MMM YY')} to{' '}
+              {profitCentre.name}, {forecastStartDate.format('MMM YY')} to{' '}
               {forecastEndDate.format('MMM YY')}
             </Title>
             <FilterButton onPress={this.setFilters}>
-              <Text>change</Text>
+              <Text style={{ fontSize: 18 }}>✎</Text>
             </FilterButton>
           </TitleContainer>
           <RunButton onPress={() => this.setState({ currentAction: 'run' })}>

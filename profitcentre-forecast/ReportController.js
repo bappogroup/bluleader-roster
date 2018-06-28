@@ -132,7 +132,7 @@ class ReportController extends React.Component {
           content = <MainReport {...props} />;
           break;
         case 'Drilldown': {
-          if (drilldownMode === 'Cards' || (!drilldownMode && !window)) {
+          if (true || drilldownMode === 'Cards' || (!drilldownMode && !window)) {
             content = <DrilldownCards {...props} />;
           } else {
             content = <DrilldownTable {...props} />;
