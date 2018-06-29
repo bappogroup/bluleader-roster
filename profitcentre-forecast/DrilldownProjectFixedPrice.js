@@ -2,46 +2,43 @@ import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 import Table from 'bappo-table';
 
-const Header = ['Consultant', 'Date', 'Revenue', 'Cost', 'Expense', 'Margin'];
+const Header = ['Consultant', 'Date', 'Cost', 'Expense'];
 
 class DrilldownProjectTm extends React.Component {
   constructor(props) {
     super(props);
-    console.log(props);
-    // const reportRows = [Header];
-    // const { month, resourceId: projectId } = props.report.params;
+    const { month, resourceId: projectId } = props.report.params;
 
-    // let totalRevenue = 0;
-    // let totalCost = 0;
-    // let totalExpense = 0;
+    // Revenue
+    const totalRevenue =
+      props.mainReportData.cells[`Fixed Price Project Revenue-${month.label}`][projectId] || 0;
 
-    // // Filter roster entries of this project, this month
-    // const { rosterEntriesByProject, projectAssignmentLookup } = props.rawData;
-    // rosterEntriesByProject.forEach(entry => {
-    //   if (entry.project_id === projectId && month.monthNumber === new Date(entry.date).getMonth()) {
-    //     const { dayRate, projectExpense } = projectAssignmentLookup[
-    //       `${entry.consultant_id}.${entry.project_id}`
-    //     ];
-    //     const revenue = +dayRate;
-    //     const cost = +entry.consultant.internalRate;
-    //     const expense = +projectExpense;
-    //     const margin = revenue - cost - expense;
-    //     totalRevenue += revenue;
-    //     totalCost += cost;
-    //     totalExpense += expense;
-    //     const row = [entry.consultant.name, entry.date, revenue, cost, expense, margin];
-    //     reportRows.push(row);
-    //   }
-    // });
+    // Consultant table
+    const reportRows = [Header];
+    let totalCost = 0;
+    let totalExpense = 0;
 
-    // const totalMargin = totalRevenue - totalCost - totalExpense;
+    const { rosterEntriesByProject, projectAssignmentLookup } = props.rawData;
+    rosterEntriesByProject.forEach(entry => {
+      if (entry.project_id === projectId && month.monthNumber === new Date(entry.date).getMonth()) {
+        const cost = +entry.consultant.internalRate;
+        const expense = +projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`]
+          .projectExpense;
+        // const margin = 0 - cost - expense;
+        totalCost += cost;
+        totalExpense += expense;
+        reportRows.push([entry.consultant.name, entry.date, cost, expense]);
+      }
+    });
 
-    // reportRows.push({
-    //   rowStyle: 'total',
-    //   data: ['Total', '', totalRevenue, totalCost, totalExpense, totalMargin],
-    // });
+    reportRows.push({
+      rowStyle: 'total',
+      data: ['Total', '', totalCost, totalExpense],
+    });
 
-    // this.state = { reportRows };
+    const totalMargin = totalRevenue - totalCost - totalExpense;
+
+    this.state = { totalRevenue, totalMargin, reportRows };
   }
 
   renderCell = data => (
@@ -51,12 +48,17 @@ class DrilldownProjectTm extends React.Component {
   );
 
   render() {
+    const { totalRevenue, totalMargin, reportRows } = this.state;
+
     return (
-      <View>
-        <Text>Fixed price project report to come</Text>
+      <View style={{ flex: 1 }}>
+        <Table data={reportRows} renderCell={this.renderCell} />
+        <View style={{ flex: 1, margin: 20 }}>
+          <Text>Revenue: {totalRevenue}</Text>
+          <Text>Margin: {totalMargin}</Text>
+        </View>
       </View>
     );
-    return <Table data={this.state.reportRows} renderCell={this.renderCell} />;
   }
 }
 
@@ -67,3 +69,5 @@ const Cell = styled(View)`
   align-items: center;
   flex: 1;
 `;
+
+// const Title = styled(Text)``;

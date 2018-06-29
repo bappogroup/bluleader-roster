@@ -11,10 +11,9 @@ class DrilldownCards extends React.Component {
 
     // Projects
     const projectCards = projects.map(project => {
-      const Revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
+      let Revenue;
       const Cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
       const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
-      const Margin = Revenue - Cost - Expense;
 
       // const projectType = project.projectType ===
       let projectTypeLabel;
@@ -25,12 +24,15 @@ class DrilldownCards extends React.Component {
           break;
         case '2':
           projectTypeLabel = 'T&M';
+          Revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
           break;
         case '3':
           projectTypeLabel = 'Fixed Price';
+          Revenue = cells[`Fixed Price Project Revenue-${monthLabel}`][project.id] || 0;
           break;
         default:
       }
+      const Margin = Revenue - Cost - Expense;
 
       return {
         title: project.name,
