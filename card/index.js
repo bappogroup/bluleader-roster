@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 
-const Card = ({ title, properties, total }) => {
+const Card = ({ title, subtitle, properties, total }) => {
   const renderProperty = ([name, value]) => (
     <PropertyRow key={name}>
       <Text>
@@ -12,9 +12,12 @@ const Card = ({ title, properties, total }) => {
 
   return (
     <Container key={title}>
-      <Title>{title}</Title>
+      <TitleContainer>
+        <Title>{title}</Title>
+        {typeof subtitle === 'string' && <Subtitle>{subtitle}</Subtitle>}
+      </TitleContainer>
       <PropertyContainer>
-        {Object.entries(properties).map(renderProperty)}
+        {typeof properties === 'object' && Object.entries(properties).map(renderProperty)}
         {typeof total !== 'undefined' && (
           <PropertyRow>
             <Text>Total: {total}</Text>
@@ -41,8 +44,16 @@ const Container = styled(View)`
   align-items: center;
 `;
 
-const Title = styled(Text)`
+const TitleContainer = styled(View)`
   margin: 15px;
+`;
+
+const Title = styled(Text)``;
+
+const Subtitle = styled(Text)`
+  color: gray;
+  font-size: 12px;
+  margin-top: 7px;
 `;
 
 const PropertyContainer = styled(View)``;

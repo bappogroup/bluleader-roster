@@ -38,7 +38,7 @@ class MainReport extends React.Component {
           cells[`Project Expense-${month.label}`].value,
       ),
     );
-    data.splice(4, 0, projectMarginRow, []);
+    data.splice(5, 0, projectMarginRow, []);
 
     const peopleMarginRow = {
       rowStyle: 'total',
@@ -61,7 +61,7 @@ class MainReport extends React.Component {
           cells[`Overheads-${month.label}`].value,
       );
     });
-    data.splice(9, 0, peopleMarginRow, []);
+    data.splice(10, 0, peopleMarginRow, []);
     data.push([], netProfitRow);
 
     this.state = { data };

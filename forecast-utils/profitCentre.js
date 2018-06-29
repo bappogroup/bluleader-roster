@@ -5,6 +5,7 @@ const dateFormat = 'YYYY-MM-DD';
 const payrollTaxRate = 0.06;
 export const pcForecastElements = [
   'T&M Project Revenue',
+  'Fixed Price Project Revenue',
   'Project Cost',
   'Project Expense',
   'People Cost Recovery',
@@ -86,6 +87,10 @@ export const getForecastBaseDataForProfitCentre = async ({
   const projects = await $models.Project.findAll(profitCentreQuery);
 
   const projectIds = projects.map(p => p.id);
+  const fixedPriceProjectIds = projects.reduce((ids, project) => {
+    if (project.projectType === '3') return [...ids, project.id];
+    return ids;
+  }, []);
 
   const [pa1, pa2, forecastElements] = await Promise.all([
     $models.ProjectAssignment.findAll({
@@ -184,11 +189,28 @@ export const getForecastBaseDataForProfitCentre = async ({
     }),
   );
 
+  // Fetch fixed price project forecast entries
+  promises.push(
+    $models.ProjectForecastEntry.findAll({
+      where: {
+        project_id: {
+          $in: fixedPriceProjectIds,
+        },
+        period_id: {
+          $in: periodIds,
+        },
+      },
+      include: [{ as: 'project' }, { as: 'period' }],
+      limit: 100000,
+    }),
+  );
+
   const [
     rosterEntriesByProject,
     rosterEntriesByConsultant,
     forecastEntriesRevenue,
     forecastEntriesCost,
+    projectForecastEntries,
   ] = await Promise.all(promises);
 
   // build roster entry lookup, key is `consultantId-date`
@@ -212,6 +234,7 @@ export const getForecastBaseDataForProfitCentre = async ({
     rosterEntriesByProject,
     rosterEntriesByConsultant,
     rosterEntryLookupByConsultant,
+    projectForecastEntries,
   };
 };
 
@@ -224,13 +247,14 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
       console.log(projectAssignmentLookup, entry);
     }
 
+    const { dayRate, projectExpense } = projectAssignmentLookup[
+      `${entry.consultant_id}.${entry.project_id}`
+    ];
+
     // T&M projects revenue, as dayRate of fixed price assignment would be 0
     if (entry.project.projectType === '2') {
       const revenueCellKey = `T&M Project Revenue-${monthLabel}`;
       if (!cells[revenueCellKey][entry.project_id]) cells[revenueCellKey][entry.project_id] = 0;
-      const { dayRate, projectExpense } = projectAssignmentLookup[
-        `${entry.consultant_id}.${entry.project_id}`
-      ];
       const rate = dayRate ? +dayRate : 0;
       cells[revenueCellKey][entry.project_id] += rate;
       cells[revenueCellKey].value += rate;
@@ -250,6 +274,39 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
     cells[expenseCellKey][entry.project_id] += expense;
     cells[expenseCellKey].value += expense;
   }
+};
+
+const calculateFixedPriceProject = ({ cells, projectForecastEntries }) => {
+  projectForecastEntries.forEach(entry => {
+    const monthLabel = moment(entry.period.name).format('MMM YYYY');
+
+    switch (entry.forecastType) {
+      case '1': {
+        // Planned Cost
+        // ignore in main report
+        const cellKey = `Fixed Price Project Planned Cost-${monthLabel}`;
+        const amount = +entry.amount;
+
+        if (!cells[cellKey]) cells[cellKey] = { value: 0 };
+        if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
+        cells[cellKey][entry.project_id] += amount;
+        cells[cellKey].value += amount;
+        break;
+      }
+      case '2': {
+        // (planned) Revenue in report
+        // will show in main report
+        const cellKey = `Fixed Price Project Revenue-${monthLabel}`;
+        const amount = +entry.amount;
+
+        if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
+        cells[cellKey][entry.project_id] += amount;
+        cells[cellKey].value += amount;
+        break;
+      }
+      default:
+    }
+  });
 };
 
 const calculatePeopleRecovery = ({ cells, rosterEntriesByConsultant }) => {
@@ -304,20 +361,9 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
 const calculateForecastEntries = ({ cells, forecastEntriesRevenue, forecastEntriesCost }) => {
   for (const entry of forecastEntriesRevenue) {
     const monthLabel = moment(entry.period.name).format('MMM YYYY');
-    let cellKey;
-    console.log('revenue', entry.forecastElement.elementType);
-    switch (entry.forecastElement.elementType) {
-      case '1':
-      case '3':
-        cellKey = `Overheads-${monthLabel}`;
-        break;
-      case '2':
-        cellKey = `Other Revenue-${monthLabel}`;
-        break;
-      default:
-    }
-
+    const cellKey = `Other Revenue-${monthLabel}`;
     const amount = +entry.amount;
+
     if (!cells[cellKey][entry.forecastElement.name]) cells[cellKey][entry.forecastElement.name] = 0;
     cells[cellKey][entry.forecastElement.name] += amount;
     cells[cellKey].value += amount;
@@ -325,20 +371,9 @@ const calculateForecastEntries = ({ cells, forecastEntriesRevenue, forecastEntri
 
   for (const entry of forecastEntriesCost) {
     const monthLabel = moment(entry.period.name).format('MMM YYYY');
-    let cellKey;
-    console.log('cost', entry.forecastElement.elementType);
-    switch (entry.forecastElement.elementType) {
-      case '1':
-      case '3':
-        cellKey = `Overheads-${monthLabel}`;
-        break;
-      case '2':
-        cellKey = `Other Revenue-${monthLabel}`;
-        break;
-      default:
-    }
-
+    const cellKey = `Overheads-${monthLabel}`;
     const amount = +entry.amount;
+
     if (!cells[cellKey][entry.forecastElement.name]) cells[cellKey][entry.forecastElement.name] = 0;
     cells[cellKey][entry.forecastElement.name] += amount;
     cells[cellKey].value += amount;
@@ -347,11 +382,11 @@ const calculateForecastEntries = ({ cells, forecastEntriesRevenue, forecastEntri
 
 export const calculateProfitCentreMainReport = ({
   permConsultants,
-  contractConsultants,
   months,
   rosterEntriesByProject,
   rosterEntriesByConsultant,
   projectAssignmentLookup,
+  projectForecastEntries,
   forecastEntriesRevenue,
   forecastEntriesCost,
 }) => {
@@ -368,6 +403,10 @@ export const calculateProfitCentreMainReport = ({
     cells,
     rosterEntriesByProject,
     projectAssignmentLookup,
+  });
+  calculateFixedPriceProject({
+    cells,
+    projectForecastEntries,
   });
   calculatePeopleRecovery({
     cells,

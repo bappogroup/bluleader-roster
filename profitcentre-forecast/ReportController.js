@@ -10,6 +10,7 @@ import DrilldownTable from './DrilldownTable';
 import DrilldownCards from './DrilldownCards';
 import DrilldownConsultant from './DrilldownConsultant';
 import DrilldownProjectTm from './DrilldownProjectTm';
+import DrilldownProjectFixedPrice from './DrilldownProjectFixedPrice';
 
 class ReportController extends React.Component {
   constructor(props) {
@@ -144,6 +145,10 @@ class ReportController extends React.Component {
           break;
         case 'DrilldownProjectTm':
           content = <DrilldownProjectTm {...props} />;
+          break;
+        case 'DrilldownProjectFixedPrice':
+          content = <DrilldownProjectFixedPrice {...props} />;
+          break;
         default:
       }
     }
@@ -165,7 +170,7 @@ class ReportController extends React.Component {
             <Text> ← back </Text>
           </CloseButton>
           <Text>{report.name}</Text>
-          {report.component === 'Drilldown' && this.renderSwitchButton()}
+          {/* {report.component === 'Drilldown' && this.renderSwitchButton()} */}
         </Header>
         {content}
       </ReportContainer>

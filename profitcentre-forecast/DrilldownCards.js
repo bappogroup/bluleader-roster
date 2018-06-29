@@ -16,8 +16,25 @@ class DrilldownCards extends React.Component {
       const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
       const Margin = Revenue - Cost - Expense;
 
+      // const projectType = project.projectType ===
+      let projectTypeLabel;
+
+      switch (project.projectType) {
+        case '1':
+          projectTypeLabel = 'Internal';
+          break;
+        case '2':
+          projectTypeLabel = 'T&M';
+          break;
+        case '3':
+          projectTypeLabel = 'Fixed Price';
+          break;
+        default:
+      }
+
       return {
         title: project.name,
+        subtitle: projectTypeLabel,
         type: `project-${project.projectType}`,
         id: project.id,
         properties: {
