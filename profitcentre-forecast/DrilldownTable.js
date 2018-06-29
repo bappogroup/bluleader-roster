@@ -17,13 +17,13 @@ class Drilldown extends React.Component {
     const projectRows = [ProjectHeader];
     projects.forEach(project => {
       const revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
-      const cost = cells[`T&M Project Cost-${monthLabel}`][project.id] || 0;
+      const cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
       const margin = revenue - cost;
       projectRows.push([project.name, revenue, cost, margin]);
     });
 
     const totalProjectRevenue = cells[`T&M Project Revenue-${monthLabel}`].value;
-    const totalProjectCost = cells[`T&M Project Cost-${monthLabel}`].value;
+    const totalProjectCost = cells[`Project Cost-${monthLabel}`].value;
     const totalProjectMargin = totalProjectRevenue - totalProjectCost;
     projectRows.push({
       rowStyle: 'total',

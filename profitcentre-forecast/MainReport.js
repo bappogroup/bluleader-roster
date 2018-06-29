@@ -34,8 +34,8 @@ class MainReport extends React.Component {
     months.forEach(month =>
       projectMarginRow.data.push(
         cells[`T&M Project Revenue-${month.label}`].value -
-          cells[`T&M Project Cost-${month.label}`].value -
-          cells[`T&M Project Expense-${month.label}`].value,
+          cells[`Project Cost-${month.label}`].value -
+          cells[`Project Expense-${month.label}`].value,
       ),
     );
     data.splice(4, 0, projectMarginRow, []);
@@ -56,7 +56,8 @@ class MainReport extends React.Component {
       );
       netProfitRow.data.push(
         projectMarginRow.data[index + 1] +
-          peopleMarginRow.data[index + 1] -
+          peopleMarginRow.data[index + 1] +
+          cells[`Other Revenue-${month.label}`].value -
           cells[`Overheads-${month.label}`].value,
       );
     });

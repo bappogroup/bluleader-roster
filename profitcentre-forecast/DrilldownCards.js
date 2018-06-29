@@ -12,8 +12,8 @@ class DrilldownCards extends React.Component {
     // Projects
     const projectCards = projects.map(project => {
       const Revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
-      const Cost = cells[`T&M Project Cost-${monthLabel}`][project.id] || 0;
-      const Expense = cells[`T&M Project Expense-${monthLabel}`][project.id] || 0;
+      const Cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
+      const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
       const Margin = Revenue - Cost - Expense;
 
       return {
@@ -30,8 +30,8 @@ class DrilldownCards extends React.Component {
     });
 
     const totalProjectRevenue = cells[`T&M Project Revenue-${monthLabel}`].value;
-    const totalProjectCost = cells[`T&M Project Cost-${monthLabel}`].value;
-    const totalProjectExpense = cells[`T&M Project Expense-${monthLabel}`].value;
+    const totalProjectCost = cells[`Project Cost-${monthLabel}`].value;
+    const totalProjectExpense = cells[`Project Expense-${monthLabel}`].value;
     const totalProjectMargin = totalProjectRevenue - totalProjectCost - totalProjectExpense;
     projectCards.push({
       title: 'Totals',
