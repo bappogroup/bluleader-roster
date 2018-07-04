@@ -35,10 +35,20 @@ class DrilldownProjectTm extends React.Component {
       rowStyle: 'total',
       data: ['Total', '', totalCost, totalExpense],
     });
+    reportRows.push([]);
 
     const totalMargin = totalRevenue - totalCost - totalExpense;
+    reportRows.push({
+      rowStyle: 'total',
+      data: [
+        '',
+        `Revenue: ${totalRevenue}`,
+        `Cost & Expense: ${totalCost + totalExpense}`,
+        `Margin: ${totalMargin}`,
+      ],
+    });
 
-    this.state = { totalRevenue, totalMargin, reportRows };
+    this.state = { reportRows };
   }
 
   renderCell = data => (
@@ -48,17 +58,9 @@ class DrilldownProjectTm extends React.Component {
   );
 
   render() {
-    const { totalRevenue, totalMargin, reportRows } = this.state;
+    const { reportRows } = this.state;
 
-    return (
-      <View style={{ flex: 1 }}>
-        <Table data={reportRows} renderCell={this.renderCell} />
-        <View style={{ flex: 1, margin: 20 }}>
-          <Text>Revenue: {totalRevenue}</Text>
-          <Text>Margin: {totalMargin}</Text>
-        </View>
-      </View>
-    );
+    return <Table data={reportRows} renderCell={this.renderCell} />;
   }
 }
 
@@ -69,5 +71,3 @@ const Cell = styled(View)`
   align-items: center;
   flex: 1;
 `;
-
-// const Title = styled(Text)``;
