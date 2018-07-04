@@ -162,13 +162,14 @@ export const getForecastBaseData = async ({
   const [forecastElements, rosterEntries, forecastEntries] = await Promise.all(promises);
 
   return {
-    costCenters,
     allConsultants,
+    costCenters,
     consultants,
+    profitCentres,
     projects,
+    projectAssignmentLookup,
     forecastElements,
     forecastEntries,
-    projectAssignmentLookup,
     rosterEntries,
   };
 };

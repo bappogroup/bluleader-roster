@@ -68,6 +68,11 @@ class Layers extends React.Component {
       ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
     );
 
+    const profitCentreLookup = {};
+    rawData.profitCentres.forEach(pc => (profitCentreLookup[pc.id] = pc));
+    const costCenterLookup = {};
+    rawData.costCenters.forEach(cc => (costCenterLookup[cc.id] = cc));
+
     this.data = {
       rawData,
       months,
@@ -88,6 +93,8 @@ class Layers extends React.Component {
     });
 
     this.data.mainReportData = mainReportData;
+    this.data.profitCentreLookup = profitCentreLookup;
+    this.data.costCenterLookup = costCenterLookup;
 
     this.setState({
       loading: false,
