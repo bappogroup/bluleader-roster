@@ -3,18 +3,18 @@ import { View, Text, Button, styled, ScrollView } from 'bappo-components';
 
 class Table extends React.Component {
   state = {
-    data: this.props.data,
     fixedCols: 1,
     firstCol: 1,
     colCount: 3,
     screenWidth: 300,
     cellWidth: this.props.cellWidth || 100,
+    fixedCellWidth: this.props.fixedCellWidth || 150,
   };
 
   renderFixedHeaderCell =
     this.props.renderFixedHeaderCell ||
     ((data, { rowStyle, key }) => (
-      <FixedCell key={key}>
+      <FixedCell key={key} style={{ width: this.state.fixedCellWidth }}>
         <HeaderText>{data}</HeaderText>
       </FixedCell>
     ));
@@ -22,7 +22,7 @@ class Table extends React.Component {
   renderFixedCell =
     this.props.renderFixedCell ||
     ((data, { rowStyle, key }) => (
-      <FixedCell key={key}>
+      <FixedCell key={key} style={{ width: this.state.fixedCellWidth }}>
         <LabelText>{data}</LabelText>
       </FixedCell>
     ));
@@ -37,17 +37,15 @@ class Table extends React.Component {
 
   renderCell =
     this.props.renderCell ||
-    ((data, { rowStyle, key }) => {
-      return (
-        <Cell key={key}>
-          <Text>{data}</Text>
-        </Cell>
-      );
-    });
+    ((data, { rowStyle, key }) => (
+      <Cell key={key}>
+        <Text>{data}</Text>
+      </Cell>
+    ));
 
   onLayout = params => {
     const screenWidth = params.nativeEvent.layout.width;
-    const colCount = Math.round((screenWidth - 150) / this.state.cellWidth);
+    const colCount = Math.round((screenWidth - this.state.fixedCellWidth) / this.state.cellWidth);
     this.setState({
       screenWidth,
       colCount,
@@ -57,7 +55,7 @@ class Table extends React.Component {
   scrollHorizontally = n => {
     const firstCol = Math.max(
       this.state.fixedCols,
-      Math.min(this.state.firstCol + n, this.state.data[0].length - this.state.colCount),
+      Math.min(this.state.firstCol + n, this.props.data[0].length - this.state.colCount),
     );
     this.setState({ firstCol });
   };
@@ -83,11 +81,14 @@ class Table extends React.Component {
 
     return (
       <Row rowStyle={rowStyle} key={i}>
-        {cells
-          .slice(0, this.state.fixedCols)
-          .map((data, index) =>
-            renderFixedCell(data, { rowStyle, key: `f${index}`, index, ...otherProperties }),
-          )}
+        {cells.slice(0, this.state.fixedCols).map((data, index) =>
+          renderFixedCell(data, {
+            rowStyle,
+            key: `f${index}`,
+            index: index + this.state.firstCol - 1,
+            ...otherProperties,
+          }),
+        )}
         {cells
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
           .map((data, index) =>
@@ -105,7 +106,9 @@ class Table extends React.Component {
   renderBlankRow = () => <Row />;
 
   render() {
-    if (!this.state.data || this.state.data.length < 1) {
+    const { data } = this.props;
+
+    if (!data || data.length < 1) {
       return (
         <View>
           <Text> No Data </Text>
@@ -124,11 +127,9 @@ class Table extends React.Component {
           </NavButton>
         </NavBar>
         <TableContainer>
-          <TableHeader>
-            {this.renderRow({ data: this.state.data[0], rowStyle: 'header' })}
-          </TableHeader>
+          <TableHeader>{this.renderRow({ data: data[0], rowStyle: 'header' })}</TableHeader>
           <TableBody>
-            {this.state.data.slice(1).map(this.renderRow)}
+            {data.slice(1).map(this.renderRow)}
             {this.renderBlankRow()}
           </TableBody>
         </TableContainer>
@@ -184,6 +185,7 @@ const TableBody = styled(ScrollView)`
 const Row = styled(View)`
   display: flex;
   flex-direction: row;
+  flex: 1;
   min-height: 40px;
   justify-content: space-between;
   align-items: center;

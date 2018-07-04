@@ -2,25 +2,26 @@ import React from 'react';
 import moment from 'moment';
 import { styled, View, Button, Text } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
-import ReportController from './ReportController';
+import ForecastInput from './ForecastInput';
+import SelectionDisplay from 'selectiondisplay';
 
-class CompanyForecast extends React.Component {
+class Main extends React.Component {
   data = {
-    companies: [],
+    profitCentres: [],
   };
 
   state = {
-    company: null,
+    profitCentre: null,
     forecastStartDate: null,
     forecastEndDate: null,
     currentAction: 'select',
   };
 
   async componentDidMount() {
-    // Load company options
+    // Load filter options
     const promises = [];
     promises.push(
-      this.props.$models.Company.findAll({
+      this.props.$models.ProfitCentre.findAll({
         limit: 1000,
       }),
     );
@@ -29,7 +30,7 @@ class CompanyForecast extends React.Component {
         limit: 1000,
       }),
     );
-    const [companies, periods] = await Promise.all(promises);
+    const [profitCentres, periods] = await Promise.all(promises);
 
     // Sort periods
     this.data.periods = periods.sort((p1, p2) => {
@@ -42,21 +43,21 @@ class CompanyForecast extends React.Component {
       label: p.name,
       pos: index,
     }));
-    this.data.companies = companies;
+    this.data.profitCentres = profitCentres;
 
     // Load user preferences
     const prefs = await getUserPreferences(this.props.$global.currentUser.id, this.props.$models);
-    const { forecastCompanyId, forecastStartMonthId, forecastEndMonthId } = prefs;
+    const { forecastProfitCentreId, forecastStartMonthId, forecastEndMonthId } = prefs;
 
-    if (!(forecastCompanyId && forecastStartMonthId && forecastEndMonthId)) this.setFilters();
+    if (!(forecastProfitCentreId && forecastStartMonthId && forecastEndMonthId)) this.setFilters();
     else {
-      const company = companies.find(c => c.id === forecastCompanyId);
+      const profitCentre = profitCentres.find(pc => pc.id === forecastProfitCentreId);
       const { forecastStartDate, forecastEndDate, periodIds } = this.processPeriods(
         forecastStartMonthId,
         forecastEndMonthId,
       );
       this.setState({
-        company,
+        profitCentre,
         forecastStartMonthId,
         forecastEndMonthId,
         forecastStartDate,
@@ -76,23 +77,23 @@ class CompanyForecast extends React.Component {
 
   setFilters = () => {
     const { $models, $popup } = this.props;
-    const { companies, monthOptions } = this.data;
+    const { profitCentres, monthOptions } = this.data;
 
-    const companyOptions = companies.map((c, index) => ({
+    const profitCentreOptions = profitCentres.map((c, index) => ({
       id: c.id,
       label: c.name,
       pos: index,
     }));
 
     $popup.form({
-      title: 'Select Company and Time Range',
+      title: 'Select Profit Centre and Time Range',
       fields: [
         {
-          name: 'forecastCompanyId',
-          label: 'Company',
+          name: 'forecastProfitCentreId',
+          label: 'ProfitCentre',
           type: 'FixedList',
           properties: {
-            options: companyOptions,
+            options: profitCentreOptions,
           },
         },
         {
@@ -115,19 +116,19 @@ class CompanyForecast extends React.Component {
         },
       ],
       initialValues: {
-        forecastCompanyId: this.state.company && this.state.company.id,
+        forecastProfitCentreId: this.state.profitCentre && this.state.profitCentre.id,
         forecastStartMonthId: this.state.forecastStartMonthId,
         forecastEndMonthId: this.state.forecastEndMonthId,
       },
-      onSubmit: ({ forecastCompanyId, forecastStartMonthId, forecastEndMonthId }) => {
-        const company = companies.find(c => c.id === forecastCompanyId);
+      onSubmit: ({ forecastProfitCentreId, forecastStartMonthId, forecastEndMonthId }) => {
+        const profitCentre = profitCentres.find(c => c.id === forecastProfitCentreId);
         const { forecastStartDate, forecastEndDate, periodIds } = this.processPeriods(
           forecastStartMonthId,
           forecastEndMonthId,
         );
 
         this.setState({
-          company,
+          profitCentre,
           forecastStartMonthId,
           forecastEndMonthId,
           forecastStartDate,
@@ -136,7 +137,7 @@ class CompanyForecast extends React.Component {
         });
 
         setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastCompanyId,
+          forecastProfitCentreId,
           forecastStartMonthId,
           forecastEndMonthId,
         });
@@ -172,22 +173,22 @@ class CompanyForecast extends React.Component {
   };
 
   render() {
-    const { company, forecastStartDate, forecastEndDate, periodIds } = this.state;
-    if (!(company && forecastStartDate && forecastEndDate && periodIds.length)) return null;
+    const { profitCentre, forecastStartDate, forecastEndDate, periodIds } = this.state;
+    if (!(profitCentre && forecastStartDate && forecastEndDate && periodIds.length)) return null;
 
-    const title = `Company: ${company.name}`;
+    const options = [
+      { label: 'Profit Center', value: profitCentre.name },
+      {
+        label: 'Periods',
+        value: `${forecastStartDate.format('MMM YY')} to ${forecastEndDate.format('MMM YY')}`,
+      },
+    ];
+
     if (this.state.currentAction === 'select') {
       return (
         <Container>
-          <TitleContainer>
-            <Title>
-              {company.name}, {forecastStartDate.format('MMM YY')} to{' '}
-              {forecastEndDate.format('MMM YY')}
-            </Title>
-            <FilterButton onPress={this.setFilters}>
-              <Text style={{ fontSize: 18 }}>✎</Text>
-            </FilterButton>
-          </TitleContainer>
+          <SelectionDisplay options={options} onChangeClick={() => this.setFilters()} />
+
           <RunButton onPress={() => this.setState({ currentAction: 'run' })}>
             <RunButtonText> Run </RunButtonText>
           </RunButton>
@@ -196,17 +197,19 @@ class CompanyForecast extends React.Component {
     }
 
     if (this.state.currentAction === 'run') {
+      const selection = {
+        profitCentre: this.state.profitCentre,
+      };
+
+      selection.periodFrom = this.data.periods.find(p => p.id == this.state.forecastStartMonthId);
+      selection.periodTo = this.data.periods.find(p => p.id == this.state.forecastEndMonthId);
+      selection.periods = this.data.periods.filter(
+        p => p.name >= selection.periodFrom.name && p.name <= selection.periodTo.name,
+      );
+
       return (
         <Container>
-          <ReportController
-            title={title}
-            company={company}
-            startDate={forecastStartDate}
-            endDate={forecastEndDate}
-            periodIds={periodIds}
-            setCurrentAction={currentAction => this.setState({ currentAction })}
-            $models={this.props.$models}
-          />
+          <ForecastInput {...this.props} selection={selection} periods />
         </Container>
       );
     }
@@ -215,14 +218,10 @@ class CompanyForecast extends React.Component {
   }
 }
 
-export default CompanyForecast;
+export default Main;
 
 const Container = styled(View)`
   flex: 1;
-`;
-
-const FilterButton = styled(Button)`
-  margin-left: 15px;
 `;
 
 const RunButton = styled(Button)`

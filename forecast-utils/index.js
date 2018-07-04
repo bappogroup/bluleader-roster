@@ -223,9 +223,9 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         cells[salaryCellKey].value += +salary;
 
         const taxCellKey = `PTAXP-${month.label}`;
-        const tax = (+salary * payrollTaxRate).toFixed(2);
+        const tax = +((+salary + +bonus) * payrollTaxRate).toFixed(2);
         cells[taxCellKey][consultant.id] = tax;
-        cells[taxCellKey].value += +tax;
+        cells[taxCellKey].value += tax;
       }
 
       // bonus
@@ -270,10 +270,12 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
         cells[wageCellKey].value += dailyRate;
 
         // Payroll Taxes
-        const tax = +(dailyRate * payrollTaxRate).toFixed(2);
-        if (!cells[taxCellKey][entry.consultant_id]) cells[taxCellKey][entry.consultant_id] = 0;
-        cells[taxCellKey][entry.consultant_id] += tax;
-        cells[taxCellKey].value += tax;
+        if (entry.consultant.incursPayrollTax) {
+          const tax = +(dailyRate * payrollTaxRate).toFixed(2);
+          if (!cells[taxCellKey][entry.consultant_id]) cells[taxCellKey][entry.consultant_id] = 0;
+          cells[taxCellKey][entry.consultant_id] += tax;
+          cells[taxCellKey].value += tax;
+        }
       }
     }
   }
