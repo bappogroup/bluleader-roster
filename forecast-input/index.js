@@ -5,6 +5,8 @@ import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import SelectionDisplay from 'selectiondisplay';
 import ForecastInput from './ForecastInput';
 
+const SETNAME = 'forecaset_input';
+
 class Main extends React.Component {
   data = {
     profitCentres: [],
@@ -218,7 +220,12 @@ class Main extends React.Component {
 
       return (
         <Container>
-          <ForecastInput {...this.props} selection={selection} periods />
+          <ForecastInput
+            {...this.props}
+            selection={selection}
+            periods
+            setCurrentAction={currentAction => this.setState({ currentAction })}
+          />
         </Container>
       );
     }
@@ -246,12 +253,3 @@ const RunButton = styled(Button)`
 const RunButtonText = styled(Text)`
   color: white;
 `;
-
-const TitleContainer = styled(View)`
-  margin: 20px;
-  flex-direction: row;
-`;
-
-const Title = styled(Text)``;
-
-const SETNAME = 'forecaset_input';

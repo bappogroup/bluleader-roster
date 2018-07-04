@@ -278,6 +278,9 @@ class ForecastInput extends React.Component {
 
     return (
       <Container>
+        <CloseButton onPress={() => this.props.setCurrentAction('select')}>
+          <Text> ← back </Text>
+        </CloseButton>
         <Table
           data={data}
           renderCell={this.renderCell}
@@ -292,20 +295,13 @@ class ForecastInput extends React.Component {
 
 export default ForecastInput;
 
-const sortByName = a => {
-  return a.sort((r1, r2) => {
-    if (r1.name < r2.name) {
-      return -1;
-    }
-    if (r2.name > r1.name) {
-      return 1;
-    }
-    return 0;
-  });
-};
-
 const Container = styled(View)`
   flex: 1;
+`;
+
+const CloseButton = styled(Button)`
+  margin-left: 20px;
+  margin-top: 20px;
 `;
 
 const Cell = styled(View)`
