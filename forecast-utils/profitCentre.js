@@ -333,7 +333,7 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
       const monthlyBonus = consultant.bonusProvision
         ? +(consultant.bonusProvision / 12).toFixed(2)
         : 0;
-      const monthlyPtax = +(monthlySalary * payrollTaxRate).toFixed(2);
+      const monthlyPtax = +((+monthlySalary + +monthlyBonus) * payrollTaxRate).toFixed(2);
       const cost = monthlySalary + monthlyBonus + monthlyPtax;
 
       if (!cells[cellKey][consultant.id]) cells[cellKey][consultant.id] = 0;
