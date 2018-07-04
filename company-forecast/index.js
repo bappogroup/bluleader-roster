@@ -2,6 +2,7 @@ import React from 'react';
 import moment from 'moment';
 import { styled, View, Button, Text } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
+import SelectionDisplay from 'selectiondisplay';
 import ReportController from './ReportController';
 
 class CompanyForecast extends React.Component {
@@ -175,19 +176,20 @@ class CompanyForecast extends React.Component {
     const { company, forecastStartDate, forecastEndDate, periodIds } = this.state;
     if (!(company && forecastStartDate && forecastEndDate && periodIds.length)) return null;
 
+    const daterangetxt = `${forecastStartDate.format('MMM YY')} to ${forecastEndDate.format(
+      'MMM YY',
+    )}`;
+
+    const options = [
+      { label: 'Company', value: company.name },
+      { label: 'Date Range', value: daterangetxt },
+    ];
+
     const title = `Company: ${company.name}`;
     if (this.state.currentAction === 'select') {
       return (
         <Container>
-          <TitleContainer>
-            <Title>
-              {company.name}, {forecastStartDate.format('MMM YY')} to{' '}
-              {forecastEndDate.format('MMM YY')}
-            </Title>
-            <FilterButton onPress={this.setFilters}>
-              <Text style={{ fontSize: 18 }}>✎</Text>
-            </FilterButton>
-          </TitleContainer>
+          <SelectionDisplay options={options} onChangeClick={() => this.setFilters()} />
           <RunButton onPress={() => this.setState({ currentAction: 'run' })}>
             <RunButtonText> Run </RunButtonText>
           </RunButton>
@@ -221,10 +223,6 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const FilterButton = styled(Button)`
-  margin-left: 15px;
-`;
-
 const RunButton = styled(Button)`
   height: 50px;
   margin-left: 20px;
@@ -238,10 +236,3 @@ const RunButton = styled(Button)`
 const RunButtonText = styled(Text)`
   color: white;
 `;
-
-const TitleContainer = styled(View)`
-  margin: 20px;
-  flex-direction: row;
-`;
-
-const Title = styled(Text)``;

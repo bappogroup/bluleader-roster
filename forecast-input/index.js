@@ -2,8 +2,8 @@ import React from 'react';
 import moment from 'moment';
 import { styled, View, Button, Text } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
-import ForecastInput from './ForecastInput';
 import SelectionDisplay from 'selectiondisplay';
+import ForecastInput from './ForecastInput';
 
 class Main extends React.Component {
   data = {
@@ -46,7 +46,9 @@ class Main extends React.Component {
     this.data.profitCentres = profitCentres;
 
     // Load user preferences
-    const prefs = await getUserPreferences(this.props.$global.currentUser.id, this.props.$models);
+    const prefs = await getUserPreferences(this.props.$global.currentUser.id, this.props.$models, {
+      setname: SETNAME,
+    });
     const { forecastProfitCentreId, forecastStartMonthId, forecastEndMonthId } = prefs;
 
     if (!(forecastProfitCentreId && forecastStartMonthId && forecastEndMonthId)) this.setFilters();
@@ -136,11 +138,18 @@ class Main extends React.Component {
           periodIds,
         });
 
-        setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastProfitCentreId,
-          forecastStartMonthId,
-          forecastEndMonthId,
-        });
+        setUserPreferences(
+          this.props.$global.currentUser.id,
+          $models,
+          {
+            forecastProfitCentreId,
+            forecastStartMonthId,
+            forecastEndMonthId,
+          },
+          {
+            setname: SETNAME,
+          },
+        );
       },
     });
   };
@@ -244,3 +253,5 @@ const TitleContainer = styled(View)`
 `;
 
 const Title = styled(Text)``;
+
+const SETNAME = 'forecaset_input';
