@@ -317,7 +317,9 @@ const calculateFixedPriceProject = ({ cells, projectForecastEntries }) => {
 };
 
 const calculatePeopleRecovery = ({ cells, rosterEntriesByConsultant }) => {
-  for (const entry of rosterEntriesByConsultant) {
+  rosterEntriesByConsultant.forEach(entry => {
+    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+
     const monthLabel = moment(entry.date).format('MMM YYYY');
 
     const recoveryKey = `People Cost Recovery-${monthLabel}`;
@@ -326,7 +328,7 @@ const calculatePeopleRecovery = ({ cells, rosterEntriesByConsultant }) => {
     const { internalRate } = entry.consultant;
     cells[recoveryKey][entry.consultant_id] += +internalRate;
     cells[recoveryKey].value += +internalRate;
-  }
+  });
 };
 
 const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByConsultant }) => {
@@ -357,7 +359,9 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
     e => e.consultant.consultantType === '2',
   );
 
-  for (const entry of contractorEntries) {
+  contractorEntries.forEach(entry => {
+    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+
     const monthLabel = moment(entry.date).format('MMM YYYY');
     const cellKey = `Consultant Cost(contractor)-${monthLabel}`;
     if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
@@ -365,7 +369,7 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
     const pay = +entry.consultant.dailyRate;
     cells[cellKey][entry.consultant_id] += pay;
     cells[cellKey].value += pay;
-  }
+  });
 };
 
 const calculateForecastEntries = ({ cells, forecastEntriesRevenue, forecastEntriesCost }) => {

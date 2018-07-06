@@ -7,8 +7,8 @@ import {
   billableProbabilities,
 } from './constants';
 
+export * from './constants';
 export * from './profitCentre';
-
 export const dateFormat = 'YYYY-MM-DD';
 
 /**
@@ -295,19 +295,28 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
  * Calculate and update 'Service Revenue' row in a financial year by:
  * accumulating revenue gained from roster entries. Revenue comes from ProjectAssignment.dayRate
  */
-const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
+const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup }) => {
   rosterEntries.forEach(entry => {
-    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
-
-    // non-leave project assignment must exist!
-    const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
     const monthLabel = moment(entry.date).format('MMM YYYY');
-    const cellKey = `TMREV-${monthLabel}`;
 
-    if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
-    const rate = dayRate ? +dayRate : 0;
-    cells[cellKey][entry.consultant_id] += rate;
-    cells[cellKey].value += rate;
+    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) {
+      // leave, will always be negative, as a cost recovery
+      const leave = +(entry.consultant.annualSalary / yearlyWorkingDays).toFixed(2);
+      const cellKey = `LEA-${monthLabel}`;
+
+      if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
+      cells[cellKey][entry.consultant_id] -= leave;
+      cells[cellKey].value -= leave;
+    } else {
+      // non-leave project assignment must exist!
+      const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+      const cellKey = `TMREV-${monthLabel}`;
+
+      if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
+      const rate = dayRate ? +dayRate : 0;
+      cells[cellKey][entry.consultant_id] += rate;
+      cells[cellKey].value += rate;
+    }
   });
 };
 
@@ -354,7 +363,7 @@ export const calculateMainReport = ({
     cells,
     rosterEntries,
   });
-  calculateServiceRevenue({
+  calculateRosterEntries({
     cells,
     rosterEntries,
     projectAssignmentLookup,

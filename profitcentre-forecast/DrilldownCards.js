@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text, Button, styled } from 'bappo-components';
+import { leaveProjectTypeIndexes } from 'forecast-utils';
 import Card from 'card';
 
 class DrilldownCards extends React.Component {
@@ -10,12 +11,14 @@ class DrilldownCards extends React.Component {
     const { projects, consultants } = props.rawData;
 
     // Projects
-    const projectCards = projects.map(project => {
+    const projectCards = [];
+    projects.forEach(project => {
+      if (leaveProjectTypeIndexes.includes(project.projectType)) return;
+
       let Revenue;
       const Cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
       const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
 
-      // const projectType = project.projectType ===
       let projectTypeLabel;
 
       switch (project.projectType) {
@@ -34,7 +37,7 @@ class DrilldownCards extends React.Component {
       }
       const Margin = Revenue - Cost - Expense;
 
-      return {
+      projectCards.push({
         title: project.name,
         subtitle: projectTypeLabel,
         type: `project-${project.projectType}`,
@@ -45,7 +48,7 @@ class DrilldownCards extends React.Component {
           Expense,
           Margin,
         },
-      };
+      });
     });
 
     const totalProjectRevenue = cells[`T&M Project Revenue-${monthLabel}`].value;
@@ -109,7 +112,7 @@ class DrilldownCards extends React.Component {
     const { value, ...properties } = cells[`Overheads-${monthLabel}`];
     const overheadsCard = { properties, title: 'Overheads', type: 'totals', total: value || 0 };
 
-    const netProfit = totalProjectMargin + totalConsultantMargin - overheadsCard.total;
+    const netProfit = (totalProjectMargin + totalConsultantMargin - overheadsCard.total).toFixed(2);
 
     this.state = { projectCards, consultantCards, overheadsCard, netProfit };
   }

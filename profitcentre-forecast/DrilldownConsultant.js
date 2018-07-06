@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 import Table from 'bappo-table';
-import { getDaysInMonth } from 'forecast-utils';
+import { getDaysInMonth, leaveProjectTypeIndexes } from 'forecast-utils';
 
 const Header = ['Date', 'Day', 'Project', 'Cost Recovery'];
 
@@ -23,8 +23,10 @@ class DrilldownConsultant extends React.Component {
       let costRecovery;
       if (entry) {
         projectName = entry.project.key || entry.project.name;
-        costRecovery = entry.consultant.internalRate;
-        totalRecovery += +costRecovery;
+        costRecovery = leaveProjectTypeIndexes.includes(entry.project.projectType)
+          ? 0
+          : +entry.consultant.internalRate;
+        totalRecovery += costRecovery;
         workingDays++;
       }
       dateRows.push([displayDate, day, projectName, costRecovery]);
