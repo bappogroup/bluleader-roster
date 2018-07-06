@@ -1,6 +1,13 @@
 import React from 'react';
 import { View, Text, Button, styled, ScrollView } from 'bappo-components';
 
+function trimNumber(n) {
+  const number = +n;
+  if (typeof number !== 'number') return n;
+  if (number % 1 === 0) return n;
+  return number.toFixed(2);
+}
+
 class Table extends React.Component {
   state = {
     fixedCols: 1,
@@ -92,7 +99,7 @@ class Table extends React.Component {
         {cells
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
           .map((data, index) =>
-            renderCell(data, {
+            renderCell(trimNumber(data), {
               rowStyle,
               key: `c${index}`,
               index: index + this.state.firstCol - 1,

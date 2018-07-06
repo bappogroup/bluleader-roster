@@ -1,11 +1,15 @@
 /* eslint no-param-reassign: "off" */
 import moment from 'moment';
+import {
+  payrollTaxRate,
+  leaveProjectTypeIndexes,
+  leaveProvisionPerDayAsPercentageOfAnnualSalary,
+  billableProbabilities,
+} from './constants';
 
 export * from './profitCentre';
 
 export const dateFormat = 'YYYY-MM-DD';
-const billableProbabilities = ['50%', '90%', '100%'];
-const payrollTaxRate = 0.06;
 
 /**
  * Determine whether a roster entry incurs contractor wage
@@ -227,6 +231,15 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         const tax = +((+salary + +bonus) * payrollTaxRate).toFixed(2);
         cells[taxCellKey][consultant.id] = tax;
         cells[taxCellKey].value += tax;
+
+        const lvProvKey = `LPROV-${month.label}`;
+        const lvprov = +(
+          +consultant.annualSalary *
+          leaveProvisionPerDayAsPercentageOfAnnualSalary *
+          2
+        ).toFixed(2);
+        cells[lvProvKey][consultant.id] = lvprov;
+        cells[lvProvKey].value += lvprov;
       }
 
       // bonus
@@ -287,10 +300,11 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
  * accumulating revenue gained from roster entries. Revenue comes from ProjectAssignment.dayRate
  */
 const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup }) => {
-  for (const entry of rosterEntries) {
-    // This project assignment must exist!
-    const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+  rosterEntries.forEach(entry => {
+    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
 
+    // non-leave project assignment must exist!
+    const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
     const monthLabel = moment(entry.date).format('MMM YYYY');
     const cellKey = `TMREV-${monthLabel}`;
 
@@ -298,7 +312,7 @@ const calculateServiceRevenue = ({ cells, rosterEntries, projectAssignmentLookup
     const rate = dayRate ? +dayRate : 0;
     cells[cellKey][entry.consultant_id] += rate;
     cells[cellKey].value += rate;
-  }
+  });
 };
 
 /**

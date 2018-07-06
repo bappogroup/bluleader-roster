@@ -233,6 +233,7 @@ class Roster extends React.Component {
     );
 
     const [newProjectAssignments, newEntryList] = await Promise.all(promises);
+    console.log(newProjectAssignments);
 
     this.setState(
       {

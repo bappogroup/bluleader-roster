@@ -1,8 +1,9 @@
 /* eslint no-param-reassign: "off" */
 import moment from 'moment';
+import { payrollTaxRate, leaveProjectTypeIndexes } from './constants';
 
 const dateFormat = 'YYYY-MM-DD';
-const payrollTaxRate = 0.06;
+
 export const pcForecastElements = [
   'T&M Project Revenue',
   'Fixed Price Project Revenue',
@@ -239,7 +240,9 @@ export const getForecastBaseDataForProfitCentre = async ({
 };
 
 const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLookup }) => {
-  for (const entry of rosterEntriesByProject) {
+  rosterEntriesByProject.forEach(entry => {
+    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+
     const monthLabel = moment(entry.date).format('MMM YYYY');
 
     if (!projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`]) {
@@ -263,9 +266,13 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
     // all project costs
     const costCellKey = `Project Cost-${monthLabel}`;
     if (!cells[costCellKey][entry.project_id]) cells[costCellKey][entry.project_id] = 0;
+    const { internalRate: canonicalInternalRate } = projectAssignmentLookup[
+      `${entry.consultant_id}.${entry.project_id}`
+    ];
     const { internalRate } = entry.consultant;
-    cells[costCellKey][entry.project_id] += +internalRate;
-    cells[costCellKey].value += +internalRate;
+    const rate = canonicalInternalRate ? +canonicalInternalRate : +internalRate;
+    cells[costCellKey][entry.project_id] += rate;
+    cells[costCellKey].value += rate;
 
     // all project expenses
     const expenseCellKey = `Project Expense-${monthLabel}`;
@@ -273,7 +280,7 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
     const expense = projectExpense ? +projectExpense : 0;
     cells[expenseCellKey][entry.project_id] += expense;
     cells[expenseCellKey].value += expense;
-  }
+  });
 };
 
 const calculateFixedPriceProject = ({ cells, projectForecastEntries }) => {
@@ -334,7 +341,14 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
         ? +(consultant.bonusProvision / 12).toFixed(2)
         : 0;
       const monthlyPtax = +((+monthlySalary + +monthlyBonus) * payrollTaxRate).toFixed(2);
-      const cost = monthlySalary + monthlyBonus + monthlyPtax;
+
+      const lvProv = +(
+        +consultant.annualSalary *
+        leaveProvisionPerDayAsPercentageOfAnnualSalary *
+        2
+      ).toFixed(2);
+
+      const cost = monthlySalary + monthlyBonus + monthlyPtax + lvProv;
 
       if (!cells[cellKey][consultant.id]) cells[cellKey][consultant.id] = 0;
       cells[cellKey][consultant.id] += cost;
