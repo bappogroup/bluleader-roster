@@ -35,7 +35,7 @@ class MainReport extends React.Component {
         // TODO
         break;
       case 'TMREV':
-        // TODO
+        component = 'DrilldownTm';
         break;
       default:
         component = 'DrilldownPlain';

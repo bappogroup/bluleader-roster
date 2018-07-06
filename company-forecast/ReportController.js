@@ -4,6 +4,7 @@ import { getForecastBaseData, getMonthArray, calculateMainReport } from 'forecas
 import MainReport from './MainReport';
 import DrilldownConsultants from './DrilldownConsultants';
 import DrilldownContractors from './DrilldownContractors';
+import DrilldownTm from './DrilldownTm';
 import DrilldownPlain from './DrilldownPlain';
 
 class Layers extends React.Component {
@@ -127,21 +128,26 @@ class Layers extends React.Component {
     if (this.state.loading) content = <ActivityIndicator />;
     else {
       const props = {
+        ...this.data,
+        report,
         openReport: this.openReport,
       };
 
       switch (report.component) {
         case 'Main':
-          content = <MainReport {...props} {...this.data} />;
+          content = <MainReport {...props} />;
           break;
         case 'DrilldownConsultants':
-          content = <DrilldownConsultants {...props} report={report} {...this.data} />;
+          content = <DrilldownConsultants {...props} />;
           break;
         case 'DrilldownContractors':
-          content = <DrilldownContractors {...props} report={report} {...this.data} />;
+          content = <DrilldownContractors {...props} />;
+          break;
+        case 'DrilldownTm':
+          content = <DrilldownTm {...props} />;
           break;
         case 'DrilldownPlain':
-          content = <DrilldownPlain {...props} report={report} {...this.data} />;
+          content = <DrilldownPlain {...props} />;
           break;
         default:
       }

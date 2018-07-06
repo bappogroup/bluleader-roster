@@ -312,9 +312,9 @@ const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup 
       const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
       const cellKey = `TMREV-${monthLabel}`;
 
-      if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
+      if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
       const rate = dayRate ? +dayRate : 0;
-      cells[cellKey][entry.consultant_id] += rate;
+      cells[cellKey][entry.project_id] += rate;
       cells[cellKey].value += rate;
     }
   });
