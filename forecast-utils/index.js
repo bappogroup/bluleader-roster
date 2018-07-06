@@ -3,7 +3,7 @@ import moment from 'moment';
 import {
   payrollTaxRate,
   leaveProjectTypeIndexes,
-  leaveProvisionPerDayAsPercentageOfAnnualSalary,
+  yearlyWorkingDays,
   billableProbabilities,
 } from './constants';
 
@@ -233,11 +233,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         cells[taxCellKey].value += tax;
 
         const lvProvKey = `LPROV-${month.label}`;
-        const lvprov = +(
-          +consultant.annualSalary *
-          leaveProvisionPerDayAsPercentageOfAnnualSalary *
-          2
-        ).toFixed(2);
+        const lvprov = +((+consultant.annualSalary / yearlyWorkingDays) * 2).toFixed(2);
         cells[lvProvKey][consultant.id] = lvprov;
         cells[lvProvKey].value += lvprov;
       }

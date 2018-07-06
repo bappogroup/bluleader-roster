@@ -3,7 +3,7 @@ import { View, Text, Button, styled, ScrollView } from 'bappo-components';
 
 function trimNumber(n) {
   const number = +n;
-  if (typeof number !== 'number') return n;
+  if (Number.isNaN(number)) return n;
   if (number % 1 === 0) return n;
   return number.toFixed(2);
 }

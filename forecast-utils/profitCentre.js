@@ -1,6 +1,6 @@
 /* eslint no-param-reassign: "off" */
 import moment from 'moment';
-import { payrollTaxRate, leaveProjectTypeIndexes } from './constants';
+import { payrollTaxRate, leaveProjectTypeIndexes, yearlyWorkingDays } from './constants';
 
 const dateFormat = 'YYYY-MM-DD';
 
@@ -342,11 +342,7 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
         : 0;
       const monthlyPtax = +((+monthlySalary + +monthlyBonus) * payrollTaxRate).toFixed(2);
 
-      const lvProv = +(
-        +consultant.annualSalary *
-        leaveProvisionPerDayAsPercentageOfAnnualSalary *
-        2
-      ).toFixed(2);
+      const lvProv = +((consultant.annualSalary / yearlyWorkingDays) * 2).toFixed(2);
 
       const cost = monthlySalary + monthlyBonus + monthlyPtax + lvProv;
 

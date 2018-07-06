@@ -190,10 +190,7 @@ const Container = styled(ScrollView)`
   padding: 15px;
 `;
 
-const CardsContainer = styled(View)`
-  flex-direction: row;
-  flex-wrap: wrap;
-`;
+const CardsContainer = styled(View)``;
 
 const Title = styled(View)`
   margin: 15px;

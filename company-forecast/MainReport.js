@@ -23,6 +23,7 @@ class MainReport extends React.Component {
       case 'SAL':
       case 'BON':
       case 'PTAXP':
+      case 'LPROV':
       case 'LEA':
         component = 'DrilldownConsultants';
         break;
