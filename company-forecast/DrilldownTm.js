@@ -7,13 +7,14 @@ const Header = ['Profit Centre', 'Project', 'Revenue'];
 class DrilldownTm extends React.Component {
   constructor(props) {
     super(props);
-    console.log(props);
 
     const reportRows = [Header];
 
     const { projects, profitCentres } = props.rawData;
     const monthLabel = props.report.params.month.label;
     const { cells } = props.mainReportData;
+    let total = 0;
+
     // Sort projects by profit centre
     projects.sort((a, b) => a.profitCentre_id - b.profitCentre_id);
     const projectByPc = {};
@@ -32,11 +33,17 @@ class DrilldownTm extends React.Component {
         reportRows.push([pcName, project.name, projectRevenue]);
         pcTotal += projectRevenue;
       });
+      total += pcTotal;
       reportRows.push({
         rowStyle: 'total',
-        data: ['Total', '', pcTotal],
+        data: ['Subtotal', '', pcTotal],
       });
       reportRows.push([]);
+    });
+
+    reportRows.push({
+      rowStyle: 'total',
+      data: ['Total', '', total],
     });
 
     this.state = { reportRows };

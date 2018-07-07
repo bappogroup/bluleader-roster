@@ -11,6 +11,14 @@ export * from './constants';
 export * from './profitCentre';
 export const dateFormat = 'YYYY-MM-DD';
 
+export function sortPeriods(rawPeriods) {
+  const periods = rawPeriods.slice();
+  return periods.sort((p1, p2) => {
+    if (p1.year !== p2.year) return +p1.year - p2.year;
+    return +p1.period - +p2.period;
+  });
+}
+
 /**
  * Determine whether a roster entry incurs contractor wage
  * Conditions are:

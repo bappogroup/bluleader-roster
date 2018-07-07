@@ -3,20 +3,25 @@ import { Text, View, styled, Button } from 'bappo-components';
 import Table from 'bappo-table';
 import ForecastEntryForm from './ForecastEntryForm';
 
+const add = '1';
+const overwrite = '2';
+
 class ForecastInput extends React.Component {
   state = {
     loading: true,
     profitCentre: this.props.selection.profitCentre,
+    header: [],
+    rows: [],
   };
 
   loadData = async () => {
-    const { ForecastElement, FinancialPeriod, ForecastEntry, CostCenter } = this.props.$models;
+    const { ForecastElement, ForecastEntry, CostCenter } = this.props.$models;
     const els = await ForecastElement.findAll({});
     const sortedPeriods = this.props.selection.periods;
 
     // save period lookup for later use
     this.periodLookup = {};
-    for (let p of sortedPeriods) {
+    for (const p of sortedPeriods) {
       this.periodLookup[`${p.id}`] = p;
     }
 
@@ -53,7 +58,7 @@ class ForecastInput extends React.Component {
 
     const cells = {};
 
-    for (let entry of entries) {
+    for (const entry of entries) {
       const key = `${entry.period_id}-${entry.forecastElement_id}`;
       cells[key] = cells[key] || [];
       cells[key].push(entry);
@@ -63,13 +68,11 @@ class ForecastInput extends React.Component {
     const header = ['', ...headerCells];
 
     const rows = els.map(el => {
-      const rowCells = sortedPeriods.map(p => {
-        return {
-          element: el,
-          period: p,
-          entries: cells[`${p.id}-${el.id}`] || [],
-        };
-      });
+      const rowCells = sortedPeriods.map(p => ({
+        element: el,
+        period: p,
+        entries: cells[`${p.id}-${el.id}`] || [],
+      }));
       return [el, ...rowCells];
     });
 
@@ -88,7 +91,7 @@ class ForecastInput extends React.Component {
     const periodFrom = this.periodLookup[data.periodFrom_id];
     const periodTo = this.periodLookup[data.periodTo_id];
     const periodIds = [];
-    for (let p of this.state.sortedPeriods) {
+    for (const p of this.state.sortedPeriods) {
       if (p.name >= periodFrom.name && p.name <= periodTo.name) {
         periodIds.push(p.id);
         newRecords.push({
@@ -140,8 +143,8 @@ class ForecastInput extends React.Component {
 
   newEntry = (values = {}) => {
     const initialValues = {
-      periodFrom_id: this.state.sortedPeriods[0].id,
-      periodTo_id: this.state.sortedPeriods[0].id,
+      periodFrom_id: values.periodFrom_id || this.state.sortedPeriods[0].id,
+      periodTo_id: values.periodTo_id || this.state.sortedPeriods[0].id,
       forecastElement_id: values.forecastElement_id,
       description: values.description,
       amount: values.amount,
@@ -249,7 +252,7 @@ class ForecastInput extends React.Component {
       };
       return (
         <BlankCell key={key} onPress={() => this.newEntry(default_values)}>
-          <Text> </Text>
+          <Text />
         </BlankCell>
       );
     }
@@ -267,12 +270,6 @@ class ForecastInput extends React.Component {
 
   render() {
     if (this.state.loading) return null;
-    if (this.state.message)
-      return (
-        <ErrorMessage>
-          <Text> {this.state.message} </Text>
-        </ErrorMessage>
-      );
 
     const data = [this.state.header, ...this.state.rows];
 
@@ -281,13 +278,19 @@ class ForecastInput extends React.Component {
         <CloseButton onPress={() => this.props.setCurrentAction('select')}>
           <Text> ← back </Text>
         </CloseButton>
-        <Table
-          data={data}
-          renderCell={this.renderCell}
-          renderFixedCell={this.renderFixedCell}
-          cellWidth={200}
-          fixedCellWidth={200}
-        />
+        {this.state.message ? (
+          <ErrorMessage>
+            <Text> {this.state.message} </Text>
+          </ErrorMessage>
+        ) : (
+          <Table
+            data={data}
+            renderCell={this.renderCell}
+            renderFixedCell={this.renderFixedCell}
+            cellWidth={200}
+            fixedCellWidth={200}
+          />
+        )}
       </Container>
     );
   }
@@ -357,9 +360,6 @@ const SmallText = styled(Text)`
   color: #aaa;
   font-size: 10px;
 `;
-
-const add = '1';
-const overwrite = '2';
 
 const ErrorMessage = styled(View)`
   margin: 20px;

@@ -3,6 +3,7 @@ import moment from 'moment';
 import { styled, View, Button, Text } from 'bappo-components';
 import { setUserPreferences, getUserPreferences } from 'user-preferences';
 import SelectionDisplay from 'selectiondisplay';
+import { sortPeriods } from 'forecast-utils';
 import ReportController from './ReportController';
 
 class ProfitCentreForecast extends React.Component {
@@ -33,10 +34,7 @@ class ProfitCentreForecast extends React.Component {
     const [profitCentres, periods] = await Promise.all(promises);
 
     // Sort periods
-    this.data.periods = periods.sort((p1, p2) => {
-      if (p1.year !== p2.year) return +p1.year - p2.year;
-      return +p1.period - +p2.period;
-    });
+    this.data.periods = sortPeriods(periods);
 
     this.data.monthOptions = this.data.periods.map((p, index) => ({
       id: p.id,
