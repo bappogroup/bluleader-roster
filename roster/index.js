@@ -118,7 +118,7 @@ class Roster extends React.Component {
 
     const [consultants, leaveProjects, probabilities, costCenter] = await Promise.all(promises);
 
-    this.data.probabilityOptions = probabilities.map((p, index) => ({
+    this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
       id: p.id,
       label: p.name,
       pos: index,
@@ -233,7 +233,6 @@ class Roster extends React.Component {
     );
 
     const [newProjectAssignments, newEntryList] = await Promise.all(promises);
-    console.log(newProjectAssignments);
 
     this.setState(
       {
@@ -307,7 +306,7 @@ class Roster extends React.Component {
       },
       onSubmit: async ({ costCenterId, startDate, weeks }) => {
         const endDate = moment(startDate).add(weeks, 'weeks');
-        this.setState({ weeks });
+        this.setState({ weeks, projectAssignments: [] });
         this.highestRowIndex = 0;
         this.isLoading = false;
         this.initialize(costCenterId, moment(startDate), endDate);
