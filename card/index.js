@@ -1,11 +1,18 @@
 import React from 'react';
 import { View, Text, styled } from 'bappo-components';
 
+function trimNumber(n) {
+  const number = +n;
+  if (Number.isNaN(number)) return n;
+  if (number % 1 === 0) return n;
+  return number.toFixed(2);
+}
+
 const Card = ({ title, subtitle, properties, total }) => {
   const renderProperty = ([name, value]) => (
     <PropertyRow key={name}>
       <Text>
-        {name}: {value}
+        {name}: {trimNumber(value)}
       </Text>
     </PropertyRow>
   );

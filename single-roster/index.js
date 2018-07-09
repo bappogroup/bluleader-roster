@@ -18,7 +18,13 @@ function truncString(str, max = 18, add = '...') {
 }
 
 class SingleRoster extends React.Component {
-  data = {};
+  data = {
+    probabilityOptions: [],
+    probabilityLookup: {}, // Find a probability by id
+    projectOptions: [],
+    projectLookup: {}, // Find a project by id
+    projectAssignmentLookup: {},
+  };
 
   state = {
     startDate: moment()
@@ -32,9 +38,6 @@ class SingleRoster extends React.Component {
     loading: false,
     weeklyEntries: [], // Array of array, containing entries of each week
     consultant: null,
-    projectOptions: [],
-    projectLookup: {}, // Find a project by id
-    probabilityLookup: {}, // Find a probability by id
   };
 
   async componentDidMount() {
@@ -82,16 +85,17 @@ class SingleRoster extends React.Component {
     projectAssignments.forEach(pa => (projectLookup[pa.project_id] = pa.project));
     const probabilityLookup = {};
     probabilities.forEach(p => (probabilityLookup[p.id] = p));
+
     this.data.probabilityOptions = probabilities.map((p, index) => ({
       id: p.id,
       label: p.name,
       pos: index,
     }));
+    this.data.probabilityLookup = probabilityLookup;
+    this.data.projectLookup = projectLookup;
+    this.data.projectOptions = projectOptions || currentProjectOptions;
 
     await this.setState({
-      projectLookup,
-      probabilityLookup,
-      projectOptions: projectOptions || currentProjectOptions,
       consultant: consultant || currentConsultant,
     });
 
@@ -133,9 +137,12 @@ class SingleRoster extends React.Component {
     );
     const newWeeklyEntries = [];
 
+    console.log(newEntries);
+    console.log(newEntriesByDate);
     for (let i = 0; i < newEntriesByDate.length; i += 7) {
       newWeeklyEntries.push(newEntriesByDate.slice(i, i + 7));
     }
+    console.log(newWeeklyEntries);
 
     await this.setState(({ weeklyEntries }) => {
       const newState = {
@@ -157,7 +164,7 @@ class SingleRoster extends React.Component {
   openEntryForm = entry => {
     this.props.$popup.form({
       objectKey: 'RosterEntry',
-      fields: getEntryFormFields(this.state.projectOptions, this.data.probabilityOptions),
+      fields: getEntryFormFields(this.data.projectOptions, this.data.probabilityOptions),
       title: `${entry.date}`,
       initialValues: {
         ...entry,
@@ -172,7 +179,8 @@ class SingleRoster extends React.Component {
   };
 
   updateRosterEntry = async data => {
-    const { consultant, startDate, projectLookup, probabilityLookup } = this.state;
+    const { consultant, startDate } = this.state;
+    const { probabilityLookup, projectLookup } = this.data;
 
     const updatedRecords = await updateRosterEntryRecords({
       data,

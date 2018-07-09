@@ -24,6 +24,7 @@ class DrilldownCards extends React.Component {
       switch (project.projectType) {
         case '1':
           projectTypeLabel = 'Internal';
+          Revenue = 0;
           break;
         case '2':
           projectTypeLabel = 'T&M';
@@ -36,6 +37,9 @@ class DrilldownCards extends React.Component {
         default:
       }
       const Margin = Revenue - Cost - Expense;
+
+      // Don't show if the number is 0
+      if (+Revenue === 0 && +Cost === 0 && +Margin === 0) return;
 
       projectCards.push({
         title: project.name,
@@ -67,7 +71,8 @@ class DrilldownCards extends React.Component {
     });
 
     // Consultants
-    const consultantCards = consultants.map(consultant => {
+    const consultantCards = [];
+    consultants.forEach(consultant => {
       const Recovery = cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let Cost;
       switch (consultant.consultantType) {
@@ -81,7 +86,9 @@ class DrilldownCards extends React.Component {
       }
       const Margin = Recovery - Cost;
 
-      return {
+      if (+Recovery === 0 && +Cost === 0) return;
+
+      consultantCards.push({
         title: consultant.name,
         type: 'consultant',
         id: consultant.id,
@@ -90,7 +97,7 @@ class DrilldownCards extends React.Component {
           Cost,
           Margin,
         },
-      };
+      });
     });
 
     const totalConsultantRecovery = cells[`People Cost Recovery-${monthLabel}`].value;

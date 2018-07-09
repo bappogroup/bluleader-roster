@@ -229,6 +229,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
       const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
       const bonus = (monthlyBonus * (validDays / totalDays)).toFixed(2);
 
+      console.log(cells);
       // Salary and tax
       if (salary > 0) {
         const salaryCellKey = `SAL-${month.label}`;
