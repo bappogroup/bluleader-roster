@@ -41,20 +41,7 @@ class Roster extends React.Component {
   constructor(props) {
     super(props);
 
-    if (!window) {
-      this.state = { errorMessage: 'This page is available only on desktop.' };
-      return;
-    }
-
-    let isMobile = false;
-    if (window.innerWidth < 500) {
-      // Mobile
-      this.CONSULTANT_CELL_WIDTH = this.CELL_DIMENSION;
-      isMobile = true;
-    }
-
     this.state = {
-      isMobile,
       costCenter: null,
       weeks: '12',
       startDate: moment().startOf('week'),
@@ -64,7 +51,7 @@ class Roster extends React.Component {
       initializing: true,
       mode: 'small',
       entryList: [],
-      leaveProjects: [],
+      commonProjects: [],
       consultants: [],
       projectAssignments: {},
       consultantOffset: 0,
@@ -112,7 +99,7 @@ class Roster extends React.Component {
       $models.Project.findAll({
         where: {
           projectType: {
-            $in: ['4', '5', '6'],
+            $in: ['4', '5', '6', '7'],
           },
         },
       }),
@@ -121,7 +108,7 @@ class Roster extends React.Component {
 
     if (costCenter_id) promises.push($models.CostCenter.findById(costCenter_id));
 
-    const [consultants, leaveProjects, probabilities, costCenter] = await Promise.all(promises);
+    const [consultants, commonProjects, probabilities, costCenter] = await Promise.all(promises);
 
     this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
       id: p.id,
@@ -142,7 +129,7 @@ class Roster extends React.Component {
         consultants,
         consultantCount: consultants.length,
         consultantOffset: 0,
-        leaveProjects,
+        commonProjects,
         startDate,
         endDate,
       },
@@ -259,12 +246,12 @@ class Roster extends React.Component {
   };
 
   getConsultantAssignments = consultantId => {
-    const { leaveProjects, projectAssignments } = this.state;
+    const { commonProjects, projectAssignments } = this.state;
     const hisProjectAssignments = projectAssignments.filter(
       pa => pa.consultant_id === consultantId,
     );
 
-    return projectAssignmentsToOptions(hisProjectAssignments, leaveProjects);
+    return projectAssignmentsToOptions(hisProjectAssignments, commonProjects);
   };
 
   // Bring up a popup asking which cost centre and start time
@@ -358,7 +345,6 @@ class Roster extends React.Component {
         ...style,
         width: this.CONSULTANT_CELL_WIDTH,
       };
-      if (this.state.isMobile) labelStyle.fontSize = 8;
 
       return (
         <ClickLabel
@@ -486,14 +472,7 @@ class Roster extends React.Component {
   };
 
   render() {
-    const { initializing, consultantCount, costCenter, entryList, mode, errorMessage } = this.state;
-
-    if (errorMessage)
-      return (
-        <View>
-          <Text>{errorMessage}</Text>
-        </View>
-      );
+    const { initializing, consultantCount, costCenter, entryList, mode } = this.state;
 
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
@@ -511,13 +490,11 @@ class Roster extends React.Component {
             <TextButton onPress={this.setFilters}>filters</TextButton>
             <TextButton onPress={this.reload}>reload</TextButton>
           </HeaderSubContainer>
-          {!this.state.isMobile && (
-            <HeaderSubContainer>
-              <Heading>Cell size:</Heading>
-              <TextButton onPress={() => this.setDisplayMode('large')}>large</TextButton>
-              <TextButton onPress={() => this.setDisplayMode('small')}>small</TextButton>
-            </HeaderSubContainer>
-          )}
+          <HeaderSubContainer>
+            <Heading>Cell size:</Heading>
+            <TextButton onPress={() => this.setDisplayMode('large')}>large</TextButton>
+            <TextButton onPress={() => this.setDisplayMode('small')}>small</TextButton>
+          </HeaderSubContainer>
         </HeaderContainer>
         <AutoSizer>
           {({ height, width }) => (

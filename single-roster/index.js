@@ -239,7 +239,7 @@ class SingleRoster extends React.Component {
 
     let backgroundColor = '#f8f8f8';
     if (entry && entry.probability) {
-      backgroundColor = entry.probability.backgroundColor;
+      backgroundColor = entry.project.backgroundColour || entry.probability.backgroundColor;
     }
 
     let projectName = entry && entry.project && entry.project.name;

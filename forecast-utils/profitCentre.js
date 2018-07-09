@@ -241,7 +241,8 @@ export const getForecastBaseDataForProfitCentre = async ({
 
 const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLookup }) => {
   rosterEntriesByProject.forEach(entry => {
-    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+    const { projectType } = entry.project;
+    if (leaveProjectTypeIndexes.includes(projectType) || projectType === '7') return;
 
     const monthLabel = moment(entry.date).format('MMM YYYY');
 
@@ -255,7 +256,7 @@ const calculateProjects = ({ cells, rosterEntriesByProject, projectAssignmentLoo
     ];
 
     // T&M projects revenue, as dayRate of fixed price assignment would be 0
-    if (entry.project.projectType === '2') {
+    if (projectType === '2') {
       const revenueCellKey = `T&M Project Revenue-${monthLabel}`;
       if (!cells[revenueCellKey][entry.project_id]) cells[revenueCellKey][entry.project_id] = 0;
       const rate = dayRate ? +dayRate : 0;
@@ -318,7 +319,8 @@ const calculateFixedPriceProject = ({ cells, projectForecastEntries }) => {
 
 const calculatePeopleRecovery = ({ cells, rosterEntriesByConsultant }) => {
   rosterEntriesByConsultant.forEach(entry => {
-    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+    const { projectType } = entry.project;
+    if (leaveProjectTypeIndexes.includes(projectType) || projectType === '7') return;
 
     const monthLabel = moment(entry.date).format('MMM YYYY');
 
@@ -360,7 +362,8 @@ const calculatePeopleCost = ({ cells, months, permConsultants, rosterEntriesByCo
   );
 
   contractorEntries.forEach(entry => {
-    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) return;
+    const { projectType } = entry.project;
+    if (leaveProjectTypeIndexes.includes(projectType) || projectType === '7') return;
 
     const monthLabel = moment(entry.date).format('MMM YYYY');
     const cellKey = `Consultant Cost(contractor)-${monthLabel}`;

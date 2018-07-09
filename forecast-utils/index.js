@@ -229,7 +229,6 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
       const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
       const bonus = (monthlyBonus * (validDays / totalDays)).toFixed(2);
 
-      console.log(cells);
       // Salary and tax
       if (salary > 0) {
         const salaryCellKey = `SAL-${month.label}`;
@@ -316,8 +315,8 @@ const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup 
       if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
-    } else {
-      // non-leave project assignment must exist!
+    } else if (entry.project.projectType === '2') {
+      // T&M project assignment must exist!
       const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
       const cellKey = `TMREV-${monthLabel}`;
 
