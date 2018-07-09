@@ -1,7 +1,8 @@
 import React from 'react';
 import { ScrollView, View, Text, Button, styled } from 'bappo-components';
 import { leaveProjectTypeIndexes } from 'forecast-utils';
-import Card from 'card';
+import WideCard from 'card';
+import NarrowCard from 'narrow-card';
 
 class DrilldownCards extends React.Component {
   constructor(props) {
@@ -71,8 +72,7 @@ class DrilldownCards extends React.Component {
     });
 
     // Consultants
-    const consultantCards = [];
-    consultants.forEach(consultant => {
+    const consultantCards = consultants.map(consultant => {
       const Recovery = cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let Cost;
       switch (consultant.consultantType) {
@@ -86,9 +86,7 @@ class DrilldownCards extends React.Component {
       }
       const Margin = Recovery - Cost;
 
-      if (+Recovery === 0 && +Cost === 0) return;
-
-      consultantCards.push({
+      return {
         title: consultant.name,
         type: 'consultant',
         id: consultant.id,
@@ -97,7 +95,7 @@ class DrilldownCards extends React.Component {
           Cost,
           Margin,
         },
-      });
+      };
     });
 
     const totalConsultantRecovery = cells[`People Cost Recovery-${monthLabel}`].value;
@@ -134,7 +132,10 @@ class DrilldownCards extends React.Component {
     const { month } = this.props.report.params;
 
     const content = cards.map(card => {
-      if (card.type === 'totals') return <Card {...card} />;
+      if (card.type === 'totals') {
+        if (this.state.isMobile) return <NarrowCard {...card} />;
+        return <WideCard {...card} />;
+      }
 
       let component;
       switch (card.type) {
@@ -160,12 +161,12 @@ class DrilldownCards extends React.Component {
             })
           }
         >
-          <Card {...card} />
+          {this.state.isMobile ? <NarrowCard {...card} /> : <WideCard {...card} />}
         </Button>
       );
     });
 
-    if (!window || window.innerWidth < 500) {
+    if (this.state.isMobile) {
       // Native or narrow screen
       return content;
     }
@@ -174,11 +175,17 @@ class DrilldownCards extends React.Component {
     return <CardsContainer>{content}</CardsContainer>;
   };
 
+  onLayout = params => {
+    const { width } = params.nativeEvent.layout;
+    if (width > 500) this.setState({ isMobile: false });
+    else this.setState({ isMobile: true });
+  };
+
   render() {
     const { projectCards, consultantCards, overheadsCard, netProfit } = this.state;
 
     return (
-      <Container>
+      <Container onLayout={this.onLayout}>
         {this.renderTitle('Projects:')}
         {this.renderCards(projectCards)}
         {this.renderTitle('Consultants:')}
@@ -204,6 +211,7 @@ const CardsContainer = styled(View)``;
 
 const Title = styled(View)`
   margin: 15px;
+  margin-top: 30px;
 `;
 
 const NetContainer = styled(View)`

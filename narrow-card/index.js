@@ -8,7 +8,7 @@ function trimNumber(n) {
   return number.toFixed(2);
 }
 
-const Card = ({ title, subtitle, properties, total }) => {
+const NarrowCard = ({ title, subtitle, properties, total }) => {
   const renderProperty = ([name, value]) => (
     <PropertyRow key={name}>
       <Text>
@@ -22,7 +22,7 @@ const Card = ({ title, subtitle, properties, total }) => {
   return (
     <Container key={title} isTotal={isTotal}>
       <TitleContainer>
-        <Title>{title}</Title>
+        <Title>{typeof title === 'string' && title.substring(0, 25)}</Title>
         {typeof subtitle === 'string' && <Subtitle>{subtitle}</Subtitle>}
       </TitleContainer>
       <PropertyContainer>
@@ -37,7 +37,7 @@ const Card = ({ title, subtitle, properties, total }) => {
   );
 };
 
-export default Card;
+export default NarrowCard;
 
 const Container = styled(View)`
   background-color: white;
@@ -45,36 +45,35 @@ const Container = styled(View)`
   border-width: 1px;
   border-style: solid;
   border-radius: 3px;
-  padding: 15px;
   margin: 15px;
   margin-bottom: 0;
-
-  flex-direction: row;
   align-items: center;
 
   ${props => props.isTotal && 'background-color: lightgrey;'};
 `;
 
 const TitleContainer = styled(View)`
-  width: 240px;
-  flex-direction: row;
+  width: 100%;
+  padding: 12px;
+  background-color: #eee;
 `;
 
-const Title = styled(Text)``;
+const Title = styled(Text)`
+  text-align: center;
+`;
 
 const Subtitle = styled(Text)`
-  padding-left: 10px;
   color: gray;
   font-size: 12px;
+  margin-top: 7px;
+  text-align: center;
 `;
 
 const PropertyContainer = styled(View)`
-  flex-direction: row;
-  display: flex;
-  flex: 1;
+  margin: 12px;
 `;
 
 const PropertyRow = styled(View)`
-  flex: 1;
-  padding: 0 10px;
+  margin-top: 5px;
+  margin-bottom: 5px;
 `;

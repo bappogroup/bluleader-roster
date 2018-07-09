@@ -41,6 +41,11 @@ class Roster extends React.Component {
   constructor(props) {
     super(props);
 
+    if (!window) {
+      this.state = { errorMessage: 'This page is available only on desktop.' };
+      return;
+    }
+
     let isMobile = false;
     if (window.innerWidth < 500) {
       // Mobile
@@ -481,7 +486,15 @@ class Roster extends React.Component {
   };
 
   render() {
-    const { initializing, consultantCount, costCenter, entryList, mode } = this.state;
+    const { initializing, consultantCount, costCenter, entryList, mode, errorMessage } = this.state;
+
+    if (errorMessage)
+      return (
+        <View>
+          <Text>{errorMessage}</Text>
+        </View>
+      );
+
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
