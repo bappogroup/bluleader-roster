@@ -91,6 +91,7 @@ class Layers extends React.Component {
       projectAssignmentLookup: rawData.projectAssignmentLookup,
       forecastElements: rawData.forecastElements,
       forecastEntries: rawData.forecastEntries,
+      projectForecastEntries: rawData.projectForecastEntries,
     });
 
     this.data.mainReportData = mainReportData;

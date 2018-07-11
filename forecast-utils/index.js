@@ -14,7 +14,7 @@ export const dateFormat = 'YYYY-MM-DD';
 export function sortPeriods(rawPeriods) {
   const periods = rawPeriods.slice();
   return periods.sort((p1, p2) => {
-    if (p1.year !== p2.year) return +p1.year - p2.year;
+    if (p1.year !== p2.year) return +p1.year - +p2.year;
     return +p1.period - +p2.period;
   });
 }
@@ -171,7 +171,24 @@ export const getForecastBaseData = async ({
     }),
   );
 
-  const [forecastElements, rosterEntries, forecastEntries] = await Promise.all(promises);
+  // Fetch fixed price project forecast entries
+  promises.push(
+    $models.ProjectForecastEntry.findAll({
+      where: {
+        period_id: {
+          $in: periodIds,
+        },
+      },
+      include: [{ as: 'period' }],
+    }),
+  );
+
+  const [
+    forecastElements,
+    rosterEntries,
+    forecastEntries,
+    projectForecastEntries,
+  ] = await Promise.all(promises);
 
   return {
     allConsultants,
@@ -182,6 +199,7 @@ export const getForecastBaseData = async ({
     projectAssignmentLookup,
     forecastElements,
     forecastEntries,
+    projectForecastEntries,
     rosterEntries,
   };
 };
@@ -343,6 +361,24 @@ const calculateForecastEntries = ({ cells, forecastEntries }) => {
   }
 };
 
+/**
+ * Calculate read-only forecast entries, e.g. 'rent', 'software licence'
+ */
+const calculateFPPEntries = ({ cells, projectForecastEntries }) => {
+  projectForecastEntries.forEach(entry => {
+    // Not showing planned cost in report
+    if (entry.forecastType === '1') return;
+
+    const monthLabel = moment(entry.period.name).format('MMM YYYY');
+    const cellKey = `FIXREV-${monthLabel}`;
+
+    const amount = +entry.amount;
+    if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
+    cells[cellKey][entry.project_id] += amount;
+    cells[cellKey].value += amount;
+  });
+};
+
 export const calculateMainReport = ({
   months,
   permConsultants,
@@ -351,6 +387,7 @@ export const calculateMainReport = ({
   projectAssignmentLookup,
   forecastElements,
   forecastEntries,
+  projectForecastEntries,
 }) => {
   // initialize cells
   const cells = {};
@@ -379,6 +416,10 @@ export const calculateMainReport = ({
   calculateForecastEntries({
     cells,
     forecastEntries,
+  });
+  calculateFPPEntries({
+    cells,
+    projectForecastEntries,
   });
 
   // Process forecast elements

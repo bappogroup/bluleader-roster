@@ -2,6 +2,21 @@ import React from 'react';
 import { styled, View, Button, Text, TextInput } from 'bappo-components';
 import BappoTable from 'bappo-table';
 
+function dateBetween(date1, date2) {
+  return {
+    beginDate: { $lt: date2 },
+    endDate: { $gt: date1 },
+  };
+}
+
+function sortPeriods(rawPeriods) {
+  const periods = rawPeriods.slice();
+  return periods.sort((p1, p2) => {
+    if (p1.year !== p2.year) return +p1.year - +p2.year;
+    return +p1.period - +p2.period;
+  });
+}
+
 class Planner extends React.Component {
   state = {
     loading: true,
@@ -12,8 +27,8 @@ class Planner extends React.Component {
   }
 
   loadData = async () => {
-    const { Project, FinancialPeriod, ProjectForecastEntry } = this.props.$models;
-    const project = this.props.project;
+    const { FinancialPeriod, ProjectForecastEntry } = this.props.$models;
+    const { project } = this.props;
 
     const entries = await ProjectForecastEntry.findAll({
       where: {
@@ -31,7 +46,7 @@ class Planner extends React.Component {
       where: dateBetween(project.startDate, project.endDate),
     });
 
-    const periods = orderPeriods(prds);
+    const periods = sortPeriods(prds);
 
     const cells = {};
 
@@ -63,16 +78,16 @@ class Planner extends React.Component {
 
     const data = [];
 
-    for (let p of this.state.periods) {
-      const revenue_cell = this.state.cells[`${p.id}-1`];
-      const cost_cell = this.state.cells[`${p.id}-2`];
+    for (const p of this.state.periods) {
+      const revenue_cell = this.state.cells[`${p.id}-2`];
+      const cost_cell = this.state.cells[`${p.id}-1`];
 
       if (revenue_cell) {
         data.push({
           period_id: p.id,
           project_id: this.state.project.id,
           amount: revenue_cell.amount,
-          forecastType: '1',
+          forecastType: '2',
         });
       }
 
@@ -81,7 +96,7 @@ class Planner extends React.Component {
           period_id: p.id,
           project_id: this.state.project.id,
           amount: cost_cell.amount,
-          forecastType: '2',
+          forecastType: '1',
         });
       }
     }
@@ -93,7 +108,7 @@ class Planner extends React.Component {
   handleValueChange = (tableCell, v) => {
     const value = v.replace(/\D/g, '');
 
-    const key = tableCell.key;
+    const { key } = tableCell;
     const cells = { ...this.state.cells };
 
     cells[key] = cells[key] || {};
@@ -103,42 +118,33 @@ class Planner extends React.Component {
     this.setState({ cells });
   };
 
-  renderCell = cell => {
-    return (
-      <Cell>
-        <TextInput
-          key={cell.period.id}
-          value={cell.entry.amount}
-          onValueChange={v => this.handleValueChange(cell, v)}
-        />
-      </Cell>
-    );
-  };
-
-  renderEntry = entry => {
-    return (
-      <View>
-        <Text>{entry.amount}</Text>
-      </View>
-    );
-  };
+  renderCell = cell => (
+    <Cell>
+      <TextInput
+        style={{ textAlign: 'center' }}
+        key={cell.period.id}
+        value={cell.entry.amount}
+        onValueChange={v => this.handleValueChange(cell, v)}
+      />
+    </Cell>
+  );
 
   render() {
     if (this.state.error) return <Text> {this.state.error} </Text>;
     if (this.state.loading) return <Text>Loading </Text>;
 
     const revenueCells = this.state.periods.map(p => ({
-      type: '1',
-      period: p,
-      key: `${p.id}-1`,
-      entry: this.state.cells[`${p.id}-1`] || 0.0,
-    }));
-
-    const costCells = this.state.periods.map(p => ({
       type: '2',
       period: p,
       key: `${p.id}-2`,
       entry: this.state.cells[`${p.id}-2`] || 0.0,
+    }));
+
+    const costCells = this.state.periods.map(p => ({
+      type: '1',
+      period: p,
+      key: `${p.id}-1`,
+      entry: this.state.cells[`${p.id}-1`] || 0.0,
     }));
 
     const rows = [this.state.header];
@@ -158,23 +164,9 @@ class Planner extends React.Component {
 
 export default Planner;
 
-const dateBetween = (date1, date2) => {
-  return {
-    beginDate: { $lt: date2 },
-    endDate: { $gt: date1 },
-  };
-};
-
-const orderPeriods = periods => {
-  return periods.sort((p1, p2) => {
-    if (p1.name > p2.name) return 1;
-    return -1;
-  });
-};
-
 const Cell = styled(View)`
   justify-content: center;
-  align-items: stretch;
+  align-items: center;
   display: flex;
   flex: 1;
 `;

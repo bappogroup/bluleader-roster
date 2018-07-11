@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, Text, Button, styled } from 'bappo-components';
+import { ScrollView, View, Text, Button, styled, ActivityIndicator } from 'bappo-components';
 import Planner from './Planner';
 
 class Projects extends React.Component {
@@ -8,10 +8,10 @@ class Projects extends React.Component {
   };
 
   async componentDidMount() {
-    console.log(this.props);
     const projects = await this.props.$models.Project.findAll({
       where: {
         projectType: '3',
+        profitCentre_id: this.props.profitCentre.id,
       },
       limit: 1000,
     });
@@ -26,17 +26,17 @@ class Projects extends React.Component {
     });
 
     const total = {};
-    for (let p of projects) {
+    for (const p of projects) {
       total[p.id] = { revenue: 0.0, cost: 0.0 };
     }
 
     // summarize
-    for (let e of entries) {
+    for (const e of entries) {
       if (e.forecastType === '2') total[e.project_id].revenue += Number(e.amount);
     }
 
     const results = [];
-    for (let p of projects) {
+    for (const p of projects) {
       results.push({ ...p, revenue: total[p.id].revenue });
     }
 
@@ -57,10 +57,17 @@ class Projects extends React.Component {
   };
 
   render() {
-    if (this.state.loading) return <Text> Loading </Text>;
+    if (this.state.loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
     if (this.state.project) return <Planner {...this.props} project={this.state.project} />;
+    if (this.state.results.length === 0) {
+      return (
+        <View>
+          <Text>No fixed price project found.</Text>
+        </View>
+      );
+    }
+
     return <ScrollView>{this.state.results.map(this.renderProject)}</ScrollView>;
-    return <Text> Hello </Text>;
   }
 }
 

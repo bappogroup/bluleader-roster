@@ -94,12 +94,9 @@ class Main extends React.Component {
     }
 
     if (this.state.currentAction === 'run') {
-      const selection = {
-        profitCentre: this.state.profitCentre,
-      };
       return (
         <Container>
-          <FixedPriceProjects {...this.props} selection={selection} />
+          <FixedPriceProjects {...this.props} profitCentre={this.state.profitCentre} />
         </Container>
       );
     }
