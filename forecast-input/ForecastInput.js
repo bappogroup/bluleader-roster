@@ -126,6 +126,8 @@ class ForecastInput extends React.Component {
   }
 
   clearRow = async data => {
+    // TODO: clear by description
+
     const periodIds = this.state.sortedPeriods.map(p => p.id);
 
     const destroyQuery = {
