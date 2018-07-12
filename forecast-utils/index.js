@@ -335,15 +335,27 @@ const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup 
       if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
-    } else if (entry.project.projectType === '2') {
-      // T&M project assignment must exist!
-      const { dayRate } = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
-      const cellKey = `TMREV-${monthLabel}`;
+    } else {
+      const assignment = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+      const { dayRate, projectExpense } = assignment;
 
-      if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
-      const rate = dayRate ? +dayRate : 0;
-      cells[cellKey][entry.project_id] += rate;
-      cells[cellKey].value += rate;
+      if (entry.project.projectType === '2') {
+        // T&M project revenue
+        // assignment must exist!
+        const cellKey = `TMREV-${monthLabel}`;
+
+        if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
+        const rate = dayRate ? +dayRate : 0;
+        cells[cellKey][entry.project_id] += rate;
+        cells[cellKey].value += rate;
+      }
+
+      if (projectExpense) {
+        const cellKey = `PJE-${monthLabel}`;
+        if (!cells[cellKey][entry.project_id]) cells[cellKey][entry.project_id] = 0;
+        cells[cellKey][entry.project_id] += +projectExpense;
+        cells[cellKey].value += +projectExpense;
+      }
     }
   });
 };
