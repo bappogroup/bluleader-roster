@@ -67,19 +67,8 @@ class MainReport extends React.Component {
     this.state = { data };
   }
 
-  renderCell = (data, params) => {
-    const { key, elementKey, index } = params;
-
+  renderHeaderCell = (data, { key, index }) => {
     const month = this.props.months[index];
-
-    if (!elementKey) {
-      // Totals
-      return (
-        <Cell key={key}>
-          <Text>{data}</Text>
-        </Cell>
-      );
-    }
 
     return (
       <ButtonCell
@@ -92,7 +81,7 @@ class MainReport extends React.Component {
           })
         }
       >
-        <Text>{data}</Text>
+        <Text style={{ color: 'white' }}>{data}</Text>
       </ButtonCell>
     );
   };
@@ -103,7 +92,7 @@ class MainReport extends React.Component {
 
     return (
       <Container>
-        <BappoTable renderCell={this.renderCell} data={data} />
+        <BappoTable renderHeaderCell={this.renderHeaderCell} data={data} />
       </Container>
     );
   }
@@ -112,12 +101,6 @@ class MainReport extends React.Component {
 export default MainReport;
 
 const Container = styled(View)`
-  flex: 1;
-`;
-
-const Cell = styled(View)`
-  justify-content: center;
-  align-items: center;
   flex: 1;
 `;
 

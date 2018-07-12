@@ -20,7 +20,7 @@ class DrilldownTm extends React.Component {
     const projectByPc = {};
     projects.forEach(project => {
       if (!projectByPc[project.profitCentre_id]) projectByPc[project.profitCentre_id] = [];
-      projectByPc[project.profitCentre_id].push(project);
+      if (project.projectType === '2') projectByPc[project.profitCentre_id].push(project);
     });
 
     Object.entries(projectByPc).forEach(([pcId, projectsInPc]) => {
@@ -34,11 +34,14 @@ class DrilldownTm extends React.Component {
         pcTotal += projectRevenue;
       });
       total += pcTotal;
-      reportRows.push({
-        rowStyle: 'total',
-        data: ['Subtotal', '', pcTotal],
-      });
-      reportRows.push([]);
+
+      if (pcTotal !== 0) {
+        reportRows.push({
+          rowStyle: 'total',
+          data: ['Subtotal', '', pcTotal],
+        });
+        reportRows.push([]);
+      }
     });
 
     reportRows.push({

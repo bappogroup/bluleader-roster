@@ -118,7 +118,7 @@ class Table extends React.Component {
     if (!data || data.length < 1) {
       return (
         <View>
-          <Text> No Data </Text>
+          <Text>No Data</Text>
         </View>
       );
     }
