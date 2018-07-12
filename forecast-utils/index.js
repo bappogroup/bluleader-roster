@@ -23,7 +23,7 @@ export function sortPeriods(rawPeriods) {
  * Determine whether a roster entry incurs contractor wage
  * Conditions are:
  * 1. prob >= 50%
- * 2. project type === 2 ('T&M')
+ * 2. project type === 2 ('T&M') || 3 ('Fixed Price')
  * 3. consultant type === 2 ('Contractor')
  *
  * @param {object} roster entry
@@ -34,7 +34,7 @@ const rosterEntryIncursContractorWages = rosterEntry => {
 
   if (
     rosterEntry.consultant.consultantType === '2' &&
-    rosterEntry.project.projectType === '2' &&
+    (rosterEntry.project.projectType === '2' || rosterEntry.project.projectType === '3') &&
     billableProbabilities.includes(probability)
   ) {
     return true;
@@ -318,8 +318,10 @@ const calculateContractConsultants = ({ consultants, cells, rosterEntries }) => 
 };
 
 /**
- * Calculate and update 'Service Revenue' row in a financial year by:
+ * Calculate and update 'T&M Service' (revenue) row in a financial year by:
  * accumulating revenue gained from roster entries. Revenue comes from ProjectAssignment.dayRate
+ *
+ * Also calculate leave recovery
  */
 const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup }) => {
   rosterEntries.forEach(entry => {

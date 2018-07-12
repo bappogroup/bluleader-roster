@@ -32,10 +32,14 @@ class MainReport extends React.Component {
         component = 'DrilldownContractors';
         break;
       case 'FIXREV':
-        // TODO
+        component = 'DrilldownProjectRevenue';
+        otherParams.projectType = '3';
+        otherParams.forecastElementKey = 'FIXREV';
         break;
       case 'TMREV':
-        component = 'DrilldownTm';
+        component = 'DrilldownProjectRevenue';
+        otherParams.projectType = '2';
+        otherParams.forecastElementKey = 'TMREV';
         break;
       default:
         component = 'DrilldownPlain';
