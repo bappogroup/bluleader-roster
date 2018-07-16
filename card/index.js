@@ -56,8 +56,9 @@ const Container = styled(View)`
 `;
 
 const TitleContainer = styled(View)`
-  width: 240px;
+  width: 280px;
   flex-direction: row;
+  overflow: hidden;
 `;
 
 const Title = styled(Text)``;

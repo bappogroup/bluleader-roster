@@ -335,6 +335,8 @@ const calculateRosterEntries = ({ cells, rosterEntries, projectAssignmentLookup 
       if (!cells[cellKey][entry.consultant_id]) cells[cellKey][entry.consultant_id] = 0;
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
+    } else if (entry.project.projectType === '7') {
+      // bench, do nothing
     } else {
       const assignment = projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
       const { dayRate, projectExpense } = assignment;
