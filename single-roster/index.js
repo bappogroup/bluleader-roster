@@ -1,13 +1,11 @@
 import React from 'react';
 import { ActivityIndicator, FlatList, View, Text, Button, styled } from 'bappo-components';
 import {
-  dateFormat,
-  datesToArray,
   getEntryFormFields,
   updateRosterEntryRecords,
   projectAssignmentsToOptions,
 } from 'roster-utils';
-import moment from 'moment';
+import { formatDate, getMonday, addWeeks, getWeeksDifference } from './utils';
 
 const WEEKS_PER_LOAD = 20;
 const weekdays = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -26,19 +24,21 @@ class SingleRoster extends React.Component {
     projectAssignmentLookup: {},
   };
 
-  state = {
-    startDate: moment()
-      .startOf('week')
-      .add(1, 'day'),
-    endDate: moment()
-      .startOf('week')
-      .add(1, 'day')
-      .add(WEEKS_PER_LOAD, 'weeks'),
-    firstLoaded: false,
-    loading: false,
-    weeklyEntries: [], // Array of array, containing entries of each week
-    consultant: null,
-  };
+  constructor(props) {
+    super(props);
+
+    const startDate = getMonday(new Date());
+    const endDate = addWeeks(startDate, WEEKS_PER_LOAD);
+
+    this.state = {
+      startDate,
+      endDate,
+      firstLoaded: false,
+      loading: false,
+      weeklyEntries: [], // Array of array, containing entries of each week
+      consultant: null,
+    };
+  }
 
   async componentDidMount() {
     const { consultant, projectOptions, $models, consultantId } = this.props;
@@ -113,7 +113,7 @@ class SingleRoster extends React.Component {
       where: {
         consultant_id: consultant.id,
         date: {
-          $between: [startDate.format(dateFormat), endDate.format(dateFormat)],
+          $between: [formatDate(startDate), formatDate(endDate)],
         },
       },
       include: [{ as: 'project' }, { as: 'probability' }],
@@ -121,33 +121,25 @@ class SingleRoster extends React.Component {
     });
 
     const newEntries = {};
+    const newEntriesArr = [];
     newRosterEntries.forEach(entry => {
       newEntries[entry.date] = entry;
     });
 
     // Put in 'date' to empty entry cells
-    for (let d = startDate.clone(); d.isBefore(endDate); d.add(1, 'day')) {
-      const date = d.format(dateFormat);
-      if (!newEntries[date]) newEntries[date] = { date };
+    for (let d = new Date(startDate.getTime()); d < endDate; d.setDate(d.getDate() + 1)) {
+      const date = formatDate(d);
+      newEntriesArr.push(newEntries[date] || { date });
     }
 
     // Group entries by week
-    const newEntriesByDate = datesToArray(startDate, endDate).map(
-      date => newEntries[date.format(dateFormat)],
-    );
     const newWeeklyEntries = [];
-
-    console.log(newEntries);
-    console.log(newEntriesByDate);
-    for (let i = 0; i < newEntriesByDate.length; i += 7) {
-      newWeeklyEntries.push(newEntriesByDate.slice(i, i + 7));
+    for (let i = 0; i < newEntriesArr.length; i += 7) {
+      newWeeklyEntries.push(newEntriesArr.slice(i, i + 7));
     }
-    console.log(newWeeklyEntries);
 
     await this.setState(({ weeklyEntries }) => {
-      const newState = {
-        loading: false,
-      };
+      const newState = { loading: false };
 
       if (isPrevious) {
         newState.weeklyEntries = [...newWeeklyEntries, ...weeklyEntries];
@@ -192,12 +184,16 @@ class SingleRoster extends React.Component {
     // Update records in state
     const newWeeklyEntries = this.state.weeklyEntries.slice();
     updatedRecords.forEach(entry => {
-      const entryDate = moment(entry.date);
-      const weekIndex = entryDate.diff(startDate, 'week');
-      const dayIndex = entryDate.weekday();
+      const entryDate = new Date(entry.date);
+      const weekIndex = getWeeksDifference(entryDate, startDate);
+      let dayIndex = entryDate.getDay();
+      if (dayIndex === 0) dayIndex = 7;
+      dayIndex -= 1;
+
       const project = projectLookup[entry.project_id];
       const probability = probabilityLookup[entry.probability_id];
-      newWeeklyEntries[weekIndex][dayIndex - 1] = {
+
+      newWeeklyEntries[weekIndex][dayIndex] = {
         ...entry,
         project,
         probability,
@@ -213,7 +209,7 @@ class SingleRoster extends React.Component {
   handleLoadMore = () => {
     const { endDate, firstLoaded } = this.state;
     if (!firstLoaded) return;
-    this.loadRosterEntries(endDate, moment(endDate).add(WEEKS_PER_LOAD, 'weeks'));
+    this.loadRosterEntries(endDate, addWeeks(endDate, WEEKS_PER_LOAD));
   };
 
   rowKeyExtractor = row => {
@@ -224,7 +220,7 @@ class SingleRoster extends React.Component {
   renderRow = ({ item }) => {
     if (!item.length) return null;
 
-    const mondayDate = moment(item[0].date).format('DD/MM');
+    const mondayDate = new Date(item[0].date).toLocaleDateString().substring(0, 5);
 
     return (
       <Row>
@@ -235,8 +231,6 @@ class SingleRoster extends React.Component {
   };
 
   renderCell = entry => {
-    if (!entry) return null;
-
     let backgroundColor = '#f8f8f8';
     if (entry && entry.probability) {
       backgroundColor = entry.project.backgroundColour || entry.probability.backgroundColor;
@@ -264,18 +258,17 @@ class SingleRoster extends React.Component {
     );
   };
 
-  renderLoadPreviousButton = () => {
-    const startDate = moment(this.state.startDate).add(-10, 'weeks');
-    const endDate = this.state.startDate;
-
-    return (
-      <ButtonRow>
-        <LoadPreviousButton onPress={() => this.loadRosterEntries(startDate, endDate, true)}>
-          <Text>load previous</Text>
-        </LoadPreviousButton>
-      </ButtonRow>
-    );
-  };
+  renderLoadPreviousButton = () => (
+    <ButtonRow>
+      <LoadPreviousButton
+        onPress={() =>
+          this.loadRosterEntries(addWeeks(this.state.startDate, -10), this.state.startDate, true)
+        }
+      >
+        <Text>load previous</Text>
+      </LoadPreviousButton>
+    </ButtonRow>
+  );
 
   render() {
     const { consultant, weeklyEntries, firstLoaded } = this.state;
@@ -283,6 +276,7 @@ class SingleRoster extends React.Component {
 
     return (
       <Container>
+        <Text>{this.state.longString}</Text>
         <HeaderRow>{weekdays.map(date => <HeaderCell key={date}>{date}</HeaderCell>)}</HeaderRow>
         <StyledList
           data={weeklyEntries}
