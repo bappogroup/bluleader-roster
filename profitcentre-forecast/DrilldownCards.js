@@ -155,7 +155,7 @@ class DrilldownCards extends React.Component {
         <Button
           onPress={() =>
             this.props.openReport({
-              name: `Report of ${card.title}, ${month.label}`,
+              name: `${card.title}, ${month.label}`,
               component,
               params: { month, resourceId: card.id },
             })

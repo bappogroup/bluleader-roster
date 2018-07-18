@@ -51,7 +51,7 @@ class MainReport extends React.Component {
         key={key}
         onPress={() =>
           this.props.openReport({
-            name: `Report on ${month.label}`,
+            name: `${month.label}`,
             component,
             params: { month, ...otherParams },
           })
