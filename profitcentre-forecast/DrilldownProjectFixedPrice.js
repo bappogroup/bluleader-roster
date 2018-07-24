@@ -15,7 +15,7 @@ class DrilldownProjectFP extends React.Component {
         projectId
       ] || 0;
     const projectOverheads =
-      props.mainReportData.cells[`Fixed Price Project Expense-${month.label}`][
+      props.mainReportData.cells[`Fixed PP Overheads-${month.label}`][
         projectId
       ] || 0;
 

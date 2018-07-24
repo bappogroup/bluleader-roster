@@ -1,16 +1,22 @@
-import React from 'react';
-import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
+import React from "react";
+import {
+  View,
+  Text,
+  styled,
+  Button,
+  ActivityIndicator
+} from "bappo-components";
 import {
   getForecastBaseDataForProfitCentre,
   calculateProfitCentreMainReport,
-  getMonthArray,
-} from 'forecast-utils';
-import MainReport from './MainReport';
-import DrilldownTable from './DrilldownTable';
-import DrilldownCards from './DrilldownCards';
-import DrilldownConsultant from './DrilldownConsultant';
-import DrilldownProjectTm from './DrilldownProjectTm';
-import DrilldownProjectFixedPrice from './DrilldownProjectFixedPrice';
+  getMonthArray
+} from "forecast-utils";
+import MainReport from "./MainReport";
+import DrilldownTable from "./DrilldownTable";
+import DrilldownCards from "./DrilldownCards";
+import DrilldownConsultant from "./DrilldownConsultant";
+import DrilldownProjectTm from "./DrilldownProjectTm";
+import DrilldownProjectFixedPrice from "./DrilldownProjectFixedPrice";
 
 class ReportController extends React.Component {
   constructor(props) {
@@ -21,10 +27,10 @@ class ReportController extends React.Component {
       reports: [
         {
           name: `Profit Centre: ${props.profitCentre.name}`,
-          component: 'Main',
-        },
+          component: "Main"
+        }
       ],
-      drilldownMode: null,
+      drilldownMode: null
     };
   }
 
@@ -33,7 +39,14 @@ class ReportController extends React.Component {
   }
 
   loadData = async () => {
-    const { $models, startDate, endDate, profitCentre, periodIds } = this.props;
+    const {
+      $models,
+      startDate,
+      endDate,
+      profitCentre,
+      periodIds,
+      include50
+    } = this.props;
 
     this.setState({ loading: true });
 
@@ -45,11 +58,12 @@ class ReportController extends React.Component {
       startDate,
       endDate,
       profitCentreId: profitCentre.id,
+      include50
     });
 
     const mainReportData = calculateProfitCentreMainReport({
       months,
-      ...rawData,
+      ...rawData
     });
 
     // Process consultants
@@ -59,13 +73,13 @@ class ReportController extends React.Component {
 
     rawData.consultants.forEach(c => {
       switch (c.consultantType) {
-        case '1':
+        case "1":
           permConsultants.push(c);
           break;
-        case '2':
+        case "2":
           contractConsultants.push(c);
           break;
-        case '3':
+        case "3":
           casualConsultants.push(c);
           break;
         default:
@@ -79,7 +93,7 @@ class ReportController extends React.Component {
       permConsultants,
       contractConsultants,
       casualConsultants,
-      mainReportData,
+      mainReportData
     };
 
     this.setState({ loading: false });
@@ -87,15 +101,19 @@ class ReportController extends React.Component {
 
   // Append a report to state
   openReport = report => {
-    if (report.component) this.setState({ reports: [...this.state.reports, report] });
+    if (report.component)
+      this.setState({ reports: [...this.state.reports, report] });
   };
 
   renderSwitchButton = () => (
     <SwitchButtonContainer>
-      <Button onPress={() => this.setState({ drilldownMode: 'Cards' })} style={{ marginRight: 7 }}>
+      <Button
+        onPress={() => this.setState({ drilldownMode: "Cards" })}
+        style={{ marginRight: 7 }}
+      >
         <Text>cards</Text>
       </Button>
-      <Button onPress={() => this.setState({ drilldownMode: 'Table' })}>
+      <Button onPress={() => this.setState({ drilldownMode: "Table" })}>
         <Text>table</Text>
       </Button>
     </SwitchButtonContainer>
@@ -111,7 +129,7 @@ class ReportController extends React.Component {
           style={{
             borderRadius: 3,
             borderWidth: 1,
-            borderColor: '#ddd',
+            borderColor: "#ddd"
           }}
         >
           <CrumbLabel>{report.name}</CrumbLabel>
@@ -125,28 +143,32 @@ class ReportController extends React.Component {
       const props = {
         ...this.data,
         openReport: this.openReport,
-        report,
+        report
       };
 
       switch (report.component) {
-        case 'Main':
+        case "Main":
           content = <MainReport {...props} />;
           break;
-        case 'Drilldown': {
-          if (true || drilldownMode === 'Cards' || (!drilldownMode && !window)) {
+        case "Drilldown": {
+          if (
+            true ||
+            drilldownMode === "Cards" ||
+            (!drilldownMode && !window)
+          ) {
             content = <DrilldownCards {...props} />;
           } else {
             content = <DrilldownTable {...props} />;
           }
           break;
         }
-        case 'DrilldownConsultant':
+        case "DrilldownConsultant":
           content = <DrilldownConsultant {...props} />;
           break;
-        case 'DrilldownProjectTm':
+        case "DrilldownProjectTm":
           content = <DrilldownProjectTm {...props} />;
           break;
-        case 'DrilldownProjectFixedPrice':
+        case "DrilldownProjectFixedPrice":
           content = <DrilldownProjectFixedPrice {...props} />;
           break;
         default:
@@ -157,10 +179,11 @@ class ReportController extends React.Component {
 
     if (this.state.reports.length > 1) {
       // Close drilldown
-      onPress = () => this.setState({ reports: this.state.reports.slice(0, -1) });
+      onPress = () =>
+        this.setState({ reports: this.state.reports.slice(0, -1) });
     } else {
       // Back to reset filter
-      onPress = () => this.props.setCurrentAction('select');
+      onPress = () => this.props.setCurrentAction("select");
     }
 
     return (
@@ -184,7 +207,9 @@ class ReportController extends React.Component {
 
     return (
       <Container>
-        {reports.map((report, index) => this.renderReport(report, index < reports.length - 1))}
+        {reports.map((report, index) =>
+          this.renderReport(report, index < reports.length - 1)
+        )}
       </Container>
     );
   }

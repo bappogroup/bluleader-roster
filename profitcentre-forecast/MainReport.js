@@ -45,7 +45,7 @@ class MainReport extends React.Component {
           cells[`Fixed Price Project Revenue-${month.label}`].value -
           cells[`Project Cost-${month.label}`].value -
           cells[`Project Expense-${month.label}`].value -
-          cells[`Fixed Price Project Expense-${month.label}`].value
+          cells[`Fixed PP Overheads-${month.label}`].value
       )
     );
     data.splice(6, 0, projectMarginRow, []);

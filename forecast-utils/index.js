@@ -23,21 +23,18 @@ export function sortPeriods(rawPeriods) {
 /**
  * Determine whether a roster entry incurs contractor wage
  * Conditions are:
- * 1. prob >= 50%
- * 2. project type === 2 ('T&M') || 3 ('Fixed Price')
- * 3. consultant type === 2 ('Contractor')
+ * 1. project type === 2 ('T&M') || 3 ('Fixed Price')
+ * 2. consultant type === 2 ('Contractor')
+ * 3. Probability: already considered when calculating base data
  *
  * @param {object} roster entry
  * @return {boolean}
  */
 const rosterEntryIncursContractorWages = rosterEntry => {
-  const probability = rosterEntry.probability.name;
-
   if (
     rosterEntry.consultant.consultantType === "2" &&
     (rosterEntry.project.projectType === "2" ||
-      rosterEntry.project.projectType === "3") &&
-    billableProbabilityKeys.includes(probability.key)
+      rosterEntry.project.projectType === "3")
   ) {
     return true;
   }

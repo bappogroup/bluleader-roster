@@ -3,7 +3,9 @@ import moment from "moment";
 import {
   payrollTaxRate,
   leaveProjectTypeIndexes,
-  yearlyWorkingDays
+  yearlyWorkingDays,
+  billableProbabilityKeys,
+  extendedBillableProbabilityKeys
 } from "./constants";
 
 const dateFormat = "YYYY-MM-DD";
@@ -11,7 +13,7 @@ const dateFormat = "YYYY-MM-DD";
 export const pcForecastElements = [
   "T&M Project Revenue",
   "Fixed Price Project Revenue",
-  "Fixed Price Project Expense",
+  "Fixed PP Overheads",
   "Project Cost",
   "Project Expense",
   "People Cost Recovery",
@@ -50,7 +52,8 @@ export const getForecastBaseDataForProfitCentre = async ({
   profitCentreId,
   startDate,
   endDate,
-  periodIds
+  periodIds,
+  include50
 }) => {
   if (!($models && profitCentreId && startDate && endDate)) return null;
 
@@ -150,7 +153,7 @@ export const getForecastBaseDataForProfitCentre = async ({
           $in: projectIds
         }
       },
-      include: [{ as: "consultant" }, { as: "project" }],
+      include: [{ as: "consultant" }, { as: "project" }, { as: "probability" }],
       limit: 100000
     })
   );
@@ -168,7 +171,7 @@ export const getForecastBaseDataForProfitCentre = async ({
           $in: consultantIds
         }
       },
-      include: [{ as: "consultant" }, { as: "project" }],
+      include: [{ as: "consultant" }, { as: "project" }, { as: "probability" }],
       limit: 100000
     })
   );
@@ -240,6 +243,10 @@ export const getForecastBaseDataForProfitCentre = async ({
     rosterEntryLookupByConsultant[key] = entry;
   });
 
+  const validProbabilityKeys = include50
+    ? extendedBillableProbabilityKeys
+    : billableProbabilityKeys;
+
   return {
     costCenters,
     allConsultants,
@@ -251,8 +258,12 @@ export const getForecastBaseDataForProfitCentre = async ({
     forecastEntriesRevenue,
     forecastEntriesCost,
     projectAssignmentLookup,
-    rosterEntriesByProject,
-    rosterEntriesByConsultant,
+    rosterEntriesByProject: rosterEntriesByProject.filter(e =>
+      validProbabilityKeys.includes(e.probability.key)
+    ),
+    rosterEntriesByConsultant: rosterEntriesByConsultant.filter(e =>
+      validProbabilityKeys.includes(e.probability.key)
+    ),
     rosterEntryLookupByConsultant,
     projectForecastEntries
   };
@@ -346,7 +357,7 @@ const calculateFixedPriceProject = ({ cells, projectForecastEntries }) => {
       case "3": {
         // Actual Expense in report
         // will show in main report
-        const cellKey = `Fixed Price Project Expense-${monthLabel}`;
+        const cellKey = `Fixed PP Overheads-${monthLabel}`;
         const amount = +entry.amount;
 
         if (!cells[cellKey][entry.project_id])

@@ -15,6 +15,7 @@ class CompanyForecast extends React.Component {
     company: null,
     forecastStartDate: null,
     forecastEndDate: null,
+    include50: false,
     currentAction: "select"
   };
 
@@ -167,7 +168,7 @@ class CompanyForecast extends React.Component {
           forecastCompanyId,
           forecastStartMonthId,
           forecastEndMonthId,
-          companyForecastInclude50
+          companyForecastInclude50: include50
         });
       }
     });

@@ -52,7 +52,8 @@ class ProfitCentreForecast extends React.Component {
     const {
       forecastProfitCentreId,
       forecastStartMonthId,
-      forecastEndMonthId
+      forecastEndMonthId,
+      pcForecastInclude50: include50
     } = prefs;
 
     if (!(forecastProfitCentreId && forecastStartMonthId && forecastEndMonthId))
@@ -72,6 +73,7 @@ class ProfitCentreForecast extends React.Component {
         forecastEndMonthId,
         forecastStartDate,
         forecastEndDate,
+        include50,
         periodIds
       });
     }
@@ -128,18 +130,25 @@ class ProfitCentreForecast extends React.Component {
             options: monthOptions
           },
           validate: this.timeRangeValidator
+        },
+        {
+          name: "include50",
+          label: "Include 50%",
+          type: "Checkbox"
         }
       ],
       initialValues: {
         forecastProfitCentreId:
           this.state.profitCentre && this.state.profitCentre.id,
         forecastStartMonthId: this.state.forecastStartMonthId,
-        forecastEndMonthId: this.state.forecastEndMonthId
+        forecastEndMonthId: this.state.forecastEndMonthId,
+        include50: this.state.include50
       },
       onSubmit: ({
         forecastProfitCentreId,
         forecastStartMonthId,
-        forecastEndMonthId
+        forecastEndMonthId,
+        include50
       }) => {
         const profitCentre = profitCentres.find(
           c => c.id === forecastProfitCentreId
@@ -156,13 +165,15 @@ class ProfitCentreForecast extends React.Component {
           forecastEndMonthId,
           forecastStartDate,
           forecastEndDate,
+          include50,
           periodIds
         });
 
         setUserPreferences(this.props.$global.currentUser.id, $models, {
           forecastProfitCentreId,
           forecastStartMonthId,
-          forecastEndMonthId
+          forecastEndMonthId,
+          pcForecastInclude50: include50
         });
       }
     });
@@ -200,6 +211,7 @@ class ProfitCentreForecast extends React.Component {
       profitCentre,
       forecastStartDate,
       forecastEndDate,
+      include50,
       periodIds
     } = this.state;
     if (
@@ -218,7 +230,8 @@ class ProfitCentreForecast extends React.Component {
 
     const options = [
       { label: "Profit Centre", value: profitCentre.name },
-      { label: "Date Range", value: daterangetxt }
+      { label: "Date Range", value: daterangetxt },
+      { label: "Include 50%", value: include50 ? "Yes" : "No" }
     ];
 
     if (this.state.currentAction === "select") {
@@ -242,6 +255,7 @@ class ProfitCentreForecast extends React.Component {
             profitCentre={profitCentre}
             startDate={forecastStartDate}
             endDate={forecastEndDate}
+            include50={include50}
             periodIds={periodIds}
             setCurrentAction={currentAction => this.setState({ currentAction })}
             $models={this.props.$models}
