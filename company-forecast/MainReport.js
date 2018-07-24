@@ -1,6 +1,12 @@
-import React from 'react';
-import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import BappoTable from 'bappo-table';
+import React from "react";
+import {
+  View,
+  Text,
+  styled,
+  Button,
+  ActivityIndicator
+} from "bappo-components";
+import BappoTable from "bappo-table";
 
 class MainReport extends React.Component {
   renderCell = (data, params) => {
@@ -20,29 +26,26 @@ class MainReport extends React.Component {
     }
 
     switch (elementKey) {
-      case 'SAL':
-      case 'BON':
-      case 'PTAXP':
-      case 'LPROV':
-      case 'LEA':
-        component = 'DrilldownConsultants';
+      case "SAL":
+      case "BON":
+      case "PTAXP":
+      case "LPROV":
+      case "LEA":
+        component = "DrilldownConsultants";
         break;
-      case 'PTAXC':
-      case 'CWAGES':
-        component = 'DrilldownContractors';
+      case "PTAXC":
+      case "CWAGES":
+        component = "DrilldownContractors";
         break;
-      case 'FIXREV':
-        component = 'DrilldownProjectRevenue';
-        otherParams.projectType = '3';
-        otherParams.forecastElementKey = 'FIXREV';
+      case "FIXREV":
+      case "FIXEXP":
+        component = "DrilldownProjectFixedPrice";
         break;
-      case 'TMREV':
-        component = 'DrilldownProjectRevenue';
-        otherParams.projectType = '2';
-        otherParams.forecastElementKey = 'TMREV';
+      case "TMREV":
+        component = "DrilldownProjectTm";
         break;
       default:
-        component = 'DrilldownPlain';
+        component = "DrilldownPlain";
         otherParams.elementKey = elementKey;
     }
 
@@ -53,7 +56,7 @@ class MainReport extends React.Component {
           this.props.openReport({
             name: `${month.label}`,
             component,
-            params: { month, ...otherParams },
+            params: { month, ...otherParams }
           })
         }
       >

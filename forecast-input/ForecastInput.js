@@ -1,22 +1,23 @@
-import React from 'react';
-import { Text, View, styled, Button } from 'bappo-components';
-import Table from 'bappo-table';
-import ForecastEntryForm from './ForecastEntryForm';
+import React from "react";
+import { Text, View, styled, Button } from "bappo-components";
+import Table from "bappo-table";
+import ForecastEntryForm from "./ForecastEntryForm";
 
-const add = '1';
-const overwrite = '2';
+const add = "1";
+const overwrite = "2";
 
 class ForecastInput extends React.Component {
   state = {
     loading: true,
     profitCentre: this.props.selection.profitCentre,
     header: [],
-    rows: [],
+    rows: []
   };
 
   loadData = async () => {
     const { ForecastElement, ForecastEntry, CostCenter } = this.props.$models;
-    const els = await ForecastElement.findAll({});
+    const _els = await ForecastElement.findAll({});
+    const els = _els.sort((a, b) => ~~b.elementType - ~~a.elementType);
     const sortedPeriods = this.props.selection.periods;
 
     // save period lookup for later use
@@ -29,14 +30,14 @@ class ForecastInput extends React.Component {
 
     const costCenters = await CostCenter.findAll({
       where: {
-        profitCentre_id: this.state.profitCentre.id,
-      },
+        profitCentre_id: this.state.profitCentre.id
+      }
     });
 
     if (costCenters.length === 0) {
       this.setState({
         loading: false,
-        message: 'This Profit Center does not have a Cost Center',
+        message: "This Profit Center does not have a Cost Center"
       });
       return;
     }
@@ -44,7 +45,7 @@ class ForecastInput extends React.Component {
       this.setState({
         loading: false,
         message:
-          'This Profit Center has more than one cost center, it should have one only for now.',
+          "This Profit Center has more than one cost center, it should have one only for now."
       });
       return;
     }
@@ -52,8 +53,8 @@ class ForecastInput extends React.Component {
     const entries = await ForecastEntry.findAll({
       where: {
         period_id: { $in: periodIds },
-        profitCentre_id: this.state.profitCentre.id,
-      },
+        profitCentre_id: this.state.profitCentre.id
+      }
     });
 
     const cells = {};
@@ -65,13 +66,13 @@ class ForecastInput extends React.Component {
     }
 
     const headerCells = sortedPeriods.map(p => p.name);
-    const header = ['', ...headerCells];
+    const header = ["", ...headerCells];
 
     const rows = els.map(el => {
       const rowCells = sortedPeriods.map(p => ({
         element: el,
         period: p,
-        entries: cells[`${p.id}-${el.id}`] || [],
+        entries: cells[`${p.id}-${el.id}`] || []
       }));
       return [el, ...rowCells];
     });
@@ -82,7 +83,7 @@ class ForecastInput extends React.Component {
       loading: false,
       sortedPeriods,
       els,
-      costCenter: costCenters[0],
+      costCenter: costCenters[0]
     });
   };
 
@@ -100,7 +101,7 @@ class ForecastInput extends React.Component {
           description: data.description,
           amount: data.amount,
           profitCentre_id: this.state.profitCentre.id,
-          costCenter_id: this.state.costCenter.id,
+          costCenter_id: this.state.costCenter.id
         });
       }
     }
@@ -108,12 +109,12 @@ class ForecastInput extends React.Component {
     const destroyQuery = {
       forecastElement_id: data.forecastElement_id,
       period_id: { $in: periodIds },
-      profitCentre_id: this.state.profitCentre.id,
+      profitCentre_id: this.state.profitCentre.id
     };
 
     if (data.method === overwrite) {
       await this.props.$models.ForecastEntry.destroy({
-        where: destroyQuery,
+        where: destroyQuery
       });
     }
 
@@ -126,18 +127,16 @@ class ForecastInput extends React.Component {
   }
 
   clearRow = async data => {
-    // TODO: clear by description
-
     const periodIds = this.state.sortedPeriods.map(p => p.id);
 
     const destroyQuery = {
       forecastElement_id: data.id,
       period_id: { $in: periodIds },
-      profitCentre_id: this.state.profitCentre.id,
+      profitCentre_id: this.state.profitCentre.id
     };
 
     await this.props.$models.ForecastEntry.destroy({
-      where: destroyQuery,
+      where: destroyQuery
     });
 
     this.loadData();
@@ -150,62 +149,65 @@ class ForecastInput extends React.Component {
       forecastElement_id: values.forecastElement_id,
       description: values.description,
       amount: values.amount,
-      method: add,
+      method: add
     };
     this.props.$popup.form({
-      title: 'New Forecast Entry',
+      title: "New Forecast Entry",
       fields: [
         {
-          name: 'periodFrom_id',
-          label: 'Period From',
-          type: 'FixedList',
+          name: "periodFrom_id",
+          label: "Period From",
+          type: "FixedList",
           properties: {
             options: this.state.sortedPeriods.map(p => ({
               id: p.id,
-              label: p.name,
-            })),
-          },
+              label: p.name
+            }))
+          }
         },
         {
-          name: 'periodTo_id',
-          label: 'Period To',
-          type: 'FixedList',
+          name: "periodTo_id",
+          label: "Period To",
+          type: "FixedList",
           properties: {
             options: this.state.sortedPeriods.map(p => ({
               id: p.id,
-              label: p.name,
-            })),
-          },
+              label: p.name
+            }))
+          }
         },
         {
-          name: 'forecastElement_id',
-          label: 'Forecast Element',
-          type: 'FixedList',
+          name: "forecastElement_id",
+          label: "Forecast Element",
+          type: "FixedList",
           properties: {
-            options: this.state.els.map(p => ({ id: p.id, label: p.name })),
-          },
+            options: this.state.els.map(p => ({ id: p.id, label: p.name }))
+          }
         },
         {
-          name: 'amount',
-          label: 'Amount',
-          type: 'Text',
+          name: "amount",
+          label: "Amount",
+          type: "Text"
         },
         {
-          name: 'description',
-          label: 'Description',
-          type: 'Text',
+          name: "description",
+          label: "Description",
+          type: "Text"
         },
         {
-          name: 'method',
-          label: 'Method',
-          type: 'FixedList',
+          name: "method",
+          label: "Method",
+          type: "FixedList",
           properties: {
-            options: [{ label: 'Add', id: add }, { label: 'Overwrite', id: overwrite }],
-          },
-        },
+            options: [
+              { label: "Add", id: add },
+              { label: "Overwrite", id: overwrite }
+            ]
+          }
+        }
       ],
       initialValues,
-      onSubmit: this.createNewEntry,
+      onSubmit: this.createNewEntry
     });
   };
 
@@ -216,7 +218,9 @@ class ForecastInput extends React.Component {
   };
 
   saveEntry = async (data, value) => {
-    this.props.$models.ForecastEntry.bulkUpdate([{ id: data.id, amount: value }]);
+    this.props.$models.ForecastEntry.bulkUpdate([
+      { id: data.id, amount: value }
+    ]);
     this.loadData();
     this.props.$popup.close();
   };
@@ -228,14 +232,16 @@ class ForecastInput extends React.Component {
         handleDelete={() => this.deleteEntry(data)}
         handleSave={value => this.saveEntry(data, value)}
       />,
-      { title: 'Forecast Value' },
+      { title: "Forecast Value" }
     );
   };
 
   renderFixedCell = (data, { rowStyle, key }) => (
     <FixedCell key={key}>
       <LabelText>{data.name}</LabelText>
-      <SmallButton onPress={() => this.newEntry({ forecastElement_id: data.id })}>
+      <SmallButton
+        onPress={() => this.newEntry({ forecastElement_id: data.id })}
+      >
         <Text>✎</Text>
       </SmallButton>
       <SmallButton onPress={() => this.clearRow(data)}>
@@ -250,7 +256,7 @@ class ForecastInput extends React.Component {
       const default_values = {
         periodFrom_id: data.period.id,
         periodTo_id: data.period.id,
-        forecastElement_id: data.element.id,
+        forecastElement_id: data.element.id
       };
       return (
         <BlankCell key={key} onPress={() => this.newEntry(default_values)}>
@@ -277,7 +283,7 @@ class ForecastInput extends React.Component {
 
     return (
       <Container>
-        <CloseButton onPress={() => this.props.setCurrentAction('select')}>
+        <CloseButton onPress={() => this.props.setCurrentAction("select")}>
           <Text> ← back </Text>
         </CloseButton>
         {this.state.message ? (

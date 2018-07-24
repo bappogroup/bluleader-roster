@@ -1,17 +1,23 @@
-import React from 'react';
-import { View, Text, styled } from 'bappo-components';
-import Table from 'bappo-table';
+import React from "react";
+import { View, Text, styled } from "bappo-components";
+import Table from "bappo-table";
 
-const Header = ['Consultant', 'Date', 'Cost', 'Expense'];
+const Header = ["Consultant", "Date", "Cost", "Expense"];
 
-class DrilldownProjectTm extends React.Component {
+class DrilldownProjectFP extends React.Component {
   constructor(props) {
     super(props);
     const { month, resourceId: projectId } = props.report.params;
 
     // Revenue
     const totalRevenue =
-      props.mainReportData.cells[`Fixed Price Project Revenue-${month.label}`][projectId] || 0;
+      props.mainReportData.cells[`Fixed Price Project Revenue-${month.label}`][
+        projectId
+      ] || 0;
+    const projectOverheads =
+      props.mainReportData.cells[`Fixed Price Project Expense-${month.label}`][
+        projectId
+      ] || 0;
 
     // Consultant table
     const reportRows = [Header];
@@ -20,10 +26,14 @@ class DrilldownProjectTm extends React.Component {
 
     const { rosterEntriesByProject, projectAssignmentLookup } = props.rawData;
     rosterEntriesByProject.forEach(entry => {
-      if (entry.project_id === projectId && month.monthNumber === new Date(entry.date).getMonth()) {
+      if (
+        entry.project_id === projectId &&
+        month.monthNumber === new Date(entry.date).getMonth()
+      ) {
         const cost = +entry.consultant.internalRate;
-        const expense = +projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`]
-          .projectExpense;
+        const expense = +projectAssignmentLookup[
+          `${entry.consultant_id}.${entry.project_id}`
+        ].projectExpense;
         // const margin = 0 - cost - expense;
         totalCost += cost;
         totalExpense += expense;
@@ -32,20 +42,21 @@ class DrilldownProjectTm extends React.Component {
     });
 
     reportRows.push({
-      rowStyle: 'total',
-      data: ['Total', '', totalCost, totalExpense],
+      rowStyle: "total",
+      data: ["Total", "", totalCost, totalExpense]
     });
     reportRows.push([]);
 
-    const totalMargin = totalRevenue - totalCost - totalExpense;
+    const totalMargin =
+      totalRevenue - totalCost - projectOverheads - totalExpense;
     reportRows.push({
-      rowStyle: 'total',
+      rowStyle: "total",
       data: [
-        '',
         `Revenue: ${totalRevenue}`,
         `Cost & Expense: ${totalCost + totalExpense}`,
-        `Margin: ${totalMargin}`,
-      ],
+        `Project Overheads: ${projectOverheads}`,
+        `Margin: ${totalMargin}`
+      ]
     });
 
     this.state = { reportRows };
@@ -64,7 +75,7 @@ class DrilldownProjectTm extends React.Component {
   }
 }
 
-export default DrilldownProjectTm;
+export default DrilldownProjectFP;
 
 const Cell = styled(View)`
   justify-content: center;

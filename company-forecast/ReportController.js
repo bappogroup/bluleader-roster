@@ -1,11 +1,22 @@
-import React from 'react';
-import { View, Text, styled, Button, ActivityIndicator } from 'bappo-components';
-import { getForecastBaseData, getMonthArray, calculateMainReport } from 'forecast-utils';
-import MainReport from './MainReport';
-import DrilldownConsultants from './DrilldownConsultants';
-import DrilldownContractors from './DrilldownContractors';
-import DrilldownProjectRevenue from './DrilldownProjectRevenue';
-import DrilldownPlain from './DrilldownPlain';
+import React from "react";
+import {
+  View,
+  Text,
+  styled,
+  Button,
+  ActivityIndicator
+} from "bappo-components";
+import {
+  getForecastBaseData,
+  getMonthArray,
+  calculateMainReport
+} from "forecast-utils";
+import MainReport from "./MainReport";
+import DrilldownConsultants from "./DrilldownConsultants";
+import DrilldownContractors from "./DrilldownContractors";
+import DrilldownProjectTm from "./DrilldownProjectTm";
+import DrilldownProjectFixedPrice from "./DrilldownProjectFixedPrice";
+import DrilldownPlain from "./DrilldownPlain";
 
 class Layers extends React.Component {
   data = {};
@@ -18,9 +29,9 @@ class Layers extends React.Component {
       reports: [
         {
           name: this.props.title,
-          component: 'Main',
-        },
-      ],
+          component: "Main"
+        }
+      ]
     };
   }
 
@@ -41,7 +52,7 @@ class Layers extends React.Component {
       periodIds,
       startDate,
       endDate,
-      companyId: company.id,
+      companyId: company.id
     });
 
     // Process consultants
@@ -51,13 +62,13 @@ class Layers extends React.Component {
 
     rawData.consultants.forEach(c => {
       switch (c.consultantType) {
-        case '1':
+        case "1":
           permConsultants.push(c);
           break;
-        case '2':
+        case "2":
           contractConsultants.push(c);
           break;
-        case '3':
+        case "3":
           casualConsultants.push(c);
           break;
         default:
@@ -66,7 +77,7 @@ class Layers extends React.Component {
 
     // Process forecast elements
     rawData.forecastElements = rawData.forecastElements.filter(
-      ele => ele.key !== 'INTCH' && ele.key !== 'INTREV',
+      ele => ele.key !== "INTCH" && ele.key !== "INTREV"
     );
 
     const profitCentreLookup = {};
@@ -80,7 +91,7 @@ class Layers extends React.Component {
       company,
       permConsultants,
       contractConsultants,
-      casualConsultants,
+      casualConsultants
     };
 
     const mainReportData = calculateMainReport({
@@ -91,7 +102,7 @@ class Layers extends React.Component {
       projectAssignmentLookup: rawData.projectAssignmentLookup,
       forecastElements: rawData.forecastElements,
       forecastEntries: rawData.forecastEntries,
-      projectForecastEntries: rawData.projectForecastEntries,
+      projectForecastEntries: rawData.projectForecastEntries
     });
 
     this.data.mainReportData = mainReportData;
@@ -99,13 +110,14 @@ class Layers extends React.Component {
     this.data.costCenterLookup = costCenterLookup;
 
     this.setState({
-      loading: false,
+      loading: false
     });
   };
 
   // Append a report to state
   openReport = report => {
-    if (report.component) this.setState({ reports: [...this.state.reports, report] });
+    if (report.component)
+      this.setState({ reports: [...this.state.reports, report] });
   };
 
   // Render a report, and apply hidden styles if needed
@@ -117,7 +129,7 @@ class Layers extends React.Component {
           style={{
             borderRadius: 3,
             borderWidth: 1,
-            borderColor: '#ddd',
+            borderColor: "#ddd"
           }}
         >
           <CrumbLabel>{report.name}</CrumbLabel>
@@ -132,23 +144,26 @@ class Layers extends React.Component {
         ...this.data,
         report,
         openReport: this.openReport,
-        ...report.params,
+        ...report.params
       };
 
       switch (report.component) {
-        case 'Main':
+        case "Main":
           content = <MainReport {...props} />;
           break;
-        case 'DrilldownConsultants':
+        case "DrilldownConsultants":
           content = <DrilldownConsultants {...props} />;
           break;
-        case 'DrilldownContractors':
+        case "DrilldownContractors":
           content = <DrilldownContractors {...props} />;
           break;
-        case 'DrilldownProjectRevenue':
-          content = <DrilldownProjectRevenue {...props} />;
+        case "DrilldownProjectTm":
+          content = <DrilldownProjectTm {...props} />;
           break;
-        case 'DrilldownPlain':
+        case "DrilldownProjectFixedPrice":
+          content = <DrilldownProjectFixedPrice {...props} />;
+          break;
+        case "DrilldownPlain":
           content = <DrilldownPlain {...props} />;
           break;
         default:
@@ -159,10 +174,11 @@ class Layers extends React.Component {
 
     if (this.state.reports.length > 1) {
       // Close drilldown
-      onPress = () => this.setState({ reports: this.state.reports.slice(0, -1) });
+      onPress = () =>
+        this.setState({ reports: this.state.reports.slice(0, -1) });
     } else {
       // Back to reset filter
-      onPress = () => this.props.setCurrentAction('select');
+      onPress = () => this.props.setCurrentAction("select");
     }
 
     return (
@@ -185,7 +201,9 @@ class Layers extends React.Component {
 
     return (
       <Container>
-        {reports.map((report, index) => this.renderReport(report, index < reports.length - 1))}
+        {reports.map((report, index) =>
+          this.renderReport(report, index < reports.length - 1)
+        )}
       </Container>
     );
   }
