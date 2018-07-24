@@ -4,7 +4,8 @@ import {
   payrollTaxRate,
   leaveProjectTypeIndexes,
   yearlyWorkingDays,
-  billableProbabilities
+  billableProbabilityKeys,
+  extendedBillableProbabilityKeys
 } from "./constants";
 
 export * from "./constants";
@@ -36,7 +37,7 @@ const rosterEntryIncursContractorWages = rosterEntry => {
     rosterEntry.consultant.consultantType === "2" &&
     (rosterEntry.project.projectType === "2" ||
       rosterEntry.project.projectType === "3") &&
-    billableProbabilities.includes(probability)
+    billableProbabilityKeys.includes(probability.key)
   ) {
     return true;
   }
@@ -74,6 +75,8 @@ export const getMonthArray = (rawStartDate, rawEndDate) => {
  * @param {object} startDate
  * @param {object} endDate
  * @param {string} companyId
+ * @param {array of string} periodIds
+ * @param {bool} include50
  * @return {object} base data
  */
 export const getForecastBaseData = async ({
@@ -81,7 +84,8 @@ export const getForecastBaseData = async ({
   companyId,
   startDate,
   endDate,
-  periodIds
+  periodIds,
+  include50
 }) => {
   if (!($models && companyId && startDate && endDate)) return null;
 
@@ -200,6 +204,13 @@ export const getForecastBaseData = async ({
     projectForecastEntries
   ] = await Promise.all(promises);
 
+  const validProbabilityKeys = include50
+    ? extendedBillableProbabilityKeys
+    : billableProbabilityKeys;
+  const validRosterEntries = rosterEntries.filter(e =>
+    validProbabilityKeys.includes(e.probability.key)
+  );
+
   return {
     allConsultants,
     costCenters,
@@ -210,7 +221,7 @@ export const getForecastBaseData = async ({
     forecastElements,
     forecastEntries,
     projectForecastEntries,
-    rosterEntries
+    rosterEntries: validRosterEntries
   };
 };
 

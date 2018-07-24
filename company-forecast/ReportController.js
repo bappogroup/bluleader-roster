@@ -41,7 +41,14 @@ class Layers extends React.Component {
 
   // Reload everything when user updated company in the filters
   loadData = async () => {
-    const { $models, startDate, endDate, company, periodIds } = this.props;
+    const {
+      $models,
+      startDate,
+      endDate,
+      company,
+      periodIds,
+      include50
+    } = this.props;
 
     this.setState({ loading: true });
 
@@ -52,7 +59,8 @@ class Layers extends React.Component {
       periodIds,
       startDate,
       endDate,
-      companyId: company.id
+      companyId: company.id,
+      include50
     });
 
     // Process consultants
