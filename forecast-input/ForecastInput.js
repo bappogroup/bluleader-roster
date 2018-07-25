@@ -126,20 +126,34 @@ class ForecastInput extends React.Component {
     this.loadData();
   }
 
-  clearRow = async data => {
+  clearRow = async forecastElement => {
     const periodIds = this.state.sortedPeriods.map(p => p.id);
 
-    const destroyQuery = {
-      forecastElement_id: data.id,
-      period_id: { $in: periodIds },
-      profitCentre_id: this.state.profitCentre.id
-    };
+    this.props.$popup.form({
+      title: "Delete Inputs",
+      fields: [
+        {
+          name: "description",
+          label:
+            "Description of input to delete (leave blank to clear the whole row)",
+          type: "Text"
+        }
+      ],
+      onSubmit: async ({ description }) => {
+        const destroyQuery = {
+          forecastElement_id: forecastElement.id,
+          period_id: { $in: periodIds },
+          profitCentre_id: this.state.profitCentre.id,
+          description
+        };
 
-    await this.props.$models.ForecastEntry.destroy({
-      where: destroyQuery
+        await this.props.$models.ForecastEntry.destroy({
+          where: destroyQuery
+        });
+
+        this.loadData();
+      }
     });
-
-    this.loadData();
   };
 
   newEntry = (values = {}) => {
