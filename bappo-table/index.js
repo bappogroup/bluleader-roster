@@ -8,6 +8,7 @@ function trimNumber(n) {
   return number.toFixed(2);
 }
 
+
 class Table extends React.Component {
   state = {
     fixedCols: 1,
@@ -118,7 +119,7 @@ class Table extends React.Component {
     if (!data || data.length < 1) {
       return (
         <View>
-          <Text>No Data</Text>
+          <Text> No Data </Text>
         </View>
       );
     }
