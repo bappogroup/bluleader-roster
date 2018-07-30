@@ -4,8 +4,7 @@
   "plugins": [
     "react",
     "jsx-a11y",
-    "import",
-    "prettier"
+    "import"
   ],
   "rules": {
     "arrow-parens": ["off"],

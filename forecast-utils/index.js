@@ -7,6 +7,7 @@ import {
   billableProbabilityKeys,
   extendedBillableProbabilityKeys
 } from "./constants";
+import { calculatePartialMonth } from "./utils";
 
 export * from "./constants";
 export * from "./profitCentre";
@@ -246,31 +247,14 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         ? +consultant.bonusProvision / 12
         : 0;
 
-      // Calculate partial monthly salary: how many days of this month is with in consultant's start/end date
-      // Consultant start date is required, while end date is optional
-      let validDays = 0;
-      const { firstDay } = month;
-      const totalDays = moment(firstDay).daysInMonth();
-      const monthStart = moment(firstDay).startOf("month");
-      const monthEnd = moment(firstDay).endOf("month");
-      const consultantStart = moment(consultant.startDate);
-      const consultantEnd = consultant.endDate && moment(consultant.endDate);
+      const ratio = calculatePartialMonth({
+        month,
+        consultantStartDate: consultant.startDate,
+        consultantEndDate: consultant.endDate
+      });
 
-      for (let m = monthStart; m.isBefore(monthEnd); m.add(1, "days")) {
-        if (consultantEnd) {
-          if (
-            m.isSameOrAfter(consultantStart) &&
-            m.isSameOrBefore(consultantEnd)
-          ) {
-            validDays++;
-          }
-        } else if (m.isSameOrAfter(consultantStart)) {
-          validDays++;
-        }
-      }
-
-      const salary = (monthlySalary * (validDays / totalDays)).toFixed(2);
-      const bonus = (monthlyBonus * (validDays / totalDays)).toFixed(2);
+      const salary = (monthlySalary * ratio).toFixed(2);
+      const bonus = (monthlyBonus * ratio).toFixed(2);
 
       // Salary and tax
       if (salary > 0) {

@@ -35,6 +35,34 @@ class MainReport extends React.Component {
       data.push(row);
     });
 
+    // Project Reveue subtotal row
+    const projectRevenueRow = {
+      rowStyle: "total",
+      data: ["Total Project Revenue"]
+    };
+    months.forEach(month =>
+      projectRevenueRow.data.push(
+        cells[`T&M Project Revenue-${month.label}`].value +
+          cells[`Fixed Price Project Revenue-${month.label}`].value
+      )
+    );
+    data.splice(3, 0, projectRevenueRow, []);
+
+    // Project Cost subtotal row
+    const projectCostRow = {
+      rowStyle: "total",
+      data: ["Total Project Cost"]
+    };
+    months.forEach(month =>
+      projectCostRow.data.push(
+        cells[`Fixed PP Overheads-${month.label}`].value +
+          cells[`Project Cost-${month.label}`].value +
+          cells[`Project Expense-${month.label}`].value
+      )
+    );
+    data.splice(7, 0, projectCostRow, []);
+
+    // Project margin row
     const projectMarginRow = {
       rowStyle: "total",
       data: ["Project Margin"]
@@ -48,7 +76,7 @@ class MainReport extends React.Component {
           cells[`Fixed PP Overheads-${month.label}`].value
       )
     );
-    data.splice(6, 0, projectMarginRow, []);
+    data.splice(9, 0, projectMarginRow, []);
 
     const peopleMarginRow = {
       rowStyle: "total",
@@ -71,7 +99,7 @@ class MainReport extends React.Component {
           cells[`Overheads-${month.label}`].value
       );
     });
-    data.splice(11, 0, peopleMarginRow, []);
+    data.splice(13, 0, peopleMarginRow, []);
     data.push([], netProfitRow);
 
     this.state = { data };

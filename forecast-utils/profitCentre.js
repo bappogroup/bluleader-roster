@@ -7,6 +7,7 @@ import {
   billableProbabilityKeys,
   extendedBillableProbabilityKeys
 } from "./constants";
+import { calculatePartialMonth } from "./utils";
 
 const dateFormat = "YYYY-MM-DD";
 
@@ -399,11 +400,18 @@ const calculatePeopleCost = ({
   for (const month of months) {
     for (const consultant of permConsultants) {
       const cellKey = `Consultant Cost(permanent)-${month.label}`;
+
+      const ratio = calculatePartialMonth({
+        month,
+        consultantStartDate: consultant.startDate,
+        consultantEndDate: consultant.endDate
+      });
+
       const monthlySalary = consultant.annualSalary
-        ? +(consultant.annualSalary / 12).toFixed(2)
+        ? +((consultant.annualSalary / 12) * ratio).toFixed(2)
         : 0;
       const monthlyBonus = consultant.bonusProvision
-        ? +(consultant.bonusProvision / 12).toFixed(2)
+        ? +((consultant.bonusProvision / 12) * ratio).toFixed(2)
         : 0;
       const monthlyPtax = +(
         (+monthlySalary + +monthlyBonus) *
@@ -412,6 +420,7 @@ const calculatePeopleCost = ({
 
       const lvProv = +(
         (consultant.annualSalary / yearlyWorkingDays) *
+        ratio *
         2
       ).toFixed(2);
 

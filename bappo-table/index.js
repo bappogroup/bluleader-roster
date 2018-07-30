@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Button, styled, ScrollView } from 'bappo-components';
+import React from "react";
+import { View, Text, Button, styled, ScrollView } from "bappo-components";
 
 function trimNumber(n) {
   const number = +n;
@@ -8,7 +8,6 @@ function trimNumber(n) {
   return number.toFixed(2);
 }
 
-
 class Table extends React.Component {
   state = {
     fixedCols: 1,
@@ -16,13 +15,17 @@ class Table extends React.Component {
     colCount: 3,
     screenWidth: 300,
     cellWidth: this.props.cellWidth || 100,
-    fixedCellWidth: this.props.fixedCellWidth || 150,
+    fixedCellWidth: this.props.fixedCellWidth || 150
   };
 
   renderFixedHeaderCell =
     this.props.renderFixedHeaderCell ||
     ((data, { rowStyle, key }) => (
-      <FixedCell key={key} style={{ width: this.state.fixedCellWidth }}>
+      <FixedCell
+        key={key}
+        style={{ width: this.state.fixedCellWidth }}
+        rowStyle={rowStyle}
+      >
         <HeaderText>{data}</HeaderText>
       </FixedCell>
     ));
@@ -30,7 +33,11 @@ class Table extends React.Component {
   renderFixedCell =
     this.props.renderFixedCell ||
     ((data, { rowStyle, key }) => (
-      <FixedCell key={key} style={{ width: this.state.fixedCellWidth }}>
+      <FixedCell
+        key={key}
+        style={{ width: this.state.fixedCellWidth }}
+        rowStyle={rowStyle}
+      >
         <LabelText>{data}</LabelText>
       </FixedCell>
     ));
@@ -38,7 +45,7 @@ class Table extends React.Component {
   renderHeaderCell =
     this.props.renderHeaderCell ||
     ((data, { rowStyle, key }) => (
-      <Cell key={key}>
+      <Cell key={key} rowStyle={rowStyle}>
         <HeaderText>{data}</HeaderText>
       </Cell>
     ));
@@ -46,24 +53,29 @@ class Table extends React.Component {
   renderCell =
     this.props.renderCell ||
     ((data, { rowStyle, key }) => (
-      <Cell key={key}>
+      <Cell key={key} rowStyle={rowStyle}>
         <Text>{data}</Text>
       </Cell>
     ));
 
   onLayout = params => {
     const screenWidth = params.nativeEvent.layout.width;
-    const colCount = Math.round((screenWidth - this.state.fixedCellWidth) / this.state.cellWidth);
+    const colCount = Math.round(
+      (screenWidth - this.state.fixedCellWidth) / this.state.cellWidth
+    );
     this.setState({
       screenWidth,
-      colCount,
+      colCount
     });
   };
 
   scrollHorizontally = n => {
     const firstCol = Math.max(
       this.state.fixedCols,
-      Math.min(this.state.firstCol + n, this.props.data[0].length - this.state.colCount),
+      Math.min(
+        this.state.firstCol + n,
+        this.props.data[0].length - this.state.colCount
+      )
     );
     this.setState({ firstCol });
   };
@@ -77,15 +89,16 @@ class Table extends React.Component {
       const { data, ...others } = row;
       cells = data;
       otherProperties = others;
-      rowStyle = row.rowStyle || 'data';
+      rowStyle = row.rowStyle || "data";
     } else {
       cells = row;
-      rowStyle = 'data';
+      rowStyle = "data";
     }
 
-    const renderCell = rowStyle === 'header' ? this.renderHeaderCell : this.renderCell;
+    const renderCell =
+      rowStyle === "header" ? this.renderHeaderCell : this.renderCell;
     const renderFixedCell =
-      rowStyle === 'header' ? this.renderFixedHeaderCell : this.renderFixedCell;
+      rowStyle === "header" ? this.renderFixedHeaderCell : this.renderFixedCell;
 
     return (
       <Row rowStyle={rowStyle} key={i}>
@@ -94,8 +107,8 @@ class Table extends React.Component {
             rowStyle,
             key: `f${index}`,
             index: index + this.state.firstCol - 1,
-            ...otherProperties,
-          }),
+            ...otherProperties
+          })
         )}
         {cells
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
@@ -104,8 +117,8 @@ class Table extends React.Component {
               rowStyle,
               key: `c${index}`,
               index: index + this.state.firstCol - 1,
-              ...otherProperties,
-            }),
+              ...otherProperties
+            })
           )}
       </Row>
     );
@@ -135,7 +148,9 @@ class Table extends React.Component {
           </NavButton>
         </NavBar>
         <TableContainer>
-          <TableHeader>{this.renderRow({ data: data[0], rowStyle: 'header' })}</TableHeader>
+          <TableHeader>
+            {this.renderRow({ data: data[0], rowStyle: "header" })}
+          </TableHeader>
           <TableBody>
             {data.slice(1).map(this.renderRow)}
             {this.renderBlankRow()}
@@ -159,6 +174,10 @@ const cssForData = `
   border-right-width: 0;
   border-color: #eee;
   border-style: solid;
+`;
+
+const cssForBold = `
+  font-weight:bold;
 `;
 
 const cssForTotal = `
@@ -197,10 +216,10 @@ const Row = styled(View)`
   min-height: 40px;
   justify-content: space-between;
   align-items: center;
-    ${props => props.rowStyle === 'data' && cssForData}
-    ${props => props.rowStyle === 'total' && cssForTotal}
-    ${props => props.rowStyle === 'header' && cssForHeader}
-  }
+  ${props => props.rowStyle === "data" && cssForData}
+  ${props => props.rowStyle === "bold" && cssForData}
+  ${props => props.rowStyle === "total" && cssForTotal}
+  ${props => props.rowStyle === "header" && cssForHeader}
 `;
 
 const FixedCell = styled(View)`
@@ -214,6 +233,7 @@ const Cell = styled(View)`
   justify-content: center;
   align-items: center;
   flex: 1;
+  ${props => props.rowStyle === "bold" && cssForBold};
 `;
 
 const LabelText = styled(Text)`

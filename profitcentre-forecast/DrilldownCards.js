@@ -16,9 +16,10 @@ class DrilldownCards extends React.Component {
     projects.forEach(project => {
       if (leaveProjectTypeIndexes.includes(project.projectType)) return;
 
-      let Revenue;
+      let Revenue = 0;
       const Cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
       const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
+      let Overheads = 0;
 
       let projectTypeLabel;
 
@@ -35,25 +36,33 @@ class DrilldownCards extends React.Component {
           projectTypeLabel = "Fixed Price";
           Revenue =
             cells[`Fixed Price Project Revenue-${monthLabel}`][project.id] || 0;
+          Overheads =
+            cells[`Fixed PP Overheads-${monthLabel}`][project.id] || 0;
           break;
         default:
       }
-      const Margin = Revenue - Cost - Expense;
+      const Margin = Revenue - Cost - Expense - Overheads;
 
       // Don't show if the number is 0
       if (+Revenue === 0 && +Cost === 0 && +Margin === 0) return;
+
+      const properties = {
+        Revenue,
+        Cost,
+        Expense,
+        Overheads,
+        Margin,
+        Percentage: `${
+          Revenue === 0 ? "-" : +((Margin / Revenue) * 100).toFixed(2)
+        }%`
+      };
 
       projectCards.push({
         title: project.name,
         subtitle: projectTypeLabel,
         type: `project-${project.projectType}`,
         id: project.id,
-        properties: {
-          Revenue,
-          Cost,
-          Expense,
-          Margin
-        }
+        properties
       });
     });
 
