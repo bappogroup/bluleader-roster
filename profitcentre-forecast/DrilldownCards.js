@@ -1,8 +1,8 @@
-import React from 'react';
-import { ScrollView, View, Text, Button, styled } from 'bappo-components';
-import { leaveProjectTypeIndexes } from 'forecast-utils';
-import WideCard from 'card';
-import NarrowCard from 'narrow-card';
+import React from "react";
+import { ScrollView, View, Text, Button, styled } from "bappo-components";
+import { leaveProjectTypeIndexes } from "forecast-utils";
+import WideCard from "card";
+import NarrowCard from "narrow-card";
 
 class DrilldownCards extends React.Component {
   constructor(props) {
@@ -23,17 +23,18 @@ class DrilldownCards extends React.Component {
       let projectTypeLabel;
 
       switch (project.projectType) {
-        case '1':
-          projectTypeLabel = 'Internal';
+        case "1":
+          projectTypeLabel = "Internal";
           Revenue = 0;
           break;
-        case '2':
-          projectTypeLabel = 'T&M';
+        case "2":
+          projectTypeLabel = "T&M";
           Revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
           break;
-        case '3':
-          projectTypeLabel = 'Fixed Price';
-          Revenue = cells[`Fixed Price Project Revenue-${monthLabel}`][project.id] || 0;
+        case "3":
+          projectTypeLabel = "Fixed Price";
+          Revenue =
+            cells[`Fixed Price Project Revenue-${monthLabel}`][project.id] || 0;
           break;
         default:
       }
@@ -51,36 +52,44 @@ class DrilldownCards extends React.Component {
           Revenue,
           Cost,
           Expense,
-          Margin,
-        },
+          Margin
+        }
       });
     });
 
-    const totalProjectRevenue = cells[`T&M Project Revenue-${monthLabel}`].value;
+    const totalProjectRevenue =
+      cells[`T&M Project Revenue-${monthLabel}`].value +
+      cells[`Fixed Price Project Revenue-${monthLabel}`].value;
     const totalProjectCost = cells[`Project Cost-${monthLabel}`].value;
     const totalProjectExpense = cells[`Project Expense-${monthLabel}`].value;
-    const totalProjectMargin = totalProjectRevenue - totalProjectCost - totalProjectExpense;
+    const totalProjectMargin =
+      totalProjectRevenue - totalProjectCost - totalProjectExpense;
     projectCards.push({
-      title: 'Totals',
-      type: 'totals',
+      title: "Totals",
+      type: "totals",
       properties: {
         Revenue: totalProjectRevenue,
         Cost: totalProjectCost,
         Expense: totalProjectExpense,
-        Margin: totalProjectMargin,
-      },
+        Margin: totalProjectMargin
+      }
     });
 
     // Consultants
     const consultantCards = consultants.map(consultant => {
-      const Recovery = cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
+      const Recovery =
+        cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let Cost;
       switch (consultant.consultantType) {
-        case '1':
-          Cost = cells[`Consultant Cost(permanent)-${monthLabel}`][consultant.id] || 0;
+        case "1":
+          Cost =
+            cells[`Consultant Cost(permanent)-${monthLabel}`][consultant.id] ||
+            0;
           break;
-        case '2':
-          Cost = cells[`Consultant Cost(contractor)-${monthLabel}`][consultant.id] || 0;
+        case "2":
+          Cost =
+            cells[`Consultant Cost(contractor)-${monthLabel}`][consultant.id] ||
+            0;
           break;
         default:
       }
@@ -88,36 +97,46 @@ class DrilldownCards extends React.Component {
 
       return {
         title: consultant.name,
-        type: 'consultant',
+        type: "consultant",
         id: consultant.id,
         properties: {
-          'Cost Recovery': Recovery,
+          "Cost Recovery": Recovery,
           Cost,
-          Margin,
-        },
+          Margin
+        }
       };
     });
 
-    const totalConsultantRecovery = cells[`People Cost Recovery-${monthLabel}`].value;
+    const totalConsultantRecovery =
+      cells[`People Cost Recovery-${monthLabel}`].value;
     const totalConsultantCost =
       cells[`Consultant Cost(permanent)-${monthLabel}`].value +
       cells[`Consultant Cost(contractor)-${monthLabel}`].value;
     const totalConsultantMargin = totalConsultantRecovery - totalConsultantCost;
     consultantCards.push({
-      title: 'Totals',
-      type: 'totals',
+      title: "Totals",
+      type: "totals",
       properties: {
-        'Cost Recovery': totalConsultantRecovery,
+        "Cost Recovery": totalConsultantRecovery,
         Cost: totalConsultantCost,
-        Margin: totalConsultantMargin,
-      },
+        Margin: totalConsultantMargin
+      }
     });
 
     // Overheads
     const { value, ...properties } = cells[`Overheads-${monthLabel}`];
-    const overheadsCard = { properties, title: 'Overheads', type: 'totals', total: value || 0 };
+    const overheadsCard = {
+      properties,
+      title: "Overheads",
+      type: "totals",
+      total: value || 0
+    };
 
-    const netProfit = (totalProjectMargin + totalConsultantMargin - overheadsCard.total).toFixed(2);
+    const netProfit = (
+      totalProjectMargin +
+      totalConsultantMargin -
+      overheadsCard.total
+    ).toFixed(2);
 
     this.state = { projectCards, consultantCards, overheadsCard, netProfit };
   }
@@ -132,21 +151,21 @@ class DrilldownCards extends React.Component {
     const { month } = this.props.report.params;
 
     const content = cards.map(card => {
-      if (card.type === 'totals') {
+      if (card.type === "totals") {
         if (this.state.isMobile) return <NarrowCard {...card} />;
         return <WideCard {...card} />;
       }
 
       let component;
       switch (card.type) {
-        case 'project-2':
-          component = 'DrilldownProjectTm';
+        case "project-2":
+          component = "DrilldownProjectTm";
           break;
-        case 'project-3':
-          component = 'DrilldownProjectFixedPrice';
+        case "project-3":
+          component = "DrilldownProjectFixedPrice";
           break;
-        case 'consultant':
-          component = 'DrilldownConsultant';
+        case "consultant":
+          component = "DrilldownConsultant";
           break;
         default:
       }
@@ -157,11 +176,15 @@ class DrilldownCards extends React.Component {
             this.props.openReport({
               name: `${card.title}, ${month.label}`,
               component,
-              params: { month, resourceId: card.id },
+              params: { month, resourceId: card.id }
             })
           }
         >
-          {this.state.isMobile ? <NarrowCard {...card} /> : <WideCard {...card} />}
+          {this.state.isMobile ? (
+            <NarrowCard {...card} />
+          ) : (
+            <WideCard {...card} />
+          )}
         </Button>
       );
     });
@@ -182,18 +205,25 @@ class DrilldownCards extends React.Component {
   };
 
   render() {
-    const { projectCards, consultantCards, overheadsCard, netProfit } = this.state;
+    const {
+      projectCards,
+      consultantCards,
+      overheadsCard,
+      netProfit
+    } = this.state;
 
     return (
       <Container onLayout={this.onLayout}>
-        {this.renderTitle('Projects:')}
+        {this.renderTitle("Projects:")}
         {this.renderCards(projectCards)}
-        {this.renderTitle('Consultants:')}
+        {this.renderTitle("Consultants:")}
         {this.renderCards(consultantCards)}
-        {this.renderTitle('Overheads:')}
+        {this.renderTitle("Overheads:")}
         {this.renderCards([overheadsCard])}
         <NetContainer>
-          <Text style={{ fontWeight: 'bold', fontSize: 18 }}>Net Profit: {netProfit}</Text>
+          <Text style={{ fontWeight: "bold", fontSize: 18 }}>
+            Net Profit: {netProfit}
+          </Text>
         </NetContainer>
         <View style={{ height: 30 }} />
       </Container>

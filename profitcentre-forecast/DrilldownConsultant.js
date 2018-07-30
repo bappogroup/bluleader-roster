@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, styled } from 'bappo-components';
-import Table from 'bappo-table';
-import { getDaysInMonth, leaveProjectTypeIndexes } from 'forecast-utils';
+import React from "react";
+import { View, Text, styled } from "bappo-components";
+import Table from "bappo-table";
+import { getDaysInMonth, leaveProjectTypeIndexes } from "forecast-utils";
 
-const Header = ['Date', 'Day', 'Project', 'Cost Recovery'];
+const Header = ["Date", "Day", "Project", "Cost Recovery"];
 
 class DrilldownConsultant extends React.Component {
   constructor(props) {
@@ -23,9 +23,14 @@ class DrilldownConsultant extends React.Component {
       let costRecovery;
       if (entry) {
         projectName = entry.project.key || entry.project.name;
-        costRecovery = leaveProjectTypeIndexes.includes(entry.project.projectType)
-          ? 0
-          : +entry.consultant.internalRate;
+        const { projectType } = entry.project;
+        if (
+          leaveProjectTypeIndexes.includes(projectType) ||
+          projectType === "7"
+        )
+          return;
+
+        costRecovery = +entry.consultant.internalRate;
         totalRecovery += costRecovery;
         workingDays++;
       }
@@ -33,8 +38,8 @@ class DrilldownConsultant extends React.Component {
     });
 
     dateRows.push({
-      rowStyle: 'total',
-      data: [`${workingDays} working days`, '', '', totalRecovery],
+      rowStyle: "total",
+      data: [`${workingDays} working days`, "", "", totalRecovery]
     });
 
     this.state = { dateRows };
