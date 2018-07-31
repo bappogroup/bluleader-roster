@@ -18,7 +18,7 @@ import DrilldownProjectTm from "./DrilldownProjectTm";
 import DrilldownProjectFixedPrice from "./DrilldownProjectFixedPrice";
 import DrilldownPlain from "./DrilldownPlain";
 
-class Layers extends React.Component {
+class ReportController extends React.Component {
   data = {};
 
   constructor(props) {
@@ -217,7 +217,7 @@ class Layers extends React.Component {
   }
 }
 
-export default Layers;
+export default ReportController;
 
 const Container = styled(View)`
   display: flex;

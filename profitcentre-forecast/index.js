@@ -1,6 +1,12 @@
 import React from "react";
 import moment from "moment";
-import { styled, View, Button, Text } from "bappo-components";
+import {
+  styled,
+  View,
+  Button,
+  Text,
+  ActivityIndicator
+} from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import SelectionDisplay from "selectiondisplay";
 import { sortPeriods } from "forecast-utils";
@@ -12,6 +18,8 @@ class ProfitCentreForecast extends React.Component {
   };
 
   state = {
+    loading: true,
+    error: null,
     profitCentre: null,
     forecastStartDate: null,
     forecastEndDate: null,
@@ -20,21 +28,55 @@ class ProfitCentreForecast extends React.Component {
   };
 
   async componentDidMount() {
-    // Load filter options
-    const promises = [];
-    promises.push(
-      this.props.$models.ProfitCentre.findAll({
-        limit: 1000
-      })
-    );
-    promises.push(
-      this.props.$models.FinancialPeriod.findAll({
-        limit: 1000
-      })
-    );
-    const [profitCentres, periods] = await Promise.all(promises);
+    // Get user identity
+    const { id: user_id } = this.props.$global.currentUser;
+    const { $models } = this.props;
 
-    // Sort periods
+    const managers = await $models.Manager.findAll({
+      where: { user_id }
+    });
+
+    if (!managers.length) {
+      return this.setState({
+        loading: false,
+        error: "You need manager permission to access this page."
+      });
+    }
+
+    const managerAssignments = await $models.ManagerAssignment.findAll({
+      where: {
+        manager_id: {
+          $in: managers.map(m => m.id)
+        }
+      },
+      include: [{ as: "profitCenter" }]
+    });
+
+    if (!managerAssignments.length) {
+      return this.setState({
+        loading: false,
+        error: "You need a manager assignment to access this page."
+      });
+    }
+
+    let profitCentres;
+
+    if (managerAssignments.length === 1 && managerAssignments[0].all) {
+      // Wildcard manager
+      profitCentres = await $models.ProfitCentre.findAll({});
+    } else {
+      // Normal manager
+      profitCentres = managerAssignments.map(ma => ma.profitCenter);
+    }
+    this.data.profitCentres = profitCentres;
+
+    // Financial periods and User preferences
+    const promises = [
+      $models.FinancialPeriod.findAll({}),
+      getUserPreferences(user_id, $models)
+    ];
+
+    const [periods, prefs] = await Promise.all(promises);
     this.data.periods = sortPeriods(periods);
 
     this.data.monthOptions = this.data.periods.map((p, index) => ({
@@ -42,13 +84,7 @@ class ProfitCentreForecast extends React.Component {
       label: p.name,
       pos: index
     }));
-    this.data.profitCentres = profitCentres;
 
-    // Load user preferences
-    const prefs = await getUserPreferences(
-      this.props.$global.currentUser.id,
-      this.props.$models
-    );
     const {
       forecastProfitCentreId,
       forecastStartMonthId,
@@ -74,7 +110,8 @@ class ProfitCentreForecast extends React.Component {
         forecastStartDate,
         forecastEndDate,
         include50,
-        periodIds
+        periodIds,
+        loading: false
       });
     }
   }
@@ -166,7 +203,8 @@ class ProfitCentreForecast extends React.Component {
           forecastStartDate,
           forecastEndDate,
           include50,
-          periodIds
+          periodIds,
+          loading: false
         });
 
         setUserPreferences(this.props.$global.currentUser.id, $models, {
@@ -208,25 +246,27 @@ class ProfitCentreForecast extends React.Component {
 
   render() {
     const {
+      loading,
+      error,
       profitCentre,
       forecastStartDate,
       forecastEndDate,
       include50,
       periodIds
     } = this.state;
-    if (
-      !(
-        profitCentre &&
-        forecastStartDate &&
-        forecastEndDate &&
-        periodIds.length
-      )
-    )
-      return null;
+
+    if (loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
+
+    if (error)
+      return (
+        <Container>
+          <Text style={{ margin: 20 }}>{error}</Text>
+        </Container>
+      );
 
     const daterangetxt = `${forecastStartDate.format(
-      "MMM YY"
-    )} to ${forecastEndDate.format("MMM YY")}`;
+      "MMM YYYY"
+    )} to ${forecastEndDate.format("MMM YYYY")}`;
 
     const options = [
       { label: "Profit Centre", value: profitCentre.name },
