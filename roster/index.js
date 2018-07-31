@@ -31,6 +31,10 @@ const dateRangeOptions = [
   {
     id: "24",
     label: "24 weeks"
+  },
+  {
+    id: "52",
+    label: "52 weeks"
   }
 ];
 
