@@ -1,36 +1,54 @@
-import React from 'react';
-import { styled, View, Button, Text } from 'bappo-components';
-import { setUserPreferences, getUserPreferences } from 'user-preferences';
-import SelectionDisplay from 'selectiondisplay';
-import FixedPriceProjects from './FixedPriceProjects';
+import React from "react";
+import {
+  styled,
+  View,
+  Button,
+  Text,
+  ActivityIndicator
+} from "bappo-components";
+import { setUserPreferences, getUserPreferences } from "user-preferences";
+import SelectionDisplay from "selectiondisplay";
+import { getAuthorisedProfitCentres } from "forecast-utils";
+import FixedPriceProjects from "./FixedPriceProjects";
 
 class Main extends React.Component {
   data = {
-    profitCentres: [],
+    profitCentres: []
   };
 
   state = {
+    loading: true,
+    error: null,
     profitCentre: null,
-    forecastStartDate: null,
-    forecastEndDate: null,
-    currentAction: 'select',
+    currentAction: "select"
   };
 
   async componentDidMount() {
-    const profitCentres = await this.props.$models.ProfitCentre.findAll({});
+    const { error, profitCentres } = await getAuthorisedProfitCentres({
+      $models: this.props.$models,
+      user_id: this.props.$global.currentUser.id
+    });
+
+    if (error) return this.setState({ loading: false, error });
 
     this.data.profitCentres = profitCentres;
 
-    const prefs = await getUserPreferences(this.props.$global.currentUser.id, this.props.$models);
+    const prefs = await getUserPreferences(
+      this.props.$global.currentUser.id,
+      this.props.$models
+    );
 
     const { forecastProfitCentreId } = prefs;
 
     if (!forecastProfitCentreId) this.setFilters();
     else {
-      const profitCentre = profitCentres.find(pc => pc.id === forecastProfitCentreId);
+      const profitCentre = profitCentres.find(
+        pc => pc.id === forecastProfitCentreId
+      );
 
       this.setState({
         profitCentre,
+        loading: false
       });
     }
   }
@@ -42,61 +60,78 @@ class Main extends React.Component {
     const profitCentreOptions = profitCentres.map((c, index) => ({
       id: c.id,
       label: c.name,
-      pos: index,
+      pos: index
     }));
 
     $popup.form({
-      title: 'Select Profit Centre and Time Range',
+      title: "Select Profit Centre and Time Range",
       fields: [
         {
-          name: 'forecastProfitCentreId',
-          label: 'ProfitCentre',
-          type: 'FixedList',
+          name: "forecastProfitCentreId",
+          label: "ProfitCentre",
+          type: "FixedList",
           properties: {
-            options: profitCentreOptions,
-          },
-        },
+            options: profitCentreOptions
+          }
+        }
       ],
       initialValues: {
-        forecastProfitCentreId: this.state.profitCentre && this.state.profitCentre.id,
+        forecastProfitCentreId:
+          this.state.profitCentre && this.state.profitCentre.id
       },
       onSubmit: ({ forecastProfitCentreId }) => {
-        const profitCentre = profitCentres.find(c => c.id === forecastProfitCentreId);
+        const profitCentre = profitCentres.find(
+          c => c.id === forecastProfitCentreId
+        );
 
         this.setState({
           profitCentre,
+          loading: false
         });
 
         setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastProfitCentreId,
+          forecastProfitCentreId
         });
-      },
+      }
     });
   };
 
   render() {
-    const { profitCentre } = this.state;
+    const { loading, error, profitCentre } = this.state;
 
-    if (!profitCentre) return null;
+    if (loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
 
-    const options = [{ label: 'Profit Center', value: profitCentre.name }];
-
-    if (this.state.currentAction === 'select') {
+    if (error)
       return (
         <Container>
-          <SelectionDisplay options={options} onChangeClick={() => this.setFilters()} />
+          <Text style={{ margin: 20 }}>{error}</Text>
+        </Container>
+      );
 
-          <RunButton onPress={() => this.setState({ currentAction: 'run' })}>
+    const options = [{ label: "Profit Center", value: profitCentre.name }];
+
+    if (this.state.currentAction === "select") {
+      return (
+        <Container>
+          <SelectionDisplay
+            options={options}
+            onChangeClick={() => this.setFilters()}
+          />
+
+          <RunButton onPress={() => this.setState({ currentAction: "run" })}>
             <RunButtonText> Run </RunButtonText>
           </RunButton>
         </Container>
       );
     }
 
-    if (this.state.currentAction === 'run') {
+    if (this.state.currentAction === "run") {
       return (
         <Container>
-          <FixedPriceProjects {...this.props} profitCentre={this.state.profitCentre} />
+          <FixedPriceProjects
+            {...this.props}
+            profitCentre={this.state.profitCentre}
+          />
         </Container>
       );
     }
@@ -124,10 +159,3 @@ const RunButton = styled(Button)`
 const RunButtonText = styled(Text)`
   color: white;
 `;
-
-const TitleContainer = styled(View)`
-  margin: 20px;
-  flex-direction: row;
-`;
-
-const Title = styled(Text)``;

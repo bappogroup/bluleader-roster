@@ -9,7 +9,7 @@ import {
 } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import SelectionDisplay from "selectiondisplay";
-import { sortPeriods } from "forecast-utils";
+import { sortPeriods, getAuthorisedProfitCentres } from "forecast-utils";
 import ReportController from "./ReportController";
 
 class ProfitCentreForecast extends React.Component {
@@ -32,42 +32,12 @@ class ProfitCentreForecast extends React.Component {
     const { id: user_id } = this.props.$global.currentUser;
     const { $models } = this.props;
 
-    const managers = await $models.Manager.findAll({
-      where: { user_id }
+    const { error, profitCentres } = await getAuthorisedProfitCentres({
+      $models,
+      user_id
     });
 
-    if (!managers.length) {
-      return this.setState({
-        loading: false,
-        error: "You need manager permission to access this page."
-      });
-    }
-
-    const managerAssignments = await $models.ManagerAssignment.findAll({
-      where: {
-        manager_id: {
-          $in: managers.map(m => m.id)
-        }
-      },
-      include: [{ as: "profitCenter" }]
-    });
-
-    if (!managerAssignments.length) {
-      return this.setState({
-        loading: false,
-        error: "You need a manager assignment to access this page."
-      });
-    }
-
-    let profitCentres;
-
-    if (managerAssignments.length === 1 && managerAssignments[0].all) {
-      // Wildcard manager
-      profitCentres = await $models.ProfitCentre.findAll({});
-    } else {
-      // Normal manager
-      profitCentres = managerAssignments.map(ma => ma.profitCenter);
-    }
+    if (error) return this.setState({ loading: false, error });
     this.data.profitCentres = profitCentres;
 
     // Financial periods and User preferences

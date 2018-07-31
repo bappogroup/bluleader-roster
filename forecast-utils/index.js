@@ -11,6 +11,7 @@ import { calculatePartialMonth } from "./utils";
 
 export * from "./constants";
 export * from "./profitCentre";
+export * from "./utils";
 export const dateFormat = "YYYY-MM-DD";
 
 export function sortPeriods(rawPeriods) {
