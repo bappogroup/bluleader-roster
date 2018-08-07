@@ -1,18 +1,27 @@
-import React from 'react';
-import { ActivityIndicator, FlatList, View, Text, Button, styled } from 'bappo-components';
+import React from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  View,
+  Text,
+  Button,
+  styled
+} from "bappo-components";
 import {
   getEntryFormFields,
   updateRosterEntryRecords,
-  projectAssignmentsToOptions,
-} from 'roster-utils';
-import { formatDate, getMonday, addWeeks, getWeeksDifference } from './utils';
+  projectAssignmentsToOptions
+} from "roster-utils";
+import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
-const weekdays = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function truncString(str, max = 18, add = '...') {
-  add = add || '...';
-  return typeof str === 'string' && str.length > max ? str.substring(0, max) + add : str;
+function truncString(str, max = 18, add = "...") {
+  add = add || "...";
+  return typeof str === "string" && str.length > max
+    ? str.substring(0, max) + add
+    : str;
 }
 
 class SingleRoster extends React.Component {
@@ -21,7 +30,7 @@ class SingleRoster extends React.Component {
     probabilityLookup: {}, // Find a probability by id
     projectOptions: [],
     projectLookup: {}, // Find a project by id
-    projectAssignmentLookup: {},
+    projectAssignmentLookup: {}
   };
 
   constructor(props) {
@@ -36,7 +45,7 @@ class SingleRoster extends React.Component {
       firstLoaded: false,
       loading: false,
       weeklyEntries: [], // Array of array, containing entries of each week
-      consultant: null,
+      consultant: null
     };
   }
 
@@ -56,20 +65,20 @@ class SingleRoster extends React.Component {
     promises.push(
       $models.ProjectAssignment.findAll({
         where: {
-          consultant_id: recordId,
+          consultant_id: recordId
         },
-        include: [{ as: 'project' }],
-        limit: 1000,
-      }),
+        include: [{ as: "project" }],
+        limit: 1000
+      })
     );
     promises.push(
       $models.Project.findAll({
         where: {
           projectType: {
-            $in: ['4', '5', '6'],
-          },
-        },
-      }),
+            $in: ["4", "5", "6", "7"]
+          }
+        }
+      })
     );
     promises.push($models.Probability.findAll({}));
 
@@ -77,26 +86,35 @@ class SingleRoster extends React.Component {
       promises.push($models.Consultant.findById(recordId));
     }
 
-    const [projectAssignments, leaveProjects, probabilities, currentConsultant] = await Promise.all(
-      promises,
+    const [
+      projectAssignments,
+      commonProjects,
+      probabilities,
+      currentConsultant
+    ] = await Promise.all(promises);
+    const currentProjectOptions = projectAssignmentsToOptions(
+      projectAssignments,
+      commonProjects
     );
-    const currentProjectOptions = projectAssignmentsToOptions(projectAssignments, leaveProjects);
     const projectLookup = {};
-    projectAssignments.forEach(pa => (projectLookup[pa.project_id] = pa.project));
+    projectAssignments.forEach(
+      pa => (projectLookup[pa.project_id] = pa.project)
+    );
+    commonProjects.forEach(p => (projectLookup[p.id] = p));
     const probabilityLookup = {};
     probabilities.forEach(p => (probabilityLookup[p.id] = p));
 
     this.data.probabilityOptions = probabilities.map((p, index) => ({
       id: p.id,
       label: p.name,
-      pos: index,
+      pos: index
     }));
     this.data.probabilityLookup = probabilityLookup;
     this.data.projectLookup = projectLookup;
     this.data.projectOptions = projectOptions || currentProjectOptions;
 
     await this.setState({
-      consultant: consultant || currentConsultant,
+      consultant: consultant || currentConsultant
     });
 
     await this.loadRosterEntries(this.state.startDate, this.state.endDate);
@@ -113,11 +131,10 @@ class SingleRoster extends React.Component {
       where: {
         consultant_id: consultant.id,
         date: {
-          $between: [formatDate(startDate), formatDate(endDate)],
-        },
+          $between: [formatDate(startDate), formatDate(endDate)]
+        }
       },
-      include: [{ as: 'project' }, { as: 'probability' }],
-      limit: 10000,
+      limit: 10000
     });
 
     const newEntries = {};
@@ -127,7 +144,11 @@ class SingleRoster extends React.Component {
     });
 
     // Put in 'date' to empty entry cells
-    for (let d = new Date(startDate.getTime()); d < endDate; d.setDate(d.getDate() + 1)) {
+    for (
+      let d = new Date(startDate.getTime());
+      d < endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
       const date = formatDate(d);
       newEntriesArr.push(newEntries[date] || { date });
     }
@@ -155,30 +176,32 @@ class SingleRoster extends React.Component {
 
   openEntryForm = entry => {
     this.props.$popup.form({
-      objectKey: 'RosterEntry',
-      fields: getEntryFormFields(this.data.projectOptions, this.data.probabilityOptions),
+      objectKey: "RosterEntry",
+      fields: getEntryFormFields(
+        this.data.projectOptions,
+        this.data.probabilityOptions
+      ),
       title: `${entry.date}`,
       initialValues: {
         ...entry,
         consultant_id: this.state.consultant.id,
         startDate: entry.date,
         endDate: entry.date,
-        weekdayFrom: '1',
-        weekdayTo: '5',
+        weekdayFrom: "1",
+        weekdayTo: "5"
       },
-      onSubmit: this.updateRosterEntry,
+      onSubmit: this.updateRosterEntry
     });
   };
 
   updateRosterEntry = async data => {
     const { consultant, startDate } = this.state;
-    const { probabilityLookup, projectLookup } = this.data;
 
     const updatedRecords = await updateRosterEntryRecords({
       data,
       consultant,
       operatorName: this.props.$global.currentUser.name,
-      $models: this.props.$models,
+      $models: this.props.$models
     });
 
     // Update records in state
@@ -190,18 +213,11 @@ class SingleRoster extends React.Component {
       if (dayIndex === 0) dayIndex = 7;
       dayIndex -= 1;
 
-      const project = projectLookup[entry.project_id];
-      const probability = probabilityLookup[entry.probability_id];
-
-      newWeeklyEntries[weekIndex][dayIndex] = {
-        ...entry,
-        project,
-        probability,
-      };
+      newWeeklyEntries[weekIndex][dayIndex] = entry;
     });
     this.setState({ weeklyEntries: newWeeklyEntries });
 
-    if (typeof this.props.onUpdate === 'function') {
+    if (typeof this.props.onUpdate === "function") {
       this.props.onUpdate();
     }
   };
@@ -220,7 +236,9 @@ class SingleRoster extends React.Component {
   renderRow = ({ item }) => {
     if (!item.length) return null;
 
-    const mondayDate = new Date(item[0].date).toLocaleDateString().substring(0, 5);
+    const mondayDate = new Date(item[0].date)
+      .toLocaleDateString()
+      .substring(0, 5);
 
     return (
       <Row>
@@ -231,12 +249,19 @@ class SingleRoster extends React.Component {
   };
 
   renderCell = entry => {
-    let backgroundColor = '#f8f8f8';
-    if (entry && entry.probability) {
-      backgroundColor = entry.project.backgroundColour || entry.probability.backgroundColor;
+    let backgroundColor = "#f8f8f8";
+    let project;
+    let probability;
+
+    if (entry.project_id) {
+      project = this.data.projectLookup[entry.project_id];
+      backgroundColor = project.backgroundColor;
+    } else if (entry.probability_id) {
+      probability = this.data.probabilityLookup[entry.probability_id];
+      backgroundColor = probability.backgroundColor;
     }
 
-    let projectName = entry && entry.project && entry.project.name;
+    let projectName = project && project.name;
     if (projectName) projectName = truncString(projectName);
 
     if (this.props.readOnly) {
@@ -262,7 +287,11 @@ class SingleRoster extends React.Component {
     <ButtonRow>
       <LoadPreviousButton
         onPress={() =>
-          this.loadRosterEntries(addWeeks(this.state.startDate, -10), this.state.startDate, true)
+          this.loadRosterEntries(
+            addWeeks(this.state.startDate, -10),
+            this.state.startDate,
+            true
+          )
         }
       >
         <Text>load previous</Text>
@@ -272,12 +301,15 @@ class SingleRoster extends React.Component {
 
   render() {
     const { consultant, weeklyEntries, firstLoaded } = this.state;
-    if (!(consultant && firstLoaded)) return <ActivityIndicator style={{ flex: 1 }} />;
+    if (!(consultant && firstLoaded))
+      return <ActivityIndicator style={{ flex: 1 }} />;
 
     return (
       <Container>
         <Text>{this.state.longString}</Text>
-        <HeaderRow>{weekdays.map(date => <HeaderCell key={date}>{date}</HeaderCell>)}</HeaderRow>
+        <HeaderRow>
+          {weekdays.map(date => <HeaderCell key={date}>{date}</HeaderCell>)}
+        </HeaderRow>
         <StyledList
           data={weeklyEntries}
           ListHeaderComponent={this.renderLoadPreviousButton}
