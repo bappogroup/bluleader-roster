@@ -9,6 +9,7 @@
   "rules": {
     "arrow-parens": ["off"],
     "camelcase": "off",
+    "comma-dangle": "off",
     "function-paren-newline": "off",
     "max-len": "off",
     "react/jsx-filename-extension": ["off"],
@@ -23,6 +24,7 @@
     "no-loop-func":"off",
     "no-return-assign": "off",
     "no-underscore-dangle": "off",
-    "object-curly-newline":"off"
+    "object-curly-newline":"off",
+    "quotes": "off"
   }
 }

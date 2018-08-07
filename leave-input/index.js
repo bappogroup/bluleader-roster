@@ -22,7 +22,29 @@ class LeaveInput extends React.Component {
     };
   }
 
-  componentDidMount() {}
+  async componentDidMount() {
+    const rosterEntries = await this.props.$models.RosterEntry.findAll({
+      where: {
+        $or: [
+          {
+            consultant_id: {
+              $in: ["6275"]
+            }
+          },
+          {
+            project_id: {
+              $in: ["489", "487"]
+            }
+          }
+        ]
+        // date: {
+        //   $between: ["2018-08-01", "2018-08-30"]
+        // }
+      }
+    });
+
+    console.log(rosterEntries);
+  }
 
   render() {
     return (
