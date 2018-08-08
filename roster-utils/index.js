@@ -248,10 +248,6 @@ export const deleteRosterEntryRecords = async ({
     };
   }
 
-  await $models.RosterEntry.destroy({
-    where: destroyQuery
-  });
-
   // Create change log
   $models.RosterChange.create({
     changedBy: operatorName,
@@ -264,6 +260,10 @@ export const deleteRosterEntryRecords = async ({
     probability_id: data.probability_id,
     weekdayFrom: data.weekdayFrom,
     weekdayTo: data.weekdayTo
+  });
+
+  return $models.RosterEntry.destroy({
+    where: destroyQuery
   });
 };
 

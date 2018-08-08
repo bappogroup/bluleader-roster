@@ -10,6 +10,7 @@ import {
 import {
   getEntryFormFields,
   updateRosterEntryRecords,
+  deleteRosterEntryRecords,
   projectAssignmentsToOptions
 } from "roster-utils";
 import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
@@ -51,13 +52,14 @@ class SingleRoster extends React.Component {
 
   async componentDidMount() {
     const { consultant, projectOptions, $models, consultantId } = this.props;
+    // let recordId = "6275";
     let recordId;
     if (consultant) {
       recordId = consultant.id;
     } else if (consultantId) {
       recordId = consultantId;
     } else {
-      recordId = this.props.$navigation.state.params.recordId;
+      ({ recordId } = this.props.$navigation.state.params);
     }
 
     const promises = [];
@@ -118,7 +120,6 @@ class SingleRoster extends React.Component {
     });
 
     await this.loadRosterEntries(this.state.startDate, this.state.endDate);
-    this.setState({ firstLoaded: true });
   }
 
   // fetch roster entries between two given dates and append current entry list in state
@@ -143,7 +144,7 @@ class SingleRoster extends React.Component {
       newEntries[entry.date] = entry;
     });
 
-    // Put in 'date' to empty entry cells
+    // Put 'date' in empty entry cells
     for (
       let d = new Date(startDate.getTime());
       d < endDate;
@@ -160,7 +161,7 @@ class SingleRoster extends React.Component {
     }
 
     await this.setState(({ weeklyEntries }) => {
-      const newState = { loading: false };
+      const newState = { loading: false, firstLoaded: true };
 
       if (isPrevious) {
         newState.weeklyEntries = [...newWeeklyEntries, ...weeklyEntries];
@@ -197,25 +198,40 @@ class SingleRoster extends React.Component {
   updateRosterEntry = async data => {
     const { consultant, startDate } = this.state;
 
-    const updatedRecords = await updateRosterEntryRecords({
+    const payload = {
       data,
       consultant,
       operatorName: this.props.$global.currentUser.name,
       $models: this.props.$models
-    });
-
-    // Update records in state
+    };
     const newWeeklyEntries = this.state.weeklyEntries.slice();
-    updatedRecords.forEach(entry => {
-      const entryDate = new Date(entry.date);
-      const weekIndex = getWeeksDifference(entryDate, startDate);
-      let dayIndex = entryDate.getDay();
-      if (dayIndex === 0) dayIndex = 7;
-      dayIndex -= 1;
 
-      newWeeklyEntries[weekIndex][dayIndex] = entry;
-    });
-    this.setState({ weeklyEntries: newWeeklyEntries });
+    if (!data.project_id) {
+      // delete records
+      const deletedCount = await deleteRosterEntryRecords(payload);
+
+      // reload roster entries
+      if (deletedCount > 0) {
+        await this.setState({ weeklyEntries: [] }, () =>
+          this.loadRosterEntries(this.state.startDate, this.state.endDate)
+        );
+      }
+    } else {
+      // update records
+      const updatedRecords = await updateRosterEntryRecords(payload);
+
+      // Update records in state
+      updatedRecords.forEach(entry => {
+        const entryDate = new Date(entry.date);
+        const weekIndex = getWeeksDifference(entryDate, startDate);
+        let dayIndex = entryDate.getDay();
+        if (dayIndex === 0) dayIndex = 7;
+        dayIndex -= 1;
+
+        newWeeklyEntries[weekIndex][dayIndex] = entry;
+      });
+      this.setState({ weeklyEntries: newWeeklyEntries });
+    }
 
     if (typeof this.props.onUpdate === "function") {
       this.props.onUpdate();
@@ -255,10 +271,10 @@ class SingleRoster extends React.Component {
 
     if (entry.project_id) {
       project = this.data.projectLookup[entry.project_id];
-      backgroundColor = project.backgroundColor;
+      ({ backgroundColor } = project);
     } else if (entry.probability_id) {
       probability = this.data.probabilityLookup[entry.probability_id];
-      backgroundColor = probability.backgroundColor;
+      ({ backgroundColor } = probability);
     }
 
     let projectName = project && project.name;
@@ -301,8 +317,9 @@ class SingleRoster extends React.Component {
 
   render() {
     const { consultant, weeklyEntries, firstLoaded } = this.state;
-    if (!(consultant && firstLoaded))
+    if (!(consultant && firstLoaded)) {
       return <ActivityIndicator style={{ flex: 1 }} />;
+    }
 
     return (
       <Container>
