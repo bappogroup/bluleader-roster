@@ -3,7 +3,7 @@ import {
   View,
   Text,
   styled,
-  Button,
+  TouchableView,
   ActivityIndicator
 } from "bappo-components";
 import BappoTable from "bappo-table";
@@ -109,7 +109,7 @@ class MainReport extends React.Component {
     const month = this.props.months[index];
 
     return (
-      <ButtonCell
+      <TouchableViewCell
         key={key}
         onPress={() =>
           this.props.openReport({
@@ -120,7 +120,7 @@ class MainReport extends React.Component {
         }
       >
         <Text style={{ color: "white" }}>{data}</Text>
-      </ButtonCell>
+      </TouchableViewCell>
     );
   };
 
@@ -142,7 +142,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const ButtonCell = styled(Button)`
+const TouchableViewCell = styled(TouchableView)`
   flex: 1;
   justify-content: center;
   align-items: center;

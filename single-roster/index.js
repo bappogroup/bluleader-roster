@@ -4,7 +4,7 @@ import {
   FlatList,
   View,
   Text,
-  Button,
+  TouchableView,
   styled
 } from "bappo-components";
 import {
@@ -325,7 +325,9 @@ class SingleRoster extends React.Component {
       <Container>
         <Text>{this.state.longString}</Text>
         <HeaderRow>
-          {weekdays.map(date => <HeaderCell key={date}>{date}</HeaderCell>)}
+          {weekdays.map(date => (
+            <HeaderCell key={date}>{date}</HeaderCell>
+          ))}
         </HeaderRow>
         <StyledList
           data={weeklyEntries}
@@ -383,7 +385,7 @@ const HeaderCell = styled(Text)`
   align-self: center;
 `;
 
-const ButtonCell = styled(Button)`
+const ButtonCell = styled(TouchableView)`
   ${cellStyle} border: 1px solid #eee;
   background-color: ${props => props.backgroundColor};
 `;
@@ -394,7 +396,7 @@ const TextCell = styled(View)`
 `;
 
 // TODO: alternate for outline
-const LoadPreviousButton = styled(Button)``;
+const LoadPreviousButton = styled(TouchableView)``;
 
 const CellText = styled(Text)`
   font-size: 12px;

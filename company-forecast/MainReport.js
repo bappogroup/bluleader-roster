@@ -3,7 +3,7 @@ import {
   View,
   Text,
   styled,
-  Button,
+  TouchableView,
   ActivityIndicator
 } from "bappo-components";
 import BappoTable from "bappo-table";
@@ -89,7 +89,7 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const ButtonCell = styled(Button)`
+const ButtonCell = styled(TouchableView)`
   flex: 1;
   justify-content: center;
   align-items: center;

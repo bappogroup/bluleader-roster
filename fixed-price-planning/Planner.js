@@ -1,11 +1,11 @@
-import React from 'react';
-import { styled, View, Button, Text, TextInput } from 'bappo-components';
-import BappoTable from 'bappo-table';
+import React from "react";
+import { styled, View, TouchableView, Text, TextInput } from "bappo-components";
+import BappoTable from "bappo-table";
 
 function dateBetween(date1, date2) {
   return {
     beginDate: { $lt: date2 },
-    endDate: { $gt: date1 },
+    endDate: { $gt: date1 }
   };
 }
 
@@ -19,7 +19,7 @@ function sortPeriods(rawPeriods) {
 
 class Planner extends React.Component {
   state = {
-    loading: true,
+    loading: true
   };
 
   componentDidMount() {
@@ -32,18 +32,19 @@ class Planner extends React.Component {
 
     const entries = await ProjectForecastEntry.findAll({
       where: {
-        project_id: project.id,
-      },
+        project_id: project.id
+      }
     });
 
     if (!project.endDate || !project.startDate) {
       this.setState({
-        error: 'Cannot proceed. Please specify begin date and end date on the project master.',
+        error:
+          "Cannot proceed. Please specify begin date and end date on the project master."
       });
     }
 
     const prds = await FinancialPeriod.findAll({
-      where: dateBetween(project.startDate, project.endDate),
+      where: dateBetween(project.startDate, project.endDate)
     });
 
     const periods = sortPeriods(prds);
@@ -56,14 +57,14 @@ class Planner extends React.Component {
     }
 
     const headerCells = periods.map(p => p.name);
-    const header = ['', ...headerCells];
+    const header = ["", ...headerCells];
 
     this.setState({
       project,
       periods,
       cells,
       header,
-      loading: false,
+      loading: false
     });
   };
 
@@ -72,8 +73,8 @@ class Planner extends React.Component {
 
     await ProjectForecastEntry.destroy({
       where: {
-        project_id: this.state.project.id,
-      },
+        project_id: this.state.project.id
+      }
     });
 
     const data = [];
@@ -81,13 +82,14 @@ class Planner extends React.Component {
     for (const p of this.state.periods) {
       const revenue_cell = this.state.cells[`${p.id}-2`];
       const cost_cell = this.state.cells[`${p.id}-1`];
+      const expense_cell = this.state.cells[`${p.id}-3`];
 
       if (revenue_cell) {
         data.push({
           period_id: p.id,
           project_id: this.state.project.id,
           amount: revenue_cell.amount,
-          forecastType: '2',
+          forecastType: "2"
         });
       }
 
@@ -96,17 +98,26 @@ class Planner extends React.Component {
           period_id: p.id,
           project_id: this.state.project.id,
           amount: cost_cell.amount,
-          forecastType: '1',
+          forecastType: "1"
+        });
+      }
+
+      if (expense_cell) {
+        data.push({
+          period_id: p.id,
+          project_id: this.state.project.id,
+          amount: expense_cell.amount,
+          forecastType: "3"
         });
       }
     }
 
     await ProjectForecastEntry.bulkCreate(data);
-    alert('saved successfully');
+    alert("saved successfully");
   };
 
   handleValueChange = (tableCell, v) => {
-    const value = v.replace(/\D/g, '');
+    const value = v.replace(/\D/g, "");
 
     const { key } = tableCell;
     const cells = { ...this.state.cells };
@@ -121,7 +132,7 @@ class Planner extends React.Component {
   renderCell = cell => (
     <Cell>
       <TextInput
-        style={{ textAlign: 'center' }}
+        style={{ textAlign: "center" }}
         key={cell.period.id}
         value={cell.entry.amount}
         onValueChange={v => this.handleValueChange(cell, v)}
@@ -134,22 +145,30 @@ class Planner extends React.Component {
     if (this.state.loading) return <Text>Loading </Text>;
 
     const revenueCells = this.state.periods.map(p => ({
-      type: '2',
+      type: "2",
       period: p,
       key: `${p.id}-2`,
-      entry: this.state.cells[`${p.id}-2`] || 0.0,
+      entry: this.state.cells[`${p.id}-2`] || 0.0
     }));
 
     const costCells = this.state.periods.map(p => ({
-      type: '1',
+      type: "1",
       period: p,
       key: `${p.id}-1`,
-      entry: this.state.cells[`${p.id}-1`] || 0.0,
+      entry: this.state.cells[`${p.id}-1`] || 0.0
+    }));
+
+    const expenseCells = this.state.periods.map(p => ({
+      type: "1",
+      period: p,
+      key: `${p.id}-3`,
+      entry: this.state.cells[`${p.id}-3`] || 0.0
     }));
 
     const rows = [this.state.header];
-    rows.push(['Revenue', ...revenueCells]);
-    rows.push(['Cost', ...costCells]);
+    rows.push(["Revenue", ...revenueCells]);
+    rows.push(["Planned Cost (Roster)", ...costCells]);
+    rows.push(["Overheads (hits P/L)", ...expenseCells]);
 
     return (
       <View>
@@ -171,7 +190,7 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const SaveButton = styled(Button)`
+const SaveButton = styled(TouchableView)`
   background-color: #f8f8f8;
   border-radius: 3px;
   width: 100px;
@@ -181,7 +200,7 @@ const SaveButton = styled(Button)`
   margin: 0 20px;
 `;
 
-const Buttons = styled(Button)`
+const Buttons = styled(TouchableView)`
   flex-direction: row;
   justify-content: flex-end;
 `;

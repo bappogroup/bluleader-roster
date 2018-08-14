@@ -1,5 +1,11 @@
 import React from "react";
-import { ScrollView, View, Text, Button, styled } from "bappo-components";
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableView,
+  styled
+} from "bappo-components";
 import { leaveProjectTypeIndexes } from "forecast-utils";
 import WideCard from "card";
 import NarrowCard from "narrow-card";
@@ -180,7 +186,7 @@ class DrilldownCards extends React.Component {
       }
 
       return (
-        <Button
+        <TouchableView
           onPress={() =>
             this.props.openReport({
               name: `${card.title}, ${month.label}`,
@@ -194,7 +200,7 @@ class DrilldownCards extends React.Component {
           ) : (
             <WideCard {...card} />
           )}
-        </Button>
+        </TouchableView>
       );
     });
 

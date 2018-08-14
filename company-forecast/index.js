@@ -1,6 +1,6 @@
 import React from "react";
 import moment from "moment";
-import { styled, View, Button, Text } from "bappo-components";
+import { styled, View, TouchableView, Text } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import SelectionDisplay from "selectiondisplay";
 import { sortPeriods } from "forecast-utils";
@@ -264,7 +264,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(Button)`
+const RunButton = styled(TouchableView)`
   height: 50px;
   margin-left: 20px;
   margin-right: 20px;

@@ -3,7 +3,7 @@ import moment from "moment";
 import {
   styled,
   View,
-  Button,
+  TouchableView,
   Text,
   ActivityIndicator
 } from "bappo-components";
@@ -251,9 +251,11 @@ class ProfitCentreForecast extends React.Component {
             options={options}
             onChangeClick={() => this.setFilters()}
           />
-          <RunButton onPress={() => this.setState({ currentAction: "run" })}>
-            <RunButtonText> Run </RunButtonText>
-          </RunButton>
+          <RunTouchableView
+            onPress={() => this.setState({ currentAction: "run" })}
+          >
+            <ButtonText> Run </ButtonText>
+          </RunTouchableView>
         </Container>
       );
     }
@@ -284,7 +286,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(Button)`
+const RunTouchableView = styled(TouchableView)`
   height: 50px;
   margin-left: 20px;
   margin-right: 20px;
@@ -294,6 +296,6 @@ const RunButton = styled(Button)`
   align-items: center;
 `;
 
-const RunButtonText = styled(Text)`
+const ButtonText = styled(Text)`
   color: white;
 `;

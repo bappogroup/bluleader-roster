@@ -3,7 +3,7 @@ import {
   View,
   Text,
   styled,
-  Button,
+  TouchableView,
   ActivityIndicator
 } from "bappo-components";
 import {
@@ -250,7 +250,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseButton = styled(Button)`
+const CloseButton = styled(TouchableView)`
   width: 100px;
   height: 40px;
   position: absolute;

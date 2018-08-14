@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, styled, Button } from "bappo-components";
+import { Text, View, styled, TouchableView } from "bappo-components";
 import Table from "bappo-table";
 import ForecastEntryForm from "./ForecastEntryForm";
 
@@ -16,7 +16,15 @@ class ForecastInput extends React.Component {
 
   loadData = async () => {
     const { ForecastElement, ForecastEntry, CostCenter } = this.props.$models;
-    const _els = await ForecastElement.findAll({});
+    let _where = {};
+    if (this.state.profitCentre.type === "1") {
+      _where = { elementType: "3" };
+    } else {
+      _where = { elementType: "3", practiceOverheads: true };
+    }
+    const _els = await ForecastElement.findAll({
+      where: _where
+    });
     const els = _els.sort((a, b) => ~~b.elementType - ~~a.elementType);
     const sortedPeriods = this.props.selection.periods;
 
@@ -324,7 +332,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const CloseButton = styled(Button)`
+const CloseButton = styled(TouchableView)`
   margin-left: 20px;
   margin-top: 20px;
 `;
@@ -336,14 +344,14 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const BlankCell = styled(Button)`
+const BlankCell = styled(TouchableView)`
   justify-content: center;
   align-items: center;
   flex: 1;
   height: 40px;
 `;
 
-const SmallButton = styled(Button)`
+const SmallButton = styled(TouchableView)`
   border-radius: 3px;
   height: 30px;
   width: 30px;
@@ -352,7 +360,7 @@ const SmallButton = styled(Button)`
   align-items: center;
 `;
 
-const MiniCell = styled(Button)`
+const MiniCell = styled(TouchableView)`
   height: 40px;
   margin: 2px;
   padding: 0 3px;

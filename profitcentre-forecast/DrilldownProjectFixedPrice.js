@@ -54,7 +54,7 @@ class DrilldownProjectFP extends React.Component {
       data: [
         `Revenue: ${totalRevenue}`,
         `Cost & Expense: ${totalCost + totalExpense}`,
-        `Project Overheads: ${projectOverheads}`,
+        `Fixed PP Project Overheads: ${projectOverheads}`,
         `Margin: ${totalMargin}`
       ]
     });

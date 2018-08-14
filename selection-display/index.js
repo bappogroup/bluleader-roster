@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, View, styled, Button } from "bappo-components";
+import { Text, View, styled, TouchableView } from "bappo-components";
 
 export default props => (
   <Selection>
@@ -47,7 +47,7 @@ const SelectionLabel = styled(Text)`
 
 const SelectionValue = styled(Text)``;
 
-const FilterButton = styled(Button)`
+const FilterButton = styled(TouchableView)`
   height: 40px;
   justify-content: flex-start;
   align-items: center;

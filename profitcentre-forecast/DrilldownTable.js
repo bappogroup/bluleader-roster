@@ -1,9 +1,9 @@
-import React from 'react';
-import { ScrollView, View, Text, styled } from 'bappo-components';
-import Table from 'bappo-table';
+import React from "react";
+import { ScrollView, View, Text, styled } from "bappo-components";
+import Table from "bappo-table";
 
-const ProjectHeader = ['Projects', 'Revenue', 'Cost', 'Margin'];
-const PeopleHeader = ['Consultant', 'Cost Recovery', 'Cost', 'Margin'];
+const ProjectHeader = ["Projects", "Revenue", "Cost", "Margin"];
+const PeopleHeader = ["Consultant", "Cost Recovery", "Cost", "Margin"];
 
 class Drilldown extends React.Component {
   constructor(props) {
@@ -16,32 +16,39 @@ class Drilldown extends React.Component {
     // Project table
     const projectRows = [ProjectHeader];
     projects.forEach(project => {
-      const revenue = cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
+      const revenue =
+        cells[`T&M Project Revenue-${monthLabel}`][project.id] || 0;
       const cost = cells[`Project Cost-${monthLabel}`][project.id] || 0;
       const margin = revenue - cost;
       projectRows.push([project.name, revenue, cost, margin]);
     });
 
-    const totalProjectRevenue = cells[`T&M Project Revenue-${monthLabel}`].value;
+    const totalProjectRevenue =
+      cells[`T&M Project Revenue-${monthLabel}`].value;
     const totalProjectCost = cells[`Project Cost-${monthLabel}`].value;
     const totalProjectMargin = totalProjectRevenue - totalProjectCost;
     projectRows.push({
-      rowStyle: 'total',
-      data: ['Total', totalProjectRevenue, totalProjectCost, totalProjectMargin],
+      rowStyle: "total",
+      data: ["Total", totalProjectRevenue, totalProjectCost, totalProjectMargin]
     });
     projectRows.push([]);
 
     // People table
     const peopleRows = [PeopleHeader];
     consultants.forEach(consultant => {
-      const recovery = cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
+      const recovery =
+        cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let cost;
       switch (consultant.consultantType) {
-        case '1':
-          cost = cells[`Consultant Cost(permanent)-${monthLabel}`][consultant.id] || 0;
+        case "1":
+          cost =
+            cells[`Consultant Cost(permanent)-${monthLabel}`][consultant.id] ||
+            0;
           break;
-        case '2':
-          cost = cells[`Consultant Cost(contractor)-${monthLabel}`][consultant.id] || 0;
+        case "2":
+          cost =
+            cells[`Consultant Cost(contractor)-${monthLabel}`][consultant.id] ||
+            0;
           break;
         default:
       }
@@ -49,19 +56,26 @@ class Drilldown extends React.Component {
       peopleRows.push([consultant.name, recovery, cost, margin]);
     });
 
-    const totalConsultantRecovery = cells[`People Cost Recovery-${monthLabel}`].value;
+    const totalConsultantRecovery =
+      cells[`People Cost Recovery-${monthLabel}`].value;
     const totalConsultantCost =
       cells[`Consultant Cost(permanent)-${monthLabel}`].value +
       cells[`Consultant Cost(contractor)-${monthLabel}`].value;
     const totalConsultantMargin = totalConsultantRecovery - totalConsultantCost;
     peopleRows.push({
-      rowStyle: 'total',
-      data: ['Total', totalConsultantRecovery, totalConsultantCost, totalConsultantMargin],
+      rowStyle: "total",
+      data: [
+        "Total",
+        totalConsultantRecovery,
+        totalConsultantCost,
+        totalConsultantMargin
+      ]
     });
     peopleRows.push([]);
 
     const overheads = cells[`Overheads-${monthLabel}`];
-    const netProfit = totalProjectMargin + totalConsultantMargin - overheads.value;
+    const netProfit =
+      totalProjectMargin + totalConsultantMargin - overheads.value;
 
     this.state = { projectRows, peopleRows, overheads, netProfit };
   }
@@ -77,11 +91,11 @@ class Drilldown extends React.Component {
 
     return (
       <OverheadsContainer>
-        <Row style={{ backgroundColor: '#888' }}>
-          <Text style={{ color: 'white' }}>Overheads</Text>
+        <Row style={{ backgroundColor: "#888" }}>
+          <Text style={{ color: "white" }}>Overheads</Text>
         </Row>
         {Object.entries(overheads).map(([name, value]) => {
-          if (name === 'value') return null;
+          if (name === "value") return null;
           return (
             <Row>
               <Text>

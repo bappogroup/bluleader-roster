@@ -4,7 +4,7 @@ import {
   ActivityIndicator,
   View,
   Text,
-  Button,
+  TouchableView,
   styled
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
@@ -594,17 +594,19 @@ class Roster extends React.Component {
             <Heading>
               Cost center: {(costCenter && costCenter.name) || "all"}
             </Heading>
-            <TextButton onPress={this.setFilters}>filters</TextButton>
-            <TextButton onPress={this.reload}>reload</TextButton>
+            <TextTouchableView onPress={this.setFilters}>
+              filters
+            </TextTouchableView>
+            <TextTouchableView onPress={this.reload}>reload</TextTouchableView>
           </HeaderSubContainer>
           <HeaderSubContainer>
             <Heading>Cell size:</Heading>
-            <TextButton onPress={() => this.setDisplayMode("large")}>
+            <TextTouchableView onPress={() => this.setDisplayMode("large")}>
               large
-            </TextButton>
-            <TextButton onPress={() => this.setDisplayMode("small")}>
+            </TextTouchableView>
+            <TextTouchableView onPress={() => this.setDisplayMode("small")}>
               small
-            </TextButton>
+            </TextTouchableView>
           </HeaderSubContainer>
         </HeaderContainer>
         <AutoSizer>
@@ -621,11 +623,15 @@ class Roster extends React.Component {
               rowHeight={this.CELL_DIMENSION}
               styleTopLeftGrid={{ width: this.CONSULTANT_CELL_WIDTH }}
               styleBottomLeftGrid={{ width: this.CONSULTANT_CELL_WIDTH }}
-              styleTopRightGrid={{ marginLeft }}
-              styleBottomRightGrid={{ marginLeft, overflow: "scroll" }}
+              styleTopRightGrid={{ marginLeft, width: width - 150 }}
+              styleBottomRightGrid={{
+                marginLeft,
+                width: width - 150
+              }}
               ref={ref => {
                 this.gridRef = ref;
               }}
+              style={{}}
             />
           )}
         </AutoSizer>
@@ -657,7 +663,7 @@ const Heading = styled(Text)`
   font-size: 18px;
 `;
 
-const TextButton = styled(Button)`
+const TextTouchableView = styled(TouchableView)`
   color: grey;
   margin-left: 10px;
 `;
@@ -686,7 +692,7 @@ const ClickLabel = styled(Label)`
   background-color: ${props => props.backgroundColor};
 `;
 
-const Cell = styled(Button)`
+const Cell = styled(TouchableView)`
   ${baseStyle} background-color: ${props =>
   props.isWeekend ? "white" : props.backgroundColor};
 

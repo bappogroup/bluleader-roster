@@ -1,11 +1,11 @@
-import React from 'react';
-import { FlatList, View, Text, Button, styled } from 'bappo-components';
-import { getRate } from './utils';
+import React from "react";
+import { FlatList, View, Text, TouchableView, styled } from "bappo-components";
+import { getRate } from "./utils";
 
 class Roster extends React.Component {
   state = {
     loading: true,
-    consultants: [],
+    consultants: []
   };
 
   renderRow = info => {
@@ -26,23 +26,23 @@ class Roster extends React.Component {
   loadData = async () => {
     const { Consultant, RosterEntry, Probability } = this.props.$models;
     const _consultants = await Consultant.findAll({
-      include: [{ as: 'consultantEvents', include: [{ as: 'costCentre' }] }],
+      include: [{ as: "consultantEvents", include: [{ as: "costCentre" }] }],
       limit: 10000,
       where: {
-        active: true,
-      },
+        active: true
+      }
     });
 
     const consultants = _consultants.map(c => {
       return {
         ...c,
-        rate: getRate(c),
+        rate: getRate(c)
       };
     });
 
     this.setState({
       loading: false,
-      consultants,
+      consultants
     });
   };
 
@@ -67,7 +67,7 @@ class Roster extends React.Component {
         getItemLayout={(_data, index) => ({
           length: 34,
           offset: 34 * index,
-          index,
+          index
         })}
       />
     );

@@ -1,28 +1,35 @@
-import React from 'react';
-import { ScrollView, View, Text, Button, styled, ActivityIndicator } from 'bappo-components';
-import Planner from './Planner';
+import React from "react";
+import {
+  ScrollView,
+  View,
+  Text,
+  TouchableView,
+  styled,
+  ActivityIndicator
+} from "bappo-components";
+import Planner from "./Planner";
 
 class Projects extends React.Component {
   state = {
-    loading: true,
+    loading: true
   };
 
   async componentDidMount() {
     const projects = await this.props.$models.Project.findAll({
       where: {
-        projectType: '3',
-        profitCentre_id: this.props.profitCentre.id,
+        projectType: "3",
+        profitCentre_id: this.props.profitCentre.id
       },
-      limit: 1000,
+      limit: 1000
     });
 
     const projectIds = projects.map(p => p.id);
 
     const entries = await this.props.$models.ProjectForecastEntry.findAll({
       where: {
-        project_id: { $in: projectIds },
+        project_id: { $in: projectIds }
       },
-      limit: 1000,
+      limit: 1000
     });
 
     const total = {};
@@ -32,7 +39,8 @@ class Projects extends React.Component {
 
     // summarize
     for (const e of entries) {
-      if (e.forecastType === '2') total[e.project_id].revenue += Number(e.amount);
+      if (e.forecastType === "2")
+        total[e.project_id].revenue += Number(e.amount);
     }
 
     const results = [];
@@ -42,7 +50,7 @@ class Projects extends React.Component {
 
     this.setState({
       results,
-      loading: false,
+      loading: false
     });
   }
 
@@ -57,8 +65,10 @@ class Projects extends React.Component {
   };
 
   render() {
-    if (this.state.loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
-    if (this.state.project) return <Planner {...this.props} project={this.state.project} />;
+    if (this.state.loading)
+      return <ActivityIndicator style={{ marginTop: 30 }} />;
+    if (this.state.project)
+      return <Planner {...this.props} project={this.state.project} />;
     if (this.state.results.length === 0) {
       return (
         <View>
@@ -67,13 +77,15 @@ class Projects extends React.Component {
       );
     }
 
-    return <ScrollView>{this.state.results.map(this.renderProject)}</ScrollView>;
+    return (
+      <ScrollView>{this.state.results.map(this.renderProject)}</ScrollView>
+    );
   }
 }
 
 export default Projects;
 
-const Row = styled(Button)`
+const Row = styled(TouchableView)`
   height: 40px;
   background-color: #f8f8f8;
   margin: 2px;

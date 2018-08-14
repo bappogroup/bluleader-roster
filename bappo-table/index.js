@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, Button, styled, ScrollView } from "bappo-components";
+import {
+  View,
+  Text,
+  TouchableView,
+  styled,
+  ScrollView
+} from "bappo-components";
 
 function trimNumber(n) {
   const number = +n;
@@ -255,7 +261,7 @@ const NavBar = styled(View)`
   justify-content: center;
 `;
 
-const NavButton = styled(Button)`
+const NavButton = styled(TouchableView)`
   height: 50px;
   padding-left: 10px;
   padding-right: 10px;

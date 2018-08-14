@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Button, Text } from 'bappo-components';
+import React from "react";
+import { View, TouchableView, Text } from "bappo-components";
 
 const Reincarnate = ({ $models }) => {
   const cleanTransactionData = () => {
@@ -18,17 +18,17 @@ const Reincarnate = ({ $models }) => {
       $models.Project.destroy({ where: {} }),
       $models.Skill.destroy({ where: {} }),
       $models.Manager.destroy({ where: {} }),
-      $models.ManagerAssignment.destroy({ where: {} }),
+      $models.ManagerAssignment.destroy({ where: {} })
     ];
 
-    return Promise.all(promises).then(() => alert && alert('Finished'));
+    return Promise.all(promises).then(() => alert && alert("Finished"));
   };
 
   return (
     <View>
-      <Button onPress={cleanTransactionData}>
+      <TouchableView onPress={cleanTransactionData}>
         <Text>Reincarnate</Text>
-      </Button>
+      </TouchableView>
     </View>
   );
 };

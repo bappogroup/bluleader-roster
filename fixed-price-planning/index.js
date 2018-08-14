@@ -2,7 +2,7 @@ import React from "react";
 import {
   styled,
   View,
-  Button,
+  TouchableView,
   Text,
   ActivityIndicator
 } from "bappo-components";
@@ -146,7 +146,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(Button)`
+const RunButton = styled(TouchableView)`
   height: 50px;
   margin-left: 20px;
   margin-right: 20px;

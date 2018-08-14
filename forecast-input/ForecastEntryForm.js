@@ -1,9 +1,9 @@
-import React from 'react';
-import { Button, TextInput, styled, View, Text } from 'bappo-components';
+import React from "react";
+import { TouchableView, TextInput, styled, View, Text } from "bappo-components";
 
 class Form extends React.Component {
   state = {
-    value: this.props.amount,
+    value: this.props.amount
   };
 
   onChange = value => {
@@ -22,7 +22,7 @@ class Form extends React.Component {
 
           <StyledButton
             onPress={() => this.props.handleSave(this.state.value)}
-            style={{ backgroundColor: '#ddf' }}
+            style={{ backgroundColor: "#ddf" }}
           >
             <Text>Save</Text>
           </StyledButton>
@@ -48,7 +48,7 @@ const Buttons = styled(View)`
   justify-content: flex-end;
 `;
 
-const StyledButton = styled(Button)`
+const StyledButton = styled(TouchableView)`
   height: 40px;
   padding: 10px 10px;
   background-color: #eee;

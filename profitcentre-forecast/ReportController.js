@@ -3,7 +3,7 @@ import {
   View,
   Text,
   styled,
-  Button,
+  TouchableView,
   ActivityIndicator
 } from "bappo-components";
 import {
@@ -105,18 +105,18 @@ class ReportController extends React.Component {
       this.setState({ reports: [...this.state.reports, report] });
   };
 
-  renderSwitchButton = () => (
-    <SwitchButtonContainer>
-      <Button
+  renderSwitchTouchableView = () => (
+    <SwitchTouchableViewContainer>
+      <TouchableView
         onPress={() => this.setState({ drilldownMode: "Cards" })}
         style={{ marginRight: 7 }}
       >
         <Text>cards</Text>
-      </Button>
-      <Button onPress={() => this.setState({ drilldownMode: "Table" })}>
+      </TouchableView>
+      <TouchableView onPress={() => this.setState({ drilldownMode: "Table" })}>
         <Text>table</Text>
-      </Button>
-    </SwitchButtonContainer>
+      </TouchableView>
+    </SwitchTouchableViewContainer>
   );
 
   renderReport = (report, hidden) => {
@@ -189,11 +189,11 @@ class ReportController extends React.Component {
     return (
       <ReportContainer key={report.name}>
         <Header>
-          <CloseButton onPress={onPress}>
+          <CloseTouchableView onPress={onPress}>
             <Text> ← back </Text>
-          </CloseButton>
+          </CloseTouchableView>
           <Text>{report.name}</Text>
-          {/* {report.component === 'Drilldown' && this.renderSwitchButton()} */}
+          {/* {report.component === 'Drilldown' && this.renderSwitchTouchableView()} */}
         </Header>
         {content}
       </ReportContainer>
@@ -247,7 +247,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseButton = styled(Button)`
+const CloseTouchableView = styled(TouchableView)`
   width: 100px;
   height: 40px;
   position: absolute;
@@ -255,7 +255,7 @@ const CloseButton = styled(Button)`
   top: 10px;
 `;
 
-const SwitchButtonContainer = styled(View)`
+const SwitchTouchableViewContainer = styled(View)`
   flex-direction: row;
   position: absolute;
   right: 10px;

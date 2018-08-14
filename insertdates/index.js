@@ -1,8 +1,10 @@
-import React from 'react';
-import { Text, Button } from 'bappo-components';
-import moment from 'moment';
+import React from "react";
+import { Text, TouchableView } from "bappo-components";
+import moment from "moment";
 
-export default props => <Button onPress={() => go(props)}>Go</Button>;
+export default props => (
+  <TouchableView onPress={() => go(props)}>Go</TouchableView>
+);
 
 const go = async props => {
   const { FinancialPeriod } = props.$models;
@@ -11,20 +13,20 @@ const go = async props => {
 
   const currentPeriods = await FinancialPeriod.findAll({});
 
-  const baseDate = moment().subtract(1, 'year');
+  const baseDate = moment().subtract(1, "year");
 
   // await FinancialPeriod.destroy({ where: {} });
 
   const dats = [];
   for (let n = 0; n < 72; n++) {
-    const date = baseDate.clone().add(n, 'months');
+    const date = baseDate.clone().add(n, "months");
     const record = {
-      name: date.format('YYYY-MM'),
-      beginDate: date.startOf('month').format('YYYY-MM-DD'),
-      endDate: date.endOf('month').format('YYYY-MM-DD'),
-      label: date.format('MMM YYYY'),
-      year: date.format('YYYY'),
-      period: date.format('MM'),
+      name: date.format("YYYY-MM"),
+      beginDate: date.startOf("month").format("YYYY-MM-DD"),
+      endDate: date.endOf("month").format("YYYY-MM-DD"),
+      label: date.format("MMM YYYY"),
+      year: date.format("YYYY"),
+      period: date.format("MM")
     };
 
     if (currentPeriods.find(c => c.name === record.name)) {
@@ -36,5 +38,5 @@ const go = async props => {
   // console.log(dats);
   await FinancialPeriod.bulkCreate(dats);
 
-  alert('done');
+  alert("done");
 };

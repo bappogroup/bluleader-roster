@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, styled } from 'bappo-components';
-import Table from 'bappo-table';
+import React from "react";
+import { View, Text, styled } from "bappo-components";
+import Table from "bappo-table";
 
-const Header = ['Consultant', 'Date', 'Revenue', 'Cost', 'Expense', 'Margin'];
+const Header = ["Consultant", "Date", "Revenue", "Cost", "Expense", "Margin"];
 
 class DrilldownProjectTm extends React.Component {
   constructor(props) {
@@ -17,7 +17,10 @@ class DrilldownProjectTm extends React.Component {
     // Filter roster entries of this project, this month
     const { rosterEntriesByProject, projectAssignmentLookup } = props.rawData;
     rosterEntriesByProject.forEach(entry => {
-      if (entry.project_id === projectId && month.monthNumber === new Date(entry.date).getMonth()) {
+      if (
+        entry.project_id === projectId &&
+        month.monthNumber === new Date(entry.date).getMonth()
+      ) {
         const { dayRate, projectExpense } = projectAssignmentLookup[
           `${entry.consultant_id}.${entry.project_id}`
         ];
@@ -28,7 +31,14 @@ class DrilldownProjectTm extends React.Component {
         totalRevenue += revenue;
         totalCost += cost;
         totalExpense += expense;
-        const row = [entry.consultant.name, entry.date, revenue, cost, expense, margin];
+        const row = [
+          entry.consultant.name,
+          entry.date,
+          revenue,
+          cost,
+          expense,
+          margin
+        ];
         reportRows.push(row);
       }
     });
@@ -36,8 +46,8 @@ class DrilldownProjectTm extends React.Component {
     const totalMargin = totalRevenue - totalCost - totalExpense;
 
     reportRows.push({
-      rowStyle: 'total',
-      data: ['Total', '', totalRevenue, totalCost, totalExpense, totalMargin],
+      rowStyle: "total",
+      data: ["Total", "", totalRevenue, totalCost, totalExpense, totalMargin]
     });
 
     this.state = { reportRows };
