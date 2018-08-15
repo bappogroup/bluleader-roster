@@ -1,6 +1,7 @@
 import React from "react";
 import { styled, View, TouchableView, Text, TextInput } from "bappo-components";
 import BappoTable from "bappo-table";
+import HybridButton from "hybrid-button";
 
 function dateBetween(date1, date2) {
   return {
@@ -171,11 +172,13 @@ class Planner extends React.Component {
     rows.push(["Overheads (hits P/L)", ...expenseCells]);
 
     return (
-      <View>
+      <View style={{ flex: 1 }}>
         <BappoTable data={rows} renderCell={this.renderCell} />
-        <Buttons>
-          <SaveButton onPress={this.save}>Save </SaveButton>
-        </Buttons>
+        <ButtonContainer>
+          <SaveButton onPress={this.save}>
+            <Text>Save</Text>
+          </SaveButton>
+        </ButtonContainer>
       </View>
     );
   }
@@ -190,7 +193,7 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const SaveButton = styled(TouchableView)`
+const SaveButton = styled(HybridButton)`
   background-color: #f8f8f8;
   border-radius: 3px;
   width: 100px;
@@ -200,7 +203,7 @@ const SaveButton = styled(TouchableView)`
   margin: 0 20px;
 `;
 
-const Buttons = styled(TouchableView)`
+const ButtonContainer = styled(View)`
   flex-direction: row;
   justify-content: flex-end;
 `;
