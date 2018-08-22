@@ -420,9 +420,6 @@ class Roster extends React.Component {
       // Render consultant label cell
       const consultantName =
         (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
-      const labelStyle = Object.assign({}, style, {
-        width: this.CONSULTANT_CELL_WIDTH
-      });
 
       // Change background color if external consultant
       backgroundColor = "white";
@@ -436,7 +433,7 @@ class Roster extends React.Component {
       return (
         <ClickLabel
           key={key}
-          style={labelStyle}
+          style={style}
           backgroundColor={backgroundColor}
           onClick={() => this.handleClickConsultant(entry)}
         >
@@ -567,25 +564,20 @@ class Roster extends React.Component {
     );
   };
 
+  columnWidthGetter = ({ index }) => {
+    const columnWidth =
+      this.state.mode === "small"
+        ? this.CELL_DIMENSION
+        : this.CELL_DIMENSION_LARGE;
+    return index === 0 ? 160 : columnWidth;
+  };
+
   render() {
-    const {
-      initializing,
-      consultantCount,
-      costCenter,
-      entryList,
-      mode
-    } = this.state;
+    const { initializing, consultantCount, costCenter, entryList } = this.state;
 
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
-
-    const columnWidth =
-      mode === "small" ? this.CELL_DIMENSION : this.CELL_DIMENSION_LARGE;
-    const marginLeft =
-      mode === "small"
-        ? this.CONSULTANT_CELL_WIDTH - this.CELL_DIMENSION
-        : this.CELL_DIMENSION;
 
     return (
       <Container>
@@ -609,32 +601,24 @@ class Roster extends React.Component {
             </TextTouchableView>
           </HeaderSubContainer>
         </HeaderContainer>
-        <AutoSizer>
-          {({ height, width }) => (
-            <MultiGrid
-              width={width}
-              height={height - this.CELL_DIMENSION - 30}
-              fixedColumnCount={1}
-              fixedRowCount={1}
-              cellRenderer={this.cellRenderer}
-              columnCount={entryList[0].length}
-              columnWidth={columnWidth}
-              rowCount={consultantCount + 1}
-              rowHeight={this.CELL_DIMENSION}
-              styleTopLeftGrid={{ width: this.CONSULTANT_CELL_WIDTH }}
-              styleBottomLeftGrid={{ width: this.CONSULTANT_CELL_WIDTH }}
-              styleTopRightGrid={{ marginLeft, width: width - 150 }}
-              styleBottomRightGrid={{
-                marginLeft,
-                width: width - 150
-              }}
-              ref={ref => {
-                this.gridRef = ref;
-              }}
-              style={{}}
-            />
-          )}
-        </AutoSizer>
+        <BodyContainer>
+          <AutoSizer>
+            {({ height, width }) => (
+              <MultiGrid
+                width={width}
+                height={height}
+                fixedColumnCount={1}
+                fixedRowCount={1}
+                cellRenderer={this.cellRenderer}
+                columnCount={entryList[0].length}
+                columnWidth={this.columnWidthGetter}
+                rowCount={consultantCount + 1}
+                rowHeight={this.CELL_DIMENSION}
+                ref={ref => (this.gridRef = ref)}
+              />
+            )}
+          </AutoSizer>
+        </BodyContainer>
       </Container>
     );
   }
@@ -661,6 +645,12 @@ const HeaderSubContainer = styled.div`
 
 const Heading = styled(Text)`
   font-size: 18px;
+`;
+
+const BodyContainer = styled.div`
+  flex: 1;
+  margin-right: 15px;
+  margin-bottom: 15px;
 `;
 
 const TextTouchableView = styled(TouchableView)`
