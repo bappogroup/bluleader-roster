@@ -5,12 +5,12 @@ export const getMonday = (date = moment()) => moment(date).day(1);
 export const daysDisplayed = 82;
 export const dateFormat = "YYYY-MM-DD";
 
-export const datesToArray = (from, to) => {
+export const datesToArray = (from, to, toStringDate) => {
   const list = [];
   let day = moment(from).clone();
 
   do {
-    list.push(day);
+    list.push(toStringDate ? day.format(dateFormat) : day);
     day = day.clone().add(1, "d");
   } while (day < to);
   return list;

@@ -357,8 +357,9 @@ const calculateRosterEntries = ({
       ).toFixed(2);
       const cellKey = `LEA-${monthLabel}`;
 
-      if (!cells[cellKey][entry.consultant_id])
+      if (!cells[cellKey][entry.consultant_id]) {
         cells[cellKey][entry.consultant_id] = 0;
+      }
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
     } else if (entry.project.projectType === "7") {

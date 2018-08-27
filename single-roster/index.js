@@ -4,9 +4,9 @@ import {
   FlatList,
   View,
   Text,
-  TouchableView,
   styled
 } from "bappo-components";
+import HybridButton from "hybrid-button";
 import {
   getEntryFormFields,
   updateRosterEntryRecords,
@@ -265,27 +265,29 @@ class SingleRoster extends React.Component {
   };
 
   renderCell = entry => {
+    const { readOnly } = this.props;
+
     let backgroundColor = "#f8f8f8";
-    let project;
-    let probability;
-
-    if (entry.project_id) {
-      project = this.data.projectLookup[entry.project_id];
-      ({ backgroundColor } = project);
-    } else if (entry.probability_id) {
-      probability = this.data.probabilityLookup[entry.probability_id];
-      ({ backgroundColor } = probability);
-    }
-
+    const project = this.data.projectLookup[entry.project_id];
     let projectName = project && project.name;
     if (projectName) projectName = truncString(projectName);
 
-    if (this.props.readOnly) {
+    if (readOnly) {
       return (
         <TextCell key={entry.date} backgroundColor={backgroundColor}>
           <CellText>{projectName}</CellText>
         </TextCell>
       );
+    }
+
+    // background color priority: from project > from probability > white
+    if (entry.probability_id) {
+      const probability = this.data.probabilityLookup[entry.probability_id];
+      ({ backgroundColor } = probability);
+    }
+
+    if (project && project.backgroundColour) {
+      backgroundColor = project.backgroundColour;
     }
 
     return (
@@ -301,7 +303,7 @@ class SingleRoster extends React.Component {
 
   renderLoadPreviousButton = () => (
     <ButtonRow>
-      <LoadPreviousButton
+      <HybridButton
         onPress={() =>
           this.loadRosterEntries(
             addWeeks(this.state.startDate, -10),
@@ -311,7 +313,7 @@ class SingleRoster extends React.Component {
         }
       >
         <Text>load previous</Text>
-      </LoadPreviousButton>
+      </HybridButton>
     </ButtonRow>
   );
 
@@ -385,7 +387,7 @@ const HeaderCell = styled(Text)`
   align-self: center;
 `;
 
-const ButtonCell = styled(TouchableView)`
+const ButtonCell = styled(HybridButton)`
   ${cellStyle} border: 1px solid #eee;
   background-color: ${props => props.backgroundColor};
 `;
@@ -394,9 +396,6 @@ const TextCell = styled(View)`
   ${cellStyle} border: 1px solid #eee;
   background-color: ${props => props.backgroundColor};
 `;
-
-// TODO: alternate for outline
-const LoadPreviousButton = styled(TouchableView)``;
 
 const CellText = styled(Text)`
   font-size: 12px;
