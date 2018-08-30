@@ -16,7 +16,7 @@ import {
 import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
-const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const weekdays = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function truncString(str, max = 18, add = "...") {
   add = add || "...";

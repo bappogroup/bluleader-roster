@@ -1,0 +1,12 @@
+[bappo]
+aws_access_key_id = YOUR_ACCESS_KEY_ID
+aws_secret_access_key =YOUR_SECRET_ACCESS_KEY
+[bappo-dev]
+role_arn = arn:aws:iam::598806614988:role/OrganizationAccountAccessRole
+source_profile = bappo
+[bappo-prod]
+role_arn = arn:aws:iam::915703954604:role/OrganizationAccountAccessRole
+source_profile = bappo
+[bappo-central]
+role_arn = arn:aws:iam::676666413781:role/OrganizationAccountAccessRole
+source_profile = bappo
