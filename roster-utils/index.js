@@ -270,8 +270,9 @@ export const deleteRosterEntryRecords = async ({
 export const projectAssignmentsToOptions = (
   projectAssignments,
   leaveProjects = []
-) =>
-  projectAssignments
+) => {
+  return projectAssignments
+    .filter(pa => pa.project)
     .map(pa => ({
       id: pa.project_id,
       label: pa.project.name
@@ -291,3 +292,4 @@ export const projectAssignmentsToOptions = (
       ...op,
       pos: index
     }));
+};
