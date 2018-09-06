@@ -357,9 +357,8 @@ const calculateRosterEntries = ({
       ).toFixed(2);
       const cellKey = `LEA-${monthLabel}`;
 
-      if (!cells[cellKey][entry.consultant_id]) {
+      if (!cells[cellKey][entry.consultant_id])
         cells[cellKey][entry.consultant_id] = 0;
-      }
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
     } else if (entry.project.projectType === "7") {
@@ -370,9 +369,12 @@ const calculateRosterEntries = ({
       const { dayRate, projectExpense } = assignment;
 
       if (entry.project.projectType === "2") {
-        // T&M project revenue
+        // T&M project revenue, by perms or contractors
         // assignment must exist!
-        const cellKey = `TMREV-${monthLabel}`;
+        const cellKey =
+          entry.consultant.consultantType === "1"
+            ? `TMREV-${monthLabel}`
+            : `TMREVC-${monthLabel}`;
 
         if (!cells[cellKey][entry.project_id])
           cells[cellKey][entry.project_id] = 0;
@@ -471,6 +473,14 @@ export const calculateMainReport = ({
     cells,
     projectForecastEntries
   });
+
+  /**
+   * Calculate Payroll Tax Threshold
+   */
+  for (const month of months) {
+    const ptaxtCellKey = `PTAXT-${month.label}`;
+    cells[ptaxtCellKey] = { value: -5000.0 };
+  }
 
   // Process forecast elements
   const costElements = [];
