@@ -8,13 +8,15 @@ import {
 } from "bappo-components";
 import {
   getForecastBaseDataForProfitCentre,
-  calculateProfitCentreMainReport,
-  getMonthArray
-} from "forecast-utils";
+  calculateProfitCentreMainReport
+} from "./profitcenter-utils";
+import { getMonthArray } from "forecast-utils";
+
+import HybridButton from "hybrid-button";
 import MainReport from "./MainReport";
-import DrilldownTable from "./DrilldownTable";
-import DrilldownCards from "./DrilldownCards";
+import DrilldownPCForOneMonth from "./DrilldownPCForOneMonth";
 import DrilldownConsultant from "./DrilldownConsultant";
+import DrilldownContractors from "./DrilldownContractors";
 import DrilldownProjectTm from "./DrilldownProjectTm";
 import DrilldownProjectFixedPrice from "./DrilldownProjectFixedPrice";
 
@@ -105,17 +107,17 @@ class ReportController extends React.Component {
       this.setState({ reports: [...this.state.reports, report] });
   };
 
-  renderSwitchTouchableView = () => (
+  renderSwitchHybridButton = () => (
     <SwitchTouchableViewContainer>
-      <TouchableView
+      <HybridButton
         onPress={() => this.setState({ drilldownMode: "Cards" })}
         style={{ marginRight: 7 }}
       >
         <Text>cards</Text>
-      </TouchableView>
-      <TouchableView onPress={() => this.setState({ drilldownMode: "Table" })}>
+      </HybridButton>
+      <HybridButton onPress={() => this.setState({ drilldownMode: "Table" })}>
         <Text>table</Text>
-      </TouchableView>
+      </HybridButton>
     </SwitchTouchableViewContainer>
   );
 
@@ -151,20 +153,17 @@ class ReportController extends React.Component {
           content = <MainReport {...props} />;
           break;
         case "Drilldown": {
-          if (
-            true ||
-            drilldownMode === "Cards" ||
-            (!drilldownMode && !window)
-          ) {
-            content = <DrilldownCards {...props} />;
-          } else {
-            content = <DrilldownTable {...props} />;
-          }
+          content = <DrilldownPCForOneMonth {...props} />;
           break;
         }
         case "DrilldownConsultant":
           content = <DrilldownConsultant {...props} />;
           break;
+
+        case "DrilldownContractors":
+          content = <DrilldownContractors {...props} />;
+          break;
+
         case "DrilldownProjectTm":
           content = <DrilldownProjectTm {...props} />;
           break;
@@ -247,7 +246,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseTouchableView = styled(TouchableView)`
+const CloseTouchableView = styled(HybridButton)`
   width: 100px;
   height: 40px;
   position: absolute;

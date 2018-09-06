@@ -1,18 +1,41 @@
 /* eslint no-param-reassign: "off" */
 import moment from "moment";
-import {
-  payrollTaxRate,
-  leaveProjectTypeIndexes,
-  yearlyWorkingDays,
-  billableProbabilityKeys,
-  extendedBillableProbabilityKeys
-} from "./constants";
-import { calculatePartialMonth } from "./utils";
 
-export * from "./constants";
-export * from "./profitCentre";
-export * from "./utils";
+/**
+ * Temporary mirror from 'forecast-utils'
+ */
+const payrollTaxRate = 0.06;
+const yearlyWorkingDays = 220;
+const leaveProjectTypeIndexes = ["4", "5", "6"];
+const billableProbabilityKeys = ["NA", "90", "100"];
+const extendedBillableProbabilityKeys = ["NA", "50", "90", "100"];
 export const dateFormat = "YYYY-MM-DD";
+
+const calculatePartialMonth = ({
+  month,
+  consultantStartDate,
+  consultantEndDate
+}) => {
+  let validDays = 0;
+  const { firstDay } = month;
+  const totalDays = moment(firstDay).daysInMonth();
+  const monthStart = moment(firstDay).startOf("month");
+  const monthEnd = moment(firstDay).endOf("month");
+  const consultantStart = moment(consultantStartDate);
+  const consultantEnd = consultantEndDate && moment(consultantEndDate);
+
+  for (let m = monthStart; m.isBefore(monthEnd); m.add(1, "days")) {
+    if (consultantEnd) {
+      if (m.isSameOrAfter(consultantStart) && m.isSameOrBefore(consultantEnd)) {
+        validDays++;
+      }
+    } else if (m.isSameOrAfter(consultantStart)) {
+      validDays++;
+    }
+  }
+
+  return validDays / totalDays;
+};
 
 export function sortPeriods(rawPeriods) {
   const periods = rawPeriods.slice();
@@ -351,7 +374,6 @@ const calculateRosterEntries = ({
     const monthLabel = moment(entry.date).format("MMM YYYY");
 
     if (leaveProjectTypeIndexes.includes(entry.project.projectType)) {
-      console.log(entry);
       // leave, will always be negative, as a cost recovery
       const leave = +(
         entry.consultant.annualSalary / yearlyWorkingDays

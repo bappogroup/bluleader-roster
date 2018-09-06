@@ -3,7 +3,13 @@ import { ScrollView, View, Text, styled } from "bappo-components";
 import Table from "bappo-table";
 
 const ProjectHeader = ["Projects", "Revenue", "Cost", "Margin"];
-const PeopleHeader = ["Consultant", "Cost Recovery", "Cost", "Margin"];
+const PeopleHeader = [
+  "Consultant",
+  "Cost Recovery",
+  "Salary",
+  "Cost",
+  "Margin"
+];
 
 class Drilldown extends React.Component {
   constructor(props) {
@@ -39,11 +45,13 @@ class Drilldown extends React.Component {
       const recovery =
         cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let cost;
+      let sal = 0;
       switch (consultant.consultantType) {
         case "1":
           cost =
             cells[`Consultant Cost(permanent)-${monthLabel}`][consultant.id] ||
             0;
+          sal = cells[`sal-perm-${monthLabel}`][consultant.id] || 0;
           break;
         case "2":
           cost =
@@ -53,7 +61,7 @@ class Drilldown extends React.Component {
         default:
       }
       const margin = recovery - cost;
-      peopleRows.push([consultant.name, recovery, cost, margin]);
+      peopleRows.push([consultant.name, recovery, sal, cost, margin]);
     });
 
     const totalConsultantRecovery =

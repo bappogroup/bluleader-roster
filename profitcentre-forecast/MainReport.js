@@ -6,8 +6,9 @@ import {
   TouchableView,
   ActivityIndicator
 } from "bappo-components";
-import BappoTable from "bappo-table";
-import { pcForecastElements } from "forecast-utils";
+import BappoTable from "./table";
+import { pcForecastElements } from "./profitcenter-utils";
+import HybridButton from "hybrid-button";
 
 class MainReport extends React.Component {
   constructor(props) {
@@ -55,8 +56,8 @@ class MainReport extends React.Component {
     };
     months.forEach(month =>
       projectCostRow.data.push(
-        cells[`Fixed PP Overheads-${month.label}`].value +
-          cells[`Project Cost-${month.label}`].value +
+        cells[`Fixed Price Costs-${month.label}`].value +
+          cells[`Roster Costs-${month.label}`].value +
           cells[`Project Expense-${month.label}`].value
       )
     );
@@ -71,9 +72,9 @@ class MainReport extends React.Component {
       projectMarginRow.data.push(
         cells[`T&M Project Revenue-${month.label}`].value +
           cells[`Fixed Price Project Revenue-${month.label}`].value -
-          cells[`Project Cost-${month.label}`].value -
+          cells[`Roster Costs-${month.label}`].value -
           cells[`Project Expense-${month.label}`].value -
-          cells[`Fixed PP Overheads-${month.label}`].value
+          cells[`Fixed Price Costs-${month.label}`].value
       )
     );
     data.splice(10, 0, projectMarginRow, []);
@@ -107,13 +108,13 @@ class MainReport extends React.Component {
 
   renderHeaderCell = (data, { key, index }) => {
     const month = this.props.months[index];
-
     return (
       <TouchableViewCell
+        style={{ alignItems: "flex-end" }}
         key={key}
         onPress={() =>
           this.props.openReport({
-            name: `${month.label}`,
+            name: `${this.props.report.name} for ${month.label}`,
             component: "Drilldown",
             params: { month }
           })
@@ -142,8 +143,10 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const TouchableViewCell = styled(TouchableView)`
-  flex: 1;
+const TouchableViewCell = styled(HybridButton)`
+  flex-shrink: 1;
+  width: 150px;
   justify-content: center;
-  align-items: center;
+  align-items: right;
+  padding-right: 10px;
 `;
