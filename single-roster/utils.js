@@ -1,5 +1,13 @@
+// Format a date into ISO string e.g. 2018-01-01
 export function formatDate(d) {
-  return new Date(d).toISOString().split('T')[0];
+  const date = new Date(d);
+  return (
+    date.getFullYear() +
+    "-" +
+    ("0" + (date.getMonth() + 1)).slice(-2) +
+    "-" +
+    ("0" + date.getDate()).slice(-2)
+  );
 }
 
 export function getMonday(d) {

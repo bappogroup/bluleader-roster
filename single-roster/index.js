@@ -16,7 +16,7 @@ import {
 import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
-const weekdays = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function truncString(str, max = 18, add = "...") {
   add = add || "...";
@@ -272,14 +272,6 @@ class SingleRoster extends React.Component {
     let projectName = project && project.name;
     if (projectName) projectName = truncString(projectName);
 
-    if (readOnly) {
-      return (
-        <TextCell key={entry.date} backgroundColor={backgroundColor}>
-          <CellText>{projectName}</CellText>
-        </TextCell>
-      );
-    }
-
     // background color priority: from project > from probability > white
     if (entry.probability_id) {
       const probability = this.data.probabilityLookup[entry.probability_id];
@@ -288,6 +280,14 @@ class SingleRoster extends React.Component {
 
     if (project && project.backgroundColour) {
       backgroundColor = project.backgroundColour;
+    }
+
+    if (readOnly) {
+      return (
+        <TextCell key={entry.date} backgroundColor={backgroundColor}>
+          <CellText>{projectName}</CellText>
+        </TextCell>
+      );
     }
 
     return (
