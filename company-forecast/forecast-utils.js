@@ -373,8 +373,8 @@ const calculateRosterEntries = ({
   rosterEntries.forEach(entry => {
     const monthLabel = moment(entry.date).format("MMM YYYY");
 
-    if (leaveProjectTypeIndexes.includes(entry.project.projectType)) {
-      // leave, will always be negative, as a cost recovery
+    if (entry.project.projectType === "4") {
+      // paid leave, will always be negative, as a cost recovery
       const leave = +(
         entry.consultant.annualSalary / yearlyWorkingDays
       ).toFixed(2);
@@ -384,8 +384,11 @@ const calculateRosterEntries = ({
         cells[cellKey][entry.consultant_id] = 0;
       cells[cellKey][entry.consultant_id] -= leave;
       cells[cellKey].value -= leave;
-    } else if (entry.project.projectType === "7") {
-      // bench, do nothing
+    } else if (
+      leaveProjectTypeIndexes.includes(entry.project.projectType) ||
+      entry.project.projectType === "7"
+    ) {
+      // bench or unpaid leaves, do nothing
     } else {
       const assignment =
         projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];

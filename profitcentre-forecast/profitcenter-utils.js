@@ -284,7 +284,7 @@ const calculateProjects = ({
     const { projectType } = entry.project;
 
     if (leaveProjectTypeIndexes.includes(projectType) || projectType === "7")
-      return; //bench
+      return; // Leave or bench
 
     const monthLabel = moment(entry.date).format("MMM YYYY");
 
@@ -383,11 +383,8 @@ const calculatePeopleRecovery = ({ cells, rosterEntriesByConsultant }) => {
     const { projectType } = entry.project;
     if (projectType === "7") return; // Bench
 
-    if (
-      leaveProjectTypeIndexes.includes(projectType) &&
-      entry.consultant.consultantType === "1"
-    ) {
-      // Leaves, only applys to permanents
+    if (projectType === "4" && entry.consultant.consultantType === "1") {
+      // Paid leaves, only applys to permanents
       const leave = +(
         entry.consultant.annualSalary / yearlyWorkingDays
       ).toFixed(2);
