@@ -9,20 +9,22 @@ const FileUploader = ({ onUpload }) => (
     <input
       type="file"
       id="fileUploader"
-      accept=".csv"
+      accept=".csv, .xls"
       onChange={() => {
-        const file = document.getElementById('fileUploader').files[0];
+        const file = document.getElementById("fileUploader").files[0];
         onUpload(file);
       }}
     />
-    Up
+    Upload
   </Button>
 );
 
-const Button = styled.div`
+export default FileUploader;
+
+const Button = styled(TouchableView)`
   height: 100px;
   width: 100px;
-  font-size: 50px;
+  font-size: 20px;
   border-radius: 100px;
   position: relative;
 
@@ -37,14 +39,13 @@ const Button = styled.div`
   transition: all 1s;
   color: #ffffff;
 
-  input[type='file'] {
+  input[type="file"] {
     height: 200px;
     width: 200px;
     position: absolute;
-    top: 0;
+    top: -10;
     left: 0;
-    opacity: 0;
-    cursor: pointer;
+    opacity: 1;
   }
 
   &:hover {

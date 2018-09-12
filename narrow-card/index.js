@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, styled } from 'bappo-components';
+import React from "react";
+import { View, Text, styled } from "bappo-components";
 
 function trimNumber(n) {
   const number = +n;
@@ -17,17 +17,18 @@ const NarrowCard = ({ title, subtitle, properties, total }) => {
     </PropertyRow>
   );
 
-  const isTotal = title === 'Totals';
+  const isTotal = title === "Totals";
 
   return (
     <Container key={title} isTotal={isTotal}>
       <TitleContainer>
-        <Title>{typeof title === 'string' && title.substring(0, 25)}</Title>
-        {typeof subtitle === 'string' && <Subtitle>{subtitle}</Subtitle>}
+        <Title>{typeof title === "string" && title.substring(0, 25)}</Title>
+        {typeof subtitle === "string" && <Subtitle>{subtitle}</Subtitle>}
       </TitleContainer>
       <PropertyContainer>
-        {typeof properties === 'object' && Object.entries(properties).map(renderProperty)}
-        {typeof total !== 'undefined' && (
+        {typeof properties === "object" &&
+          Object.entries(properties).map(renderProperty)}
+        {typeof total !== "undefined" && (
           <PropertyRow>
             <Text>Total: {total}</Text>
           </PropertyRow>
@@ -49,7 +50,7 @@ const Container = styled(View)`
   margin-bottom: 0;
   align-items: center;
 
-  ${props => props.isTotal && 'background-color: lightgrey;'};
+  ${props => props.isTotal && "background-color: lightgrey;"};
 `;
 
 const TitleContainer = styled(View)`
