@@ -27,37 +27,6 @@ export const datesEqual = (time1, time2) => {
   return moment1.format(dateFormat) === moment2.format(dateFormat);
 };
 
-const weekdayOptions = [
-  {
-    id: "1",
-    label: "Monday"
-  },
-  {
-    id: "2",
-    label: "Tuesday"
-  },
-  {
-    id: "3",
-    label: "Wednesday"
-  },
-  {
-    id: "4",
-    label: "Thursday"
-  },
-  {
-    id: "5",
-    label: "Friday"
-  },
-  {
-    id: "6",
-    label: "Saturday"
-  },
-  {
-    id: "7",
-    label: "Sunday"
-  }
-];
-
 export const getEntryFormFields = (projectOptions, probabilityOptions) => [
   {
     name: "project_id",
@@ -78,22 +47,29 @@ export const getEntryFormFields = (projectOptions, probabilityOptions) => [
     label: "Until"
   },
   {
-    name: "weekdayFrom",
-    label: "Weekday From",
-    type: "FixedList",
-    properties: {
-      options: weekdayOptions
-    },
-    validate: [value => (value ? undefined : "Required")]
+    name: "monday",
+    type: "Checkbox",
+    label: "Monday"
   },
   {
-    name: "weekdayTo",
-    label: "Weekday To",
-    type: "FixedList",
-    properties: {
-      options: weekdayOptions
-    },
-    validate: [value => (value ? undefined : "Required")]
+    name: "tuesday",
+    type: "Checkbox",
+    label: "Tuesday"
+  },
+  {
+    name: "wednesday",
+    type: "Checkbox",
+    label: "Wednesday"
+  },
+  {
+    name: "thursday",
+    type: "Checkbox",
+    label: "Thursday"
+  },
+  {
+    name: "friday",
+    type: "Checkbox",
+    label: "Friday"
   },
   {
     name: "probability_id",
@@ -122,6 +98,13 @@ export const updateRosterEntryRecords = async (
 ) => {
   const { RosterEntry, RosterChange } = $models;
 
+  const selectedDays = [];
+  if (data.monday) selectedDays.push(1);
+  if (data.tuesday) selectedDays.push(2);
+  if (data.wednesday) selectedDays.push(3);
+  if (data.thursday) selectedDays.push(4);
+  if (data.friday) selectedDays.push(5);
+
   // Generate new entries
   const newEntries = [];
   for (
@@ -131,8 +114,8 @@ export const updateRosterEntryRecords = async (
   ) {
     let weekdayIndex = d.day();
     // Sunday's index is 7
-    if (weekdayIndex === 0) weekdayIndex = 7;
-    if (weekdayIndex >= +data.weekdayFrom && weekdayIndex <= +data.weekdayTo) {
+    // if (weekdayIndex === 0) weekdayIndex = 7;
+    if (selectedDays.includes(weekdayIndex)) {
       // Only pick chosen weekdays
       newEntries.push({
         date: d.format("YYYY-MM-DD"),
@@ -202,6 +185,7 @@ export const deleteRosterEntryRecords = async (
   { data, consultant, operatorName, $models },
   leaveProjects
 ) => {
+  // TODO: use weekday options
   const destroyQuery = {
     consultant_id: data.consultant_id,
     date: {
@@ -211,7 +195,6 @@ export const deleteRosterEntryRecords = async (
 
   if (!data.shouldOverrideLeaves) {
     // Don't override leave entries
-
     const leaveEntries = await $models.RosterEntry.findAll({
       where: {
         consultant_id: data.consultant_id,
@@ -231,16 +214,15 @@ export const deleteRosterEntryRecords = async (
 
   // Create change log
   $models.RosterChange.create({
+    ...data,
     changedBy: operatorName,
     changeDate: moment().format(dateFormat),
-    comment: data.comment,
-    consultant: consultant.name,
-    startDate: data.startDate,
-    endDate: data.endDate,
-    project_id: data.project_id,
-    probability_id: data.probability_id,
-    weekdayFrom: data.weekdayFrom,
-    weekdayTo: data.weekdayTo
+    consultant: consultant.name
+    // comment: data.comment,
+    // startDate: data.startDate,
+    // endDate: data.endDate,
+    // project_id: data.project_id,
+    // probability_id: data.probability_id,
   });
 
   return $models.RosterEntry.destroy({

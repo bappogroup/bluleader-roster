@@ -505,8 +505,11 @@ class Roster extends React.Component {
         consultant_id: consultant.id,
         startDate: date,
         endDate: date,
-        weekdayFrom: "1",
-        weekdayTo: "5"
+        monday: true,
+        tuesday: true,
+        wednesday: true,
+        thursday: true,
+        friday: true
       },
       onSubmit: this.updateRosterEntry
     });
@@ -528,8 +531,8 @@ class Roster extends React.Component {
       ["4", "5", "6"].includes(p.projectType)
     );
 
+    // Set the probability of leave projects to 'NA', if the probability exists
     if (leaveProjects.find(p => p.id === data.project_id)) {
-      // Set the probability of leave projects to 'NA', if the probability exists
       const naProb = this.data.probabilityOptions.find(pr => pr.label === "NA");
       if (naProb) data.probability_id = naProb.id;
     }
