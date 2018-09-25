@@ -524,8 +524,18 @@ class Roster extends React.Component {
       $models: this.props.$models
     };
 
-    if (data.project_id) await updateRosterEntryRecords(payload);
-    else await deleteRosterEntryRecords(payload);
+    const leaveProjects = this.state.commonProjects.filter(p =>
+      ["4", "5", "6"].includes(p.projectType)
+    );
+
+    if (leaveProjects.find(p => p.id === data.project_id)) {
+      // Set the probability of leave projects to 'NA', if the probability exists
+      const naProb = this.data.probabilityOptions.find(pr => pr.label === "NA");
+      if (naProb) data.probability_id = naProb.id;
+    }
+
+    if (data.project_id) await updateRosterEntryRecords(payload, leaveProjects);
+    else await deleteRosterEntryRecords(payload, leaveProjects);
 
     await this.reloadConsultantData(data.consultant_id);
   };

@@ -116,21 +116,11 @@ export const getEntryFormFields = (projectOptions, probabilityOptions) => [
   }
 ];
 
-export const updateRosterEntryRecords = async ({
-  data,
-  consultant,
-  operatorName,
-  $models
-}) => {
+export const updateRosterEntryRecords = async (
+  { data, consultant, operatorName, $models },
+  leaveProjects
+) => {
   const { RosterEntry, RosterChange } = $models;
-
-  const leaveProjects = await $models.Project.findAll({
-    where: {
-      projectType: {
-        $in: ["4", "5", "6"]
-      }
-    }
-  });
 
   // Generate new entries
   const newEntries = [];
@@ -208,12 +198,10 @@ export const updateRosterEntryRecords = async ({
   return RosterEntry.bulkCreate(entriesToCreate);
 };
 
-export const deleteRosterEntryRecords = async ({
-  data,
-  consultant,
-  operatorName,
-  $models
-}) => {
+export const deleteRosterEntryRecords = async (
+  { data, consultant, operatorName, $models },
+  leaveProjects
+) => {
   const destroyQuery = {
     consultant_id: data.consultant_id,
     date: {
@@ -223,13 +211,6 @@ export const deleteRosterEntryRecords = async ({
 
   if (!data.shouldOverrideLeaves) {
     // Don't override leave entries
-    const leaveProjects = await $models.Project.findAll({
-      where: {
-        projectType: {
-          $in: ["4", "5", "6"]
-        }
-      }
-    });
 
     const leaveEntries = await $models.RosterEntry.findAll({
       where: {
