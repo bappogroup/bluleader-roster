@@ -5,7 +5,8 @@ import {
   View,
   Text,
   TouchableView,
-  styled
+  styled,
+  Button
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
@@ -599,19 +600,21 @@ class Roster extends React.Component {
             <Heading>
               Cost center: {(costCenter && costCenter.name) || "all"}
             </Heading>
-            <TextTouchableView onPress={this.setFilters}>
-              filters
-            </TextTouchableView>
-            <TextTouchableView onPress={this.reload}>reload</TextTouchableView>
+            <Button text="filters" onPress={this.setFilters} type="tertiary" />
+            <Button text="reload" onPress={this.reload} type="tertiary" />
           </HeaderSubContainer>
           <HeaderSubContainer>
             <Heading>Cell size:</Heading>
-            <TextTouchableView onPress={() => this.setDisplayMode("large")}>
-              large
-            </TextTouchableView>
-            <TextTouchableView onPress={() => this.setDisplayMode("small")}>
-              small
-            </TextTouchableView>
+            <Button
+              text="large"
+              onPress={() => this.setDisplayMode("large")}
+              type="tertiary"
+            />
+            <Button
+              text="small"
+              onPress={() => this.setDisplayMode("small")}
+              type="tertiary"
+            />
           </HeaderSubContainer>
         </HeaderContainer>
         <BodyContainer>
@@ -644,31 +647,27 @@ const Container = styled(View)`
   flex-direction: column;
 `;
 
-const HeaderContainer = styled.div`
-  display: flex;
+const HeaderContainer = styled(View)`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   margin: 20px;
 `;
 
-const HeaderSubContainer = styled.div`
-  display: flex;
+const HeaderSubContainer = styled(View)`
+  flex-direction: row;
+  align-items: center;
 `;
 
 const Heading = styled(Text)`
   font-size: 18px;
+  margin-right: 10px;
 `;
 
 const BodyContainer = styled.div`
   flex: 1;
   margin-right: 15px;
   margin-bottom: 15px;
-`;
-
-const TextTouchableView = styled(TouchableView)`
-  color: grey;
-  margin-left: 10px;
 `;
 
 const baseStyle = `
