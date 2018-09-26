@@ -185,32 +185,50 @@ export const deleteRosterEntryRecords = async (
   { data, consultant, operatorName, $models },
   leaveProjects
 ) => {
-  // TODO: use weekday options
+  let idsToRemove;
+
+  let allRecords = await $models.RosterEntry.findAll({
+    where: {
+      consultant_id: data.consultant_id,
+      date: {
+        $between: [data.startDate, data.endDate]
+      }
+    }
+  });
+
+  // Only consider selected weekdays
+  const selectedDays = [];
+  if (data.monday) selectedDays.push(1);
+  if (data.tuesday) selectedDays.push(2);
+  if (data.wednesday) selectedDays.push(3);
+  if (data.thursday) selectedDays.push(4);
+  if (data.friday) selectedDays.push(5);
+
+  allRecords = allRecords.filter(r => {
+    const weekdayIndex = moment(r.date).day();
+    return selectedDays.includes(weekdayIndex);
+  });
+
+  // Whether to delete leave entries
+  if (!data.shouldOverrideLeaves) {
+    // Don't delete leave entries
+    const leaveProjectIds = leaveProjects.map(p => p.id);
+    idsToRemove = [];
+    allRecords.forEach(r => {
+      if (!leaveProjectIds.includes(r.project_id)) idsToRemove.push(r.id);
+    });
+  } else {
+    // Delete all
+    idsToRemove = allRecords.map(r => r.id);
+  }
+
+  if (!idsToRemove.length) return null;
+
   const destroyQuery = {
-    consultant_id: data.consultant_id,
-    date: {
-      $between: [data.startDate, data.endDate]
+    id: {
+      $in: idsToRemove
     }
   };
-
-  if (!data.shouldOverrideLeaves) {
-    // Don't override leave entries
-    const leaveEntries = await $models.RosterEntry.findAll({
-      where: {
-        consultant_id: data.consultant_id,
-        date: {
-          $between: [data.startDate, data.endDate]
-        },
-        project_id: {
-          $in: leaveProjects.map(p => p.id)
-        }
-      }
-    });
-
-    destroyQuery.id = {
-      $notIn: leaveEntries.map(e => e.id)
-    };
-  }
 
   // Create change log
   $models.RosterChange.create({
