@@ -12,7 +12,7 @@ export const datesToArray = (from, to, toStringDate) => {
   do {
     list.push(toStringDate ? day.format(dateFormat) : day);
     day = day.clone().add(1, "d");
-  } while (day < moment(to));
+  } while (day <= moment(to));
   return list;
 };
 

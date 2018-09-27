@@ -103,9 +103,9 @@ class Roster extends React.Component {
     if (!this.state.initializing) await this.setState({ initializing: true });
 
     // Get date array, to put at first of entryList
-    const dateArray = datesToArray(startDate, endDate).map(date => {
+    const dateArray = datesToArray(startDate, endDate).map((date, index) => {
       let labelFormat = "DD";
-      if (date.day() === 1) labelFormat = "MMM DD";
+      if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
 
       return {
         formattedDate: date.format(labelFormat),
@@ -593,6 +593,8 @@ class Roster extends React.Component {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
 
+    const title = `Cost center: ${(costCenter && costCenter.name) || "all"}`;
+
     return (
       <Container>
         <HeaderContainer>
@@ -600,17 +602,25 @@ class Roster extends React.Component {
             <Heading>
               Cost center: {(costCenter && costCenter.name) || "all"}
             </Heading>
-            <Button text="filters" onPress={this.setFilters} type="tertiary" />
-            <Button text="reload" onPress={this.reload} type="tertiary" />
+            <FunctionButton
+              text="filters"
+              onPress={this.setFilters}
+              type="tertiary"
+            />
+            <FunctionButton
+              text="reload"
+              onPress={this.reload}
+              type="tertiary"
+            />
           </HeaderSubContainer>
           <HeaderSubContainer>
             <Heading>Cell size:</Heading>
-            <Button
+            <FunctionButton
               text="large"
               onPress={() => this.setDisplayMode("large")}
               type="tertiary"
             />
-            <Button
+            <FunctionButton
               text="small"
               onPress={() => this.setDisplayMode("small")}
               type="tertiary"
@@ -668,6 +678,10 @@ const BodyContainer = styled.div`
   flex: 1;
   margin-right: 15px;
   margin-bottom: 15px;
+`;
+
+const FunctionButton = styled(Button)`
+  // margin-left: 10px;
 `;
 
 const baseStyle = `

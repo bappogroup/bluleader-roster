@@ -118,9 +118,9 @@ class Roster extends React.Component {
     if (!this.state.initializing) await this.setState({ initializing: true });
 
     // Get date array, to put at first of entryList
-    const dateArray = datesToArray(startDate, endDate).map(date => {
+    const dateArray = datesToArray(startDate, endDate).map((date, index) => {
       let labelFormat = "DD";
-      if (date.day() === 1) labelFormat = "MMM DD";
+      if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
 
       return {
         formattedDate: date.format(labelFormat),

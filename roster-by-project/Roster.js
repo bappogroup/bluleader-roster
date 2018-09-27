@@ -1,24 +1,10 @@
 import React from "react";
 import moment from "moment";
-import {
-  ActivityIndicator,
-  View,
-  Text,
-  TouchableView,
-  styled,
-  Button
-} from "bappo-components";
+import { ActivityIndicator, View, Text, styled } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
-import {
-  dateFormat,
-  datesToArray,
-  getEntryFormFields,
-  updateRosterEntryRecords,
-  deleteRosterEntryRecords,
-  projectAssignmentsToOptions
-} from "roster-utils";
 
 // Format a date into ISO string e.g. 2018-01-01
+// Take out all timezone info
 function formatDate(d) {
   const date = new Date(d);
   return (
@@ -29,6 +15,18 @@ function formatDate(d) {
     ("0" + date.getDate()).slice(-2)
   );
 }
+
+const datesToArray = (from, to, toStringDate) => {
+  const list = [];
+  let day = moment(from).clone();
+  const _to = moment(to);
+
+  do {
+    list.push(toStringDate ? day.format("YYYY-MM-DD") : day);
+    day = day.clone().add(1, "d");
+  } while (day <= _to);
+  return list;
+};
 
 class RosterByProject extends React.Component {
   // Dimensions
@@ -68,7 +66,7 @@ class RosterByProject extends React.Component {
       // Get start & end date from roster entries
       const date = new Date(entry.date);
       if (date < startDate) startDate = date;
-      else if (date > endDate) endDate = date;
+      if (date > endDate) endDate = date;
 
       // Get all related consultants
       if (!consultants.find(c => c.id === entry.consultant_id))
@@ -82,9 +80,12 @@ class RosterByProject extends React.Component {
     });
 
     // Get date array, to put at first of entryList
-    const dateArray = datesToArray(startDate, endDate).map(date => {
+    const dateArray = datesToArray(
+      formatDate(startDate),
+      formatDate(endDate)
+    ).map((date, index) => {
       let labelFormat = "DD";
-      if (date.day() === 1) labelFormat = "MMM DD";
+      if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
 
       return {
         formattedDate: date.format(labelFormat),
@@ -108,7 +109,7 @@ class RosterByProject extends React.Component {
       tempMap[cid] = [];
     });
     rosterEntries.forEach(entry => {
-      const entryIndex = moment(entry.date).diff(startDate, "days");
+      const entryIndex = moment(entry.date).diff(formatDate(startDate), "days");
       tempMap[entry.consultant_id][entryIndex] = entry;
     });
     // Insert consultant name at first of roster entry array
@@ -207,8 +208,6 @@ class RosterByProject extends React.Component {
       );
 
     if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
-
-    console.log(this.entryList);
 
     return (
       <Container>
