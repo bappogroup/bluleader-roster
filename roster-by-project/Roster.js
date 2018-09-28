@@ -1,6 +1,12 @@
 import React from "react";
 import moment from "moment";
-import { ActivityIndicator, View, Text, styled } from "bappo-components";
+import {
+  ActivityIndicator,
+  View,
+  Text,
+  styled,
+  Button
+} from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 
 // Format a date into ISO string e.g. 2018-01-01
@@ -37,12 +43,16 @@ class RosterByProject extends React.Component {
   entryList = [];
   projectMap = {};
 
-  state = {
-    loading: true,
-    consultants: [],
-    mode: "small",
-    error: null
-  };
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      loading: true,
+      consultants: [],
+      error: null,
+      mode: this.props.projects.length > 1 ? "large" : "small"
+    };
+  }
 
   async componentDidMount() {
     const { $models, projects } = this.props;
@@ -147,7 +157,6 @@ class RosterByProject extends React.Component {
   };
 
   cellRenderer = ({ columnIndex, key, rowIndex, style }) => {
-    const { mode } = this.state;
     const entry =
       this.entryList[rowIndex] && this.entryList[rowIndex][columnIndex];
 
@@ -188,7 +197,6 @@ class RosterByProject extends React.Component {
     if (entry) {
       label = this.projectMap[entry.project_id];
       if (this.props.projects.length === 1) label = label.slice(0, 3);
-      else style["wordBreak"] = "break-all";
     }
 
     // Apply weekend cell style
@@ -206,6 +214,9 @@ class RosterByProject extends React.Component {
     );
   };
 
+  setDisplayMode = mode =>
+    this.setState({ mode }, () => this.gridRef.recomputeGridSize());
+
   render() {
     const { error, loading } = this.state;
 
@@ -220,6 +231,19 @@ class RosterByProject extends React.Component {
 
     return (
       <Container>
+        <Header>
+          <Text>Cell size:</Text>
+          <Button
+            text="large"
+            onPress={() => this.setDisplayMode("large")}
+            type="tertiary"
+          />
+          <Button
+            text="small"
+            onPress={() => this.setDisplayMode("small")}
+            type="tertiary"
+          />
+        </Header>
         <AutoSizer>
           {({ height, width }) => (
             <MultiGrid
@@ -268,4 +292,9 @@ const Cell = styled(View)`
   border: 1px solid #eee;
 
   ${props => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")};
+`;
+
+const Header = styled(View)`
+  flex-direction: row;
+  align-items: center;
 `;
