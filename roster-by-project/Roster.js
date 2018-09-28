@@ -35,6 +35,7 @@ class RosterByProject extends React.Component {
   CONSULTANT_CELL_WIDTH = 160;
 
   entryList = [];
+  projectMap = {};
 
   state = {
     loading: true,
@@ -44,17 +45,19 @@ class RosterByProject extends React.Component {
   };
 
   async componentDidMount() {
-    const { $models, project } = this.props;
+    const { $models, projects } = this.props;
     const rosterEntries = await $models.RosterEntry.findAll({
       where: {
-        project_id: project.id
+        project_id: {
+          $in: projects.map(p => p.id)
+        }
       },
       include: [{ as: "consultant" }]
     });
 
     if (!rosterEntries.length)
       return this.setState({
-        error: "No roster record found for this project",
+        error: "No roster record found for project(s)",
         loading: false
       });
 
@@ -127,6 +130,11 @@ class RosterByProject extends React.Component {
 
     this.entryList = entryList.concat(newEntryList);
 
+    // Build projectId - projectName lookup
+    const projectMap = {};
+    projects.forEach(p => (projectMap[p.id] = p.name));
+    this.projectMap = projectMap;
+
     this.setState({ loading: false, consultants });
   }
 
@@ -178,8 +186,9 @@ class RosterByProject extends React.Component {
 
     // Render roster entry cell
     if (entry) {
-      label = this.props.project.name;
-      if (mode === "small" && label.length > 3) label = label.slice(0, 3);
+      label = this.projectMap[entry.project_id];
+      if (this.props.projects.length === 1) label = label.slice(0, 3);
+      else style["wordBreak"] = "break-all";
     }
 
     // Apply weekend cell style
