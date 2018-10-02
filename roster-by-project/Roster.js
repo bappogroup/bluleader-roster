@@ -269,6 +269,7 @@ export default RosterByProject;
 
 const Container = styled(View)`
   flex: 1;
+  margin-bottom: 35px;
 `;
 
 const baseStyle = `

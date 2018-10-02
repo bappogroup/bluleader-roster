@@ -31,7 +31,8 @@ class SingleRoster extends React.Component {
     probabilityLookup: {}, // Find a probability by id
     projectOptions: [],
     projectLookup: {}, // Find a project by id
-    projectAssignmentLookup: {}
+    projectAssignmentLookup: {},
+    commonProjects: []
   };
 
   constructor(props) {
@@ -106,6 +107,7 @@ class SingleRoster extends React.Component {
     const probabilityLookup = {};
     probabilities.forEach(p => (probabilityLookup[p.id] = p));
 
+    this.data.commonProjects = commonProjects;
     this.data.probabilityOptions = probabilities.map((p, index) => ({
       id: p.id,
       label: p.name,
@@ -188,8 +190,11 @@ class SingleRoster extends React.Component {
         consultant_id: this.state.consultant.id,
         startDate: entry.date,
         endDate: entry.date,
-        weekdayFrom: "1",
-        weekdayTo: "5"
+        monday: true,
+        tuesday: true,
+        wednesday: true,
+        thursday: true,
+        friday: true
       },
       onSubmit: this.updateRosterEntry
     });
@@ -206,9 +211,16 @@ class SingleRoster extends React.Component {
     };
     const newWeeklyEntries = this.state.weeklyEntries.slice();
 
+    const leaveProjects = this.data.commonProjects.filter(p =>
+      ["4", "5", "6"].includes(p.projectType)
+    );
+
     if (!data.project_id) {
       // delete records
-      const deletedCount = await deleteRosterEntryRecords(payload);
+      const deletedCount = await deleteRosterEntryRecords(
+        payload,
+        leaveProjects
+      );
 
       // reload roster entries
       if (deletedCount > 0) {
@@ -218,7 +230,10 @@ class SingleRoster extends React.Component {
       }
     } else {
       // update records
-      const updatedRecords = await updateRosterEntryRecords(payload);
+      const updatedRecords = await updateRosterEntryRecords(
+        payload,
+        leaveProjects
+      );
 
       // Update records in state
       updatedRecords.forEach(entry => {
