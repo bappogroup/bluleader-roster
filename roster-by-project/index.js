@@ -29,7 +29,11 @@ class RosterByProject extends React.Component {
   };
 
   async componentDidMount() {
-    const projects = await this.props.$models.Project.findAll({ where: {} });
+    const projects = await this.props.$models.Project.findAll({
+      where: {
+        active: true
+      }
+    });
     this.setState({
       filteredProjects: projects.sort(function(a, b) {
         // Sort alphabetically
