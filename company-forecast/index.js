@@ -1,9 +1,10 @@
 import React from "react";
 import moment from "moment";
-import { styled, View, TouchableView, Text } from "bappo-components";
+import { styled, View, Text } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import SelectionDisplay from "selectiondisplay";
 import { sortPeriods } from "forecast-utils";
+import HybridButton from "hybrid-button";
 import ReportController from "./ReportController";
 
 class CompanyForecast extends React.Component {
@@ -264,7 +265,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(TouchableView)`
+const RunButton = styled(HybridButton)`
   height: 50px;
   margin-left: 20px;
   margin-right: 20px;
