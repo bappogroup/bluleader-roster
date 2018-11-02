@@ -3,28 +3,32 @@ import moment from "moment";
 import {
   styled,
   View,
-  TouchableView,
   Text,
-  ActivityIndicator
+  ActivityIndicator,
+  Form,
+  SelectField,
+  SwitchField,
+  Button
 } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
-import SelectionDisplay from "selectiondisplay";
 import { sortPeriods, getAuthorisedProfitCentres } from "forecast-utils";
 import ReportController from "./ReportController";
 
 class ProfitCentreForecast extends React.Component {
   data = {
-    profitCentres: []
+    profitCentres: [],
+    profitCentreOptions: [],
+    periods: [],
+    monthOptions: []
   };
 
   state = {
-    loading: true,
     error: null,
     profitCentre: null,
     forecastStartDate: null,
     forecastEndDate: null,
     include50: false,
-    currentAction: "select"
+    currentAction: "loading"
   };
 
   async componentDidMount() {
@@ -37,8 +41,7 @@ class ProfitCentreForecast extends React.Component {
       user_id
     });
 
-    if (error) return this.setState({ loading: false, error });
-    this.data.profitCentres = profitCentres;
+    if (error) return this.setState({ currentAction: "error", error });
 
     // Financial periods and User preferences
     const promises = [
@@ -46,12 +49,18 @@ class ProfitCentreForecast extends React.Component {
       getUserPreferences(user_id, $models)
     ];
 
+    // Set this.data
     const [periods, prefs] = await Promise.all(promises);
+    this.data.profitCentres = profitCentres;
     this.data.periods = sortPeriods(periods);
-
     this.data.monthOptions = this.data.periods.map((p, index) => ({
-      id: p.id,
+      value: p.id,
       label: p.name,
+      pos: index
+    }));
+    this.data.profitCentreOptions = profitCentres.map((c, index) => ({
+      value: c.id,
+      label: c.name,
       pos: index
     }));
 
@@ -62,9 +71,7 @@ class ProfitCentreForecast extends React.Component {
       pcForecastInclude50: include50
     } = prefs;
 
-    if (!(forecastProfitCentreId && forecastStartMonthId && forecastEndMonthId))
-      this.setFilters();
-    else {
+    if (forecastProfitCentreId && forecastStartMonthId && forecastEndMonthId) {
       const profitCentre = profitCentres.find(
         pc => pc.id === forecastProfitCentreId
       );
@@ -81,110 +88,24 @@ class ProfitCentreForecast extends React.Component {
         forecastEndDate,
         include50,
         periodIds,
-        loading: false
+        currentAction: "select"
       });
+    } else {
+      this.setState({ currentAction: "select" });
     }
   }
 
   timeRangeValidator = (value, formValues) => {
     if (!value) return "Required";
     const startOption = this.data.monthOptions.find(
-      m => m.id === formValues.forecastStartMonthId
+      m => m.value === formValues.forecastStartMonthId
     );
     const endOption = this.data.monthOptions.find(
-      m => m.id === formValues.forecastEndMonthId
+      m => m.value === formValues.forecastEndMonthId
     );
     if (startOption && endOption && endOption.pos < startOption.pos)
       return "Invalid time range";
     return undefined;
-  };
-
-  setFilters = () => {
-    const { $models, $popup } = this.props;
-    const { profitCentres, monthOptions } = this.data;
-
-    const profitCentreOptions = profitCentres.map((c, index) => ({
-      id: c.id,
-      label: c.name,
-      pos: index
-    }));
-
-    $popup.form({
-      title: "Select Profit Centre and Time Range",
-      fields: [
-        {
-          name: "forecastProfitCentreId",
-          label: "ProfitCentre",
-          type: "FixedList",
-          properties: {
-            options: profitCentreOptions
-          }
-        },
-        {
-          name: "forecastStartMonthId",
-          label: "Start Month",
-          type: "FixedList",
-          properties: {
-            options: monthOptions
-          },
-          validate: this.timeRangeValidator
-        },
-        {
-          name: "forecastEndMonthId",
-          label: "End Month",
-          type: "FixedList",
-          properties: {
-            options: monthOptions
-          },
-          validate: this.timeRangeValidator
-        },
-        {
-          name: "include50",
-          label: "Include 50%",
-          type: "Checkbox"
-        }
-      ],
-      initialValues: {
-        forecastProfitCentreId:
-          this.state.profitCentre && this.state.profitCentre.id,
-        forecastStartMonthId: this.state.forecastStartMonthId,
-        forecastEndMonthId: this.state.forecastEndMonthId,
-        include50: this.state.include50
-      },
-      onSubmit: ({
-        forecastProfitCentreId,
-        forecastStartMonthId,
-        forecastEndMonthId,
-        include50
-      }) => {
-        const profitCentre = profitCentres.find(
-          c => c.id === forecastProfitCentreId
-        );
-        const {
-          forecastStartDate,
-          forecastEndDate,
-          periodIds
-        } = this.processPeriods(forecastStartMonthId, forecastEndMonthId);
-
-        this.setState({
-          profitCentre,
-          forecastStartMonthId,
-          forecastEndMonthId,
-          forecastStartDate,
-          forecastEndDate,
-          include50,
-          periodIds,
-          loading: false
-        });
-
-        setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastProfitCentreId,
-          forecastStartMonthId,
-          forecastEndMonthId,
-          pcForecastInclude50: include50
-        });
-      }
-    });
   };
 
   processPeriods = (startMonthId, endMonthId) => {
@@ -214,69 +135,141 @@ class ProfitCentreForecast extends React.Component {
     return { forecastStartDate, forecastEndDate, periodIds };
   };
 
+  renderSelectionForm = () => {
+    const initialValues = {
+      forecastProfitCentreId:
+        this.state.profitCentre && this.state.profitCentre.id,
+      forecastStartMonthId: this.state.forecastStartMonthId,
+      forecastEndMonthId: this.state.forecastEndMonthId,
+      include50: this.state.include50
+    };
+    const onSubmit = ({
+      forecastProfitCentreId,
+      forecastStartMonthId,
+      forecastEndMonthId,
+      include50
+    }) => {
+      const profitCentre = this.data.profitCentres.find(
+        c => c.id === forecastProfitCentreId
+      );
+      const {
+        forecastStartDate,
+        forecastEndDate,
+        periodIds
+      } = this.processPeriods(forecastStartMonthId, forecastEndMonthId);
+
+      this.setState({
+        profitCentre,
+        forecastStartMonthId,
+        forecastEndMonthId,
+        forecastStartDate,
+        forecastEndDate,
+        include50,
+        periodIds,
+        currentAction: "run"
+      });
+
+      setUserPreferences(
+        this.props.$global.currentUser.id,
+        this.props.$models,
+        {
+          forecastProfitCentreId,
+          forecastStartMonthId,
+          forecastEndMonthId,
+          pcForecastInclude50: include50
+        }
+      );
+    };
+
+    return (
+      <Form initialValues={initialValues} onSubmit={onSubmit}>
+        <Form.Field
+          name="forecastProfitCentreId"
+          label="Profit Centre"
+          component={SelectField}
+          props={{
+            options: this.data.profitCentreOptions
+          }}
+        />
+        <Form.Field
+          name="forecastStartMonthId"
+          label="Start Month"
+          component={SelectField}
+          props={{
+            options: this.data.monthOptions
+          }}
+          validate={this.timeRangeValidator}
+        />
+        <Form.Field
+          name="forecastEndMonthId"
+          label="End Month"
+          component={SelectField}
+          props={{
+            options: this.data.monthOptions
+          }}
+          validate={this.timeRangeValidator}
+        />
+        <Form.Field
+          name="include50"
+          label="Include 50%"
+          component={SwitchField}
+        />
+        <Form.SubmitButton>
+          <Button text="Run" />
+        </Form.SubmitButton>
+      </Form>
+    );
+  };
+
   render() {
     const {
-      loading,
       error,
       profitCentre,
       forecastStartDate,
       forecastEndDate,
       include50,
-      periodIds
+      periodIds,
+      currentAction
     } = this.state;
 
-    if (loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
-
-    if (error)
-      return (
-        <Container>
-          <Text style={{ margin: 20 }}>{error}</Text>
-        </Container>
-      );
-
-    const daterangetxt = `${forecastStartDate.format(
-      "MMM YYYY"
-    )} to ${forecastEndDate.format("MMM YYYY")}`;
-
-    const options = [
-      { label: "Profit Centre", value: profitCentre.name },
-      { label: "Date Range", value: daterangetxt },
-      { label: "Include 50%", value: include50 ? "Yes" : "No" }
-    ];
-
-    if (this.state.currentAction === "select") {
-      return (
-        <Container>
-          <SelectionDisplay
-            options={options}
-            onChangeClick={() => this.setFilters()}
-          />
-          <RunTouchableView
-            onPress={() => this.setState({ currentAction: "run" })}
-          >
-            <ButtonText> Run </ButtonText>
-          </RunTouchableView>
-        </Container>
-      );
+    switch (currentAction) {
+      case "loading": {
+        return <ActivityIndicator style={{ marginTop: 30 }} />;
+      }
+      case "error": {
+        return (
+          <Container>
+            <Text style={{ margin: 20 }}>{error}</Text>
+          </Container>
+        );
+      }
+      case "select": {
+        return (
+          <Container style={{ padding: 40, width: 400 }}>
+            {this.renderSelectionForm()}
+          </Container>
+        );
+      }
+      case "run": {
+        return (
+          <Container>
+            <ReportController
+              profitCentre={profitCentre}
+              startDate={forecastStartDate}
+              endDate={forecastEndDate}
+              include50={include50}
+              periodIds={periodIds}
+              setCurrentAction={currentAction =>
+                this.setState({ currentAction })
+              }
+              $models={this.props.$models}
+            />
+          </Container>
+        );
+      }
+      default:
+        return null;
     }
-
-    if (this.state.currentAction === "run") {
-      return (
-        <Container>
-          <ReportController
-            profitCentre={profitCentre}
-            startDate={forecastStartDate}
-            endDate={forecastEndDate}
-            include50={include50}
-            periodIds={periodIds}
-            setCurrentAction={currentAction => this.setState({ currentAction })}
-            $models={this.props.$models}
-          />
-        </Container>
-      );
-    }
-
-    return null;
   }
 }
 
@@ -284,18 +277,4 @@ export default ProfitCentreForecast;
 
 const Container = styled(View)`
   flex: 1;
-`;
-
-const RunTouchableView = styled(TouchableView)`
-  height: 50px;
-  margin-left: 20px;
-  margin-right: 20px;
-  background-color: orange;
-  border-radius: 3px;
-  justify-content: center;
-  align-items: center;
-`;
-
-const ButtonText = styled(Text)`
-  color: white;
 `;

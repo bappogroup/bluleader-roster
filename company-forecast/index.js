@@ -1,15 +1,24 @@
 import React from "react";
 import moment from "moment";
-import { styled, View, Text } from "bappo-components";
+import {
+  styled,
+  ActivityIndicator,
+  View,
+  Form,
+  SelectField,
+  SwitchField,
+  Button
+} from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
-import SelectionDisplay from "selectiondisplay";
 import { sortPeriods } from "forecast-utils";
-import HybridButton from "hybrid-button";
 import ReportController from "./ReportController";
 
 class CompanyForecast extends React.Component {
   data = {
-    companies: []
+    companies: [],
+    companyOptions: [],
+    periods: [],
+    monthOptions: []
   };
 
   state = {
@@ -17,7 +26,7 @@ class CompanyForecast extends React.Component {
     forecastStartDate: null,
     forecastEndDate: null,
     include50: false,
-    currentAction: "select"
+    currentAction: "loading"
   };
 
   async componentDidMount() {
@@ -35,15 +44,20 @@ class CompanyForecast extends React.Component {
     );
     const [companies, periods] = await Promise.all(promises);
 
-    // Sort periods
+    // Set this.data
     this.data.periods = sortPeriods(periods);
-
     this.data.monthOptions = this.data.periods.map((p, index) => ({
-      id: p.id,
+      value: p.id,
       label: p.name,
       pos: index
     }));
     this.data.companies = companies;
+    const companyOptions = companies.map((c, index) => ({
+      value: c.id,
+      label: c.name,
+      pos: index
+    }));
+    this.data.companyOptions = companyOptions;
 
     // Load user preferences
     const prefs = await getUserPreferences(
@@ -57,9 +71,7 @@ class CompanyForecast extends React.Component {
       companyForecastInclude50: include50
     } = prefs;
 
-    if (!(forecastCompanyId && forecastStartMonthId && forecastEndMonthId))
-      this.setFilters();
-    else {
+    if (forecastCompanyId && forecastStartMonthId && forecastEndMonthId) {
       const company = companies.find(c => c.id === forecastCompanyId);
       const {
         forecastStartDate,
@@ -73,106 +85,26 @@ class CompanyForecast extends React.Component {
         forecastStartDate,
         forecastEndDate,
         include50,
-        periodIds
+        periodIds,
+        currentAction: "select"
       });
+    } else {
+      this.setState({ currentAction: "select" });
     }
   }
 
   timeRangeValidator = (value, formValues) => {
     if (!value) return "Required";
     const startOption = this.data.monthOptions.find(
-      m => m.id === formValues.forecastStartMonthId
+      m => m.value === formValues.forecastStartMonthId
     );
     const endOption = this.data.monthOptions.find(
-      m => m.id === formValues.forecastEndMonthId
+      m => m.value === formValues.forecastEndMonthId
     );
+
     if (startOption && endOption && endOption.pos < startOption.pos)
       return "Invalid time range";
     return undefined;
-  };
-
-  setFilters = () => {
-    const { $models, $popup } = this.props;
-    const { companies, monthOptions } = this.data;
-
-    const companyOptions = companies.map((c, index) => ({
-      id: c.id,
-      label: c.name,
-      pos: index
-    }));
-
-    $popup.form({
-      title: "Select Company and Time Range",
-      fields: [
-        {
-          name: "forecastCompanyId",
-          label: "Company",
-          type: "FixedList",
-          properties: {
-            options: companyOptions
-          }
-        },
-        {
-          name: "forecastStartMonthId",
-          label: "Start Month",
-          type: "FixedList",
-          properties: {
-            options: monthOptions
-          },
-          validate: this.timeRangeValidator
-        },
-        {
-          name: "forecastEndMonthId",
-          label: "End Month",
-          type: "FixedList",
-          properties: {
-            options: monthOptions
-          },
-          validate: this.timeRangeValidator
-        },
-        {
-          name: "include50",
-          label: "Include 50%",
-          type: "Checkbox"
-        }
-      ],
-      initialValues: {
-        forecastCompanyId: this.state.company && this.state.company.id,
-        forecastStartMonthId: this.state.forecastStartMonthId,
-        forecastEndMonthId: this.state.forecastEndMonthId,
-        include50: this.state.include50
-      },
-      onSubmit: ({
-        forecastCompanyId,
-        forecastStartMonthId,
-        forecastEndMonthId,
-        include50
-      }) => {
-        const company = companies.find(c => c.id === forecastCompanyId);
-        const {
-          forecastStartDate,
-          forecastEndDate,
-          periodIds
-        } = this.processPeriods(forecastStartMonthId, forecastEndMonthId);
-
-        this.setState({
-          company,
-          forecastStartMonthId,
-          forecastEndMonthId,
-          forecastStartDate,
-          forecastEndDate,
-          include50,
-          periodIds
-        });
-
-        setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastCompanyId,
-          forecastStartMonthId,
-          forecastEndMonthId,
-          companyForecastInclude50: include50
-        });
-      }
-    });
   };
 
   processPeriods = (startMonthId, endMonthId) => {
@@ -202,47 +134,121 @@ class CompanyForecast extends React.Component {
     return { forecastStartDate, forecastEndDate, periodIds };
   };
 
+  renderSelectionForm = () => {
+    const initialValues = {
+      forecastCompanyId: this.state.company && this.state.company.id,
+      forecastStartMonthId: this.state.forecastStartMonthId,
+      forecastEndMonthId: this.state.forecastEndMonthId,
+      include50: this.state.include50
+    };
+    const onSubmit = ({
+      forecastCompanyId,
+      forecastStartMonthId,
+      forecastEndMonthId,
+      include50
+    }) => {
+      const company = this.data.companies.find(c => c.id === forecastCompanyId);
+      const {
+        forecastStartDate,
+        forecastEndDate,
+        periodIds
+      } = this.processPeriods(forecastStartMonthId, forecastEndMonthId);
+
+      this.setState({
+        company,
+        forecastStartMonthId,
+        forecastEndMonthId,
+        forecastStartDate,
+        forecastEndDate,
+        include50,
+        periodIds,
+        currentAction: "run"
+      });
+
+      setUserPreferences(
+        this.props.$global.currentUser.id,
+        this.props.$models,
+        {
+          forecastCompanyId,
+          forecastStartMonthId,
+          forecastEndMonthId,
+          companyForecastInclude50: include50
+        }
+      );
+    };
+
+    return (
+      <Form initialValues={initialValues} onSubmit={onSubmit}>
+        <Form.Field
+          name="forecastCompanyId"
+          label="Company"
+          component={SelectField}
+          props={{
+            options: this.data.companyOptions
+          }}
+        />
+        <Form.Field
+          name="forecastStartMonthId"
+          label="Start Month"
+          component={SelectField}
+          props={{
+            options: this.data.monthOptions
+          }}
+          validate={this.timeRangeValidator}
+        />
+        <Form.Field
+          name="forecastEndMonthId"
+          label="End Month"
+          component={SelectField}
+          props={{
+            options: this.data.monthOptions
+          }}
+          validate={this.timeRangeValidator}
+        />
+        <Form.Field
+          name="include50"
+          label="Include 50%"
+          component={SwitchField}
+        />
+        <Form.SubmitButton>
+          <Button text="Run" />
+        </Form.SubmitButton>
+      </Form>
+    );
+  };
+
   render() {
     const {
       company,
       forecastStartDate,
       forecastEndDate,
       include50,
-      periodIds
+      periodIds,
+      currentAction
     } = this.state;
-    if (!(company && forecastStartDate && forecastEndDate && periodIds.length))
-      return null;
 
-    const daterangetxt = `${forecastStartDate.format(
-      "MMM YY"
-    )} to ${forecastEndDate.format("MMM YY")}`;
+    if (currentAction === "loading")
+      return <ActivityIndicator style={{ marginTop: 30 }} />;
 
-    const options = [
-      { label: "Company", value: company.name },
-      { label: "Date Range", value: daterangetxt },
-      { label: "Include 50%", value: include50 ? "Yes" : "No" }
-    ];
-
-    const title = `Company: ${company.name}`;
-    if (this.state.currentAction === "select") {
+    if (currentAction === "select") {
       return (
-        <Container>
-          <SelectionDisplay
-            options={options}
-            onChangeClick={() => this.setFilters()}
-          />
-          <RunButton onPress={() => this.setState({ currentAction: "run" })}>
-            <RunButtonText> Run </RunButtonText>
-          </RunButton>
+        <Container style={{ padding: 40, width: 400 }}>
+          {this.renderSelectionForm()}
         </Container>
       );
     }
 
-    if (this.state.currentAction === "run") {
+    if (
+      currentAction === "run" &&
+      company &&
+      forecastStartDate &&
+      forecastEndDate &&
+      periodIds.length
+    ) {
       return (
         <Container>
           <ReportController
-            title={title}
+            title={`Company: ${company.name}`}
             company={company}
             startDate={forecastStartDate}
             endDate={forecastEndDate}
@@ -263,18 +269,4 @@ export default CompanyForecast;
 
 const Container = styled(View)`
   flex: 1;
-`;
-
-const RunButton = styled(HybridButton)`
-  height: 50px;
-  margin-left: 20px;
-  margin-right: 20px;
-  background-color: orange;
-  border-radius: 3px;
-  justify-content: center;
-  align-items: center;
-`;
-
-const RunButtonText = styled(Text)`
-  color: white;
 `;
