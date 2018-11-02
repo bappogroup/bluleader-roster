@@ -7,8 +7,7 @@ import {
   ActivityIndicator,
   Form,
   SelectField,
-  SwitchField,
-  Button
+  SwitchField
 } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import { sortPeriods, getAuthorisedProfitCentres } from "forecast-utils";
@@ -182,7 +181,11 @@ class ProfitCentreForecast extends React.Component {
     };
 
     return (
-      <Form initialValues={initialValues} onSubmit={onSubmit}>
+      <Form
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        style={{ width: 300 }}
+      >
         <Form.Field
           name="forecastProfitCentreId"
           label="Profit Centre"
@@ -214,9 +217,9 @@ class ProfitCentreForecast extends React.Component {
           label="Include 50%"
           component={SwitchField}
         />
-        <Form.SubmitButton>
-          <Button text="Run" />
-        </Form.SubmitButton>
+        <SubmitButton>
+          <Text style={{ color: "white" }}>Run</Text>
+        </SubmitButton>
       </Form>
     );
   };
@@ -238,33 +241,25 @@ class ProfitCentreForecast extends React.Component {
       }
       case "error": {
         return (
-          <Container>
+          <SelectContainer>
             <Text style={{ margin: 20 }}>{error}</Text>
-          </Container>
+          </SelectContainer>
         );
       }
       case "select": {
-        return (
-          <Container style={{ padding: 40, width: 400 }}>
-            {this.renderSelectionForm()}
-          </Container>
-        );
+        return <SelectContainer>{this.renderSelectionForm()}</SelectContainer>;
       }
       case "run": {
         return (
-          <Container>
-            <ReportController
-              profitCentre={profitCentre}
-              startDate={forecastStartDate}
-              endDate={forecastEndDate}
-              include50={include50}
-              periodIds={periodIds}
-              setCurrentAction={currentAction =>
-                this.setState({ currentAction })
-              }
-              $models={this.props.$models}
-            />
-          </Container>
+          <ReportController
+            profitCentre={profitCentre}
+            startDate={forecastStartDate}
+            endDate={forecastEndDate}
+            include50={include50}
+            periodIds={periodIds}
+            setCurrentAction={currentAction => this.setState({ currentAction })}
+            $models={this.props.$models}
+          />
         );
       }
       default:
@@ -275,6 +270,16 @@ class ProfitCentreForecast extends React.Component {
 
 export default ProfitCentreForecast;
 
-const Container = styled(View)`
+const SelectContainer = styled(View)`
   flex: 1;
+  align-items: center;
+  margin-top: 40px;
+`;
+
+const SubmitButton = styled(Form.SubmitButton)`
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ theme }) => theme.bappo.primaryColor};
+  border-radius: 4px;
+  height: 48px;
 `;

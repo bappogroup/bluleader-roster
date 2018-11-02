@@ -1,18 +1,14 @@
 import React from "react";
-import {
-  View,
-  Text,
-  styled,
-  TouchableView,
-  ActivityIndicator
-} from "bappo-components";
+import { View, Text, styled, ActivityIndicator } from "bappo-components";
 import {
   getForecastBaseData,
   getMonthArray,
   calculateMainReport
-} from "forecast-utils";
+} from "./forecast-utils";
+import HybridButton from "hybrid-button";
 import MainReport from "./MainReport";
 import DrilldownConsultants from "./DrilldownConsultants";
+import DrillDownOneConsultant from "./DrillDownOneConsultant";
 import DrilldownContractors from "./DrilldownContractors";
 import DrilldownProjectTm from "./DrilldownProjectTm";
 import DrilldownProjectFixedPrice from "./DrilldownProjectFixedPrice";
@@ -162,6 +158,9 @@ class ReportController extends React.Component {
         case "DrilldownConsultants":
           content = <DrilldownConsultants {...props} />;
           break;
+        case "DrilldownOneConsultant":
+          content = <DrillDownOneConsultant {...props} />;
+          break;
         case "DrilldownContractors":
           content = <DrilldownContractors {...props} />;
           break;
@@ -250,7 +249,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseButton = styled(TouchableView)`
+const CloseButton = styled(HybridButton)`
   width: 100px;
   height: 40px;
   position: absolute;

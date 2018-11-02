@@ -7,7 +7,7 @@ import {
   Form,
   SelectField,
   SwitchField,
-  Button
+  Text
 } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import { sortPeriods } from "forecast-utils";
@@ -178,7 +178,11 @@ class CompanyForecast extends React.Component {
     };
 
     return (
-      <Form initialValues={initialValues} onSubmit={onSubmit}>
+      <Form
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        style={{ width: 300 }}
+      >
         <Form.Field
           name="forecastCompanyId"
           label="Company"
@@ -210,9 +214,9 @@ class CompanyForecast extends React.Component {
           label="Include 50%"
           component={SwitchField}
         />
-        <Form.SubmitButton>
-          <Button text="Run" />
-        </Form.SubmitButton>
+        <SubmitButton>
+          <Text style={{ color: "white" }}>Run</Text>
+        </SubmitButton>
       </Form>
     );
   };
@@ -227,46 +231,55 @@ class CompanyForecast extends React.Component {
       currentAction
     } = this.state;
 
-    if (currentAction === "loading")
-      return <ActivityIndicator style={{ marginTop: 30 }} />;
-
-    if (currentAction === "select") {
-      return (
-        <Container style={{ padding: 40, width: 400 }}>
-          {this.renderSelectionForm()}
-        </Container>
-      );
+    switch (currentAction) {
+      case "loading": {
+        return <ActivityIndicator style={{ marginTop: 30 }} />;
+      }
+      case "select": {
+        return <SelectContainer>{this.renderSelectionForm()}</SelectContainer>;
+      }
+      case "run": {
+        if (
+          company &&
+          forecastStartDate &&
+          forecastEndDate &&
+          periodIds.length
+        ) {
+          return (
+            <ReportController
+              title={`Company: ${company.name}`}
+              company={company}
+              startDate={forecastStartDate}
+              endDate={forecastEndDate}
+              include50={include50}
+              periodIds={periodIds}
+              setCurrentAction={currentAction =>
+                this.setState({ currentAction })
+              }
+              $models={this.props.$models}
+            />
+          );
+        }
+        return null;
+      }
+      default:
+        return null;
     }
-
-    if (
-      currentAction === "run" &&
-      company &&
-      forecastStartDate &&
-      forecastEndDate &&
-      periodIds.length
-    ) {
-      return (
-        <Container>
-          <ReportController
-            title={`Company: ${company.name}`}
-            company={company}
-            startDate={forecastStartDate}
-            endDate={forecastEndDate}
-            include50={include50}
-            periodIds={periodIds}
-            setCurrentAction={currentAction => this.setState({ currentAction })}
-            $models={this.props.$models}
-          />
-        </Container>
-      );
-    }
-
-    return null;
   }
 }
 
 export default CompanyForecast;
 
-const Container = styled(View)`
+const SelectContainer = styled(View)`
   flex: 1;
+  align-items: center;
+  margin-top: 40px;
+`;
+
+const SubmitButton = styled(Form.SubmitButton)`
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ theme }) => theme.bappo.primaryColor};
+  border-radius: 4px;
+  height: 48px;
 `;

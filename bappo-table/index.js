@@ -6,18 +6,37 @@ import {
   styled,
   ScrollView
 } from "bappo-components";
+import HybridButton from "hybrid-button";
 
-function trimNumber(n) {
-  const number = +n;
-  if (Number.isNaN(number)) return n;
-  if (number % 1 === 0) return n;
-  return number.toFixed(2);
+function formatNumber(n) {
+  const num = +n;
+  if (Number.isNaN(num)) return n;
+  // if (number % 1 === 0) return n;
+  // return number.toFixed(2);
+  const c = 2;
+  const d = ".";
+  const t = ",";
+  const s = n < 0 ? "-" : "";
+  const i = String(parseInt((n = Math.abs(Number(n) || 0).toFixed(c))));
+  let j = i.length;
+  j = j > 3 ? j % 3 : 0;
+  return (
+    s +
+    (j ? i.substr(0, j) + t : "") +
+    i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) +
+    (c
+      ? d +
+        Math.abs(n - i)
+          .toFixed(c)
+          .slice(2)
+      : "")
+  );
 }
 
 class Table extends React.Component {
   state = {
-    fixedCols: 1,
-    firstCol: 1,
+    fixedCols: this.props.fixedCols || 1,
+    firstCol: this.props.fixedCols || 1,
     colCount: 3,
     screenWidth: 300,
     cellWidth: this.props.cellWidth || 100,
@@ -44,30 +63,36 @@ class Table extends React.Component {
         style={{ width: this.state.fixedCellWidth }}
         rowStyle={rowStyle}
       >
-        <LabelText>{data}</LabelText>
+        <LabelText rowStyle={rowStyle}>{data}</LabelText>
       </FixedCell>
     ));
 
   renderHeaderCell =
     this.props.renderHeaderCell ||
     ((data, { rowStyle, key }) => (
-      <Cell key={key} rowStyle={rowStyle}>
-        <HeaderText>{data}</HeaderText>
+      <Cell key={key} rowStyle={rowStyle} justifyRight={true}>
+        <HeaderText justifyRight={true}>{data}</HeaderText>
       </Cell>
     ));
 
   renderCell =
     this.props.renderCell ||
-    ((data, { rowStyle, key }) => (
-      <Cell key={key} rowStyle={rowStyle}>
-        <Text>{data}</Text>
-      </Cell>
-    ));
+    ((data, { rowStyle, key }) => {
+      const justifyRight = !Number.isNaN(+data);
+      return (
+        <Cell key={key} rowStyle={rowStyle} justifyRight={justifyRight}>
+          <CellText rowStyle={rowStyle} justifyRight={justifyRight}>
+            {formatNumber(data)}
+          </CellText>
+        </Cell>
+      );
+    });
 
   onLayout = params => {
-    const screenWidth = params.nativeEvent.layout.width;
+    const screenWidth = params.nativeEvent.layout.width - 40;
     const colCount = Math.round(
-      (screenWidth - this.state.fixedCellWidth) / this.state.cellWidth
+      (screenWidth - this.state.fixedCellWidth * this.state.fixedCols) /
+        this.state.cellWidth
     );
     this.setState({
       screenWidth,
@@ -86,7 +111,7 @@ class Table extends React.Component {
     this.setState({ firstCol });
   };
 
-  renderRow = (row, i) => {
+  renderRowInner = (row, i) => {
     let cells;
     let rowStyle;
     let otherProperties;
@@ -107,7 +132,7 @@ class Table extends React.Component {
       rowStyle === "header" ? this.renderFixedHeaderCell : this.renderFixedCell;
 
     return (
-      <Row rowStyle={rowStyle} key={i}>
+      <RowInner rowStyle={rowStyle} key={i}>
         {cells.slice(0, this.state.fixedCols).map((data, index) =>
           renderFixedCell(data, {
             rowStyle,
@@ -119,18 +144,34 @@ class Table extends React.Component {
         {cells
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
           .map((data, index) =>
-            renderCell(trimNumber(data), {
+            renderCell(data, {
+              Cell,
               rowStyle,
               key: `c${index}`,
               index: index + this.state.firstCol - 1,
               ...otherProperties
             })
           )}
-      </Row>
+      </RowInner>
     );
   };
 
-  renderBlankRow = () => <Row />;
+  renderRow = props =>
+    props.onPress ? (
+      <DrillDownRow onPress={() => props.onPress(props)}>
+        {this.renderRowInner(props)}
+      </DrillDownRow>
+    ) : (
+      <Row>{this.renderRowInner(props)}</Row>
+    );
+
+  renderHeaderRow = props => <Row>{this.renderRowInner(props)}</Row>;
+
+  renderBlankRow = () => (
+    <Row>
+      <RowInner />
+    </Row>
+  );
 
   render() {
     const { data } = this.props;
@@ -155,7 +196,7 @@ class Table extends React.Component {
         </NavBar>
         <TableContainer>
           <TableHeader>
-            {this.renderRow({ data: data[0], rowStyle: "header" })}
+            {this.renderHeaderRow({ data: data[0], rowStyle: "header" })}
           </TableHeader>
           <TableBody>
             {data.slice(1).map(this.renderRow)}
@@ -215,12 +256,16 @@ const TableBody = styled(ScrollView)`
   flex: 1;
 `;
 
-const Row = styled(View)`
+const Row = styled(View)``;
+
+const DrillDownRow = styled(HybridButton)``;
+
+const RowInner = styled(View)`
   display: flex;
   flex-direction: row;
   flex: 1;
   min-height: 40px;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   ${props => props.rowStyle === "data" && cssForData}
   ${props => props.rowStyle === "bold" && cssForData}
@@ -230,24 +275,38 @@ const Row = styled(View)`
 
 const FixedCell = styled(View)`
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   flex: none;
   width: 150px;
+  padding-left: 20px;
+  padding-right: 10px;
 `;
 
 const Cell = styled(View)`
   justify-content: center;
-  align-items: center;
-  flex: 1;
+  align-items: ${props => (props.justifyRight ? "flex-end" : "flex-start")};
+  width: 150px;
+  flex-shrink: 1;
+  flex-grow: none;
   ${props => props.rowStyle === "bold" && cssForBold};
+  padding-right: 10px;
+  flex-wrap: nowrap;
+`;
+
+const CellText = styled(Text)`
+  color: ${props => (props.rowStyle === "total" ? "black" : "#aae")};
+  text-align: ${props => (props.justifyRight ? "right" : "left")};
 `;
 
 const LabelText = styled(Text)`
-  color: #ccc;
+  color: ${props => (props.rowStyle === "total" ? "black" : "#aae")};
 `;
 
 const HeaderText = styled(Text)`
+  display: flex;
+  flex: 1;
   color: white;
+  text-align: ${props => (props.justifyRight ? "right" : "left")};
 `;
 
 const NavButtonText = styled(Text)`
@@ -261,9 +320,9 @@ const NavBar = styled(View)`
   justify-content: center;
 `;
 
-const NavButton = styled(TouchableView)`
+const NavButton = styled(HybridButton)`
   height: 50px;
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
   justify-content: center;
 `;
