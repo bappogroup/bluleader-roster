@@ -1,7 +1,12 @@
 import React from "react";
-import { View, Text, styled, ActivityIndicator } from "bappo-components";
+import {
+  View,
+  Text,
+  styled,
+  ActivityIndicator,
+  TouchableView
+} from "bappo-components";
 import BappoTable from "./table";
-import HybridButton from "hybrid-button";
 import formatNumber from "./formatNumber";
 
 class MainReport extends React.Component {
@@ -102,13 +107,13 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const Cell = styled(View)`
-  justify-content: center;
-  align-items: flex-end;
-  width: 150px;
-  flex-shrink: 1;
-  flex-grow: none;
-`;
+// const Cell = styled(View)`
+//   justify-content: center;
+//   align-items: flex-end;
+//   width: 150px;
+//   flex-shrink: 1;
+//   flex-grow: 0;
+// `;
 
 const TotalCell = styled(View)`
   justify-content: center;
@@ -116,29 +121,29 @@ const TotalCell = styled(View)`
   padding-right: 10px;
   width: 150px;
   flex-shrink: 1;
-  flex-grow: none;
+  flex-grow: 0;
 `;
 
 const CellText = styled(Text)`
   color: #aae;
 `;
 
-const ButtonCell = styled(HybridButton)`
+const ButtonCell = styled(TouchableView)`
   justify-content: center;
   align-items: flex-end;
   padding-right: 10px;
   width: 150px;
   flex-shrink: 1;
-  flex-grow: none;
+  flex-grow: 0;
 `;
 
-const FixedCell = styled(View)`
-  justify-content: center;
-  align-items: flex-begin;
-  flex: none;
-  width: 150px;
-  padding-left: 30px;
-`;
+// const FixedCell = styled(View)`
+//   justify-content: center;
+//   align-items: flex-begin;
+//   flex: none;
+//   width: 150px;
+//   padding-left: 30px;
+// `;
 
 // const LabelText = styled(Text)`
 //   color: #cce;

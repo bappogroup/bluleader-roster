@@ -4,7 +4,9 @@ import {
   Text,
   TouchableView,
   styled,
-  ScrollView
+  ScrollView,
+  Icon,
+  Platform
 } from "bappo-components";
 import fileDownload from "js-file-download";
 
@@ -192,6 +194,15 @@ class Table extends React.Component {
     fileDownload(data.join("\n"), "data.csv");
   };
 
+  renderDownloadButton = () => {
+    if (Platform.OS === "web")
+      return (
+        <DownloadButton onPress={this.download}>
+          <Icon name="file-download" style={{ fontSize: 24 }} />
+        </DownloadButton>
+      );
+  };
+
   render() {
     let { data } = this.props;
 
@@ -212,9 +223,7 @@ class Table extends React.Component {
           <NavButton onPress={() => this.scrollHorizontally(1)}>
             <NavButtonText>→</NavButtonText>
           </NavButton>
-          <DownloadButton onPress={this.download}>
-            <NavButtonText>⤓</NavButtonText>
-          </DownloadButton>
+          {this.renderDownloadButton()}
         </NavBar>
         <TableContainer>
           <TableHeader>
@@ -325,7 +334,7 @@ const Cell = styled(View)`
   align-items: ${props => (props.justifyRight ? "flex-end" : "flex-start")};
   width: 150px;
   flex-shrink: 1;
-  flex-grow: none;
+  flex-grow: 0;
   ${props => props.rowStyle === "bold" && cssForBold};
   padding-right: 10px;
   flex-wrap: nowrap;

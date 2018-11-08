@@ -1,8 +1,7 @@
 import React from "react";
-import { View, Text } from "bappo-components";
+import { View } from "bappo-components";
 import Table from "./table";
 import moment from "moment";
-import Button from "hybrid-button";
 
 const Header = [
   "Consultant",
@@ -19,6 +18,36 @@ const Header = [
 ];
 
 class DrilldownConsultants extends React.Component {
+  convertRecordToRow = r => {
+    const dataRow = [
+      r.consultant.name,
+      r.revenue,
+      r.expense,
+      r.salary,
+      r.payrolltax,
+      r.bonus,
+      r.leaveProvision,
+      r.leave,
+      r.cost,
+      r.gm,
+      r.gmp
+    ];
+
+    return {
+      onPress: () => {
+        this.props.openReport({
+          name: `OneConsultant`,
+          component: "DrilldownOneConsultant",
+          params: {
+            consultant: r.consultant,
+            month: this.props.report.params.month
+          }
+        });
+      },
+      data: dataRow
+    };
+  };
+
   constructor(props) {
     super(props);
 
@@ -57,10 +86,14 @@ class DrilldownConsultants extends React.Component {
       }
     });
 
-    const records = [];
-    const sortedConsultants = permConsultants.sort(
-      (a, b) => (a.name > b.name ? 1 : -1)
+    const sortedConsultants = permConsultants.sort((a, b) =>
+      a.name > b.name ? 1 : -1
     );
+
+    let records = [];
+    let adminRecords = [];
+    let normalRecords = [];
+
     sortedConsultants.forEach(consultant => {
       const revenue = revenueByConsultant[consultant.id] || 0;
       const expense = expenseByConsultant[consultant.id] || 0;
@@ -78,7 +111,7 @@ class DrilldownConsultants extends React.Component {
       const gm = revenue - cost;
       const gmp = revenue === 0 ? "-" : ((100 * gm) / revenue).toFixed(2);
 
-      records.push({
+      const record = {
         consultant,
         revenue,
         expense,
@@ -90,79 +123,35 @@ class DrilldownConsultants extends React.Component {
         cost,
         gm,
         gmp
-      });
+      };
+
+      records.push(record);
+      if (
+        consultant.costCenter &&
+        consultant.costCenter.name === "Administration"
+      ) {
+        adminRecords.push(record);
+      } else {
+        normalRecords.push(record);
+      }
     });
 
-    // calculate totals
-    const total = {
-      revenue: 0.0,
-      expense: 0.0,
-      salary: 0.0,
-      payrolltax: 0.0,
-      bonus: 0.0,
-      leaveProvision: 0.0,
-      leave: 0.0,
-      cost: 0.0,
-      gm: 0.0
-    };
+    // const adminTotal = calcTotals(adminRecords);
+    // const consultantTotal = calcTotals(normalRecords);
+    // const grandTotal = calcTotals(records);
 
+    // Create Report Rows
     const reportRows = [Header];
-    records.forEach(r => {
-      total.revenue += r.revenue;
-      total.expense += r.expense;
-      total.salary += r.salary;
-      total.payrolltax += r.payrolltax;
-      total.bonus += r.bonus;
-      total.leaveProvision += r.leaveProvision;
-      total.leave += r.leave;
-      total.cost += r.cost;
-      total.gm += r.gm;
-
-      const dataRow = [
-        r.consultant.name,
-        r.revenue,
-        r.expense,
-        r.salary,
-        r.payrolltax,
-        r.bonus,
-        r.leaveProvision,
-        r.leave,
-        r.cost,
-        r.gm,
-        r.gmp
-      ];
-
-      reportRows.push({
-        onPress: () => {
-          this.props.openReport({
-            name: `OneConsultant`,
-            component: "DrilldownOneConsultant",
-            params: {
-              consultant: r.consultant,
-              month: props.report.params.month
-            }
-          });
-        },
-        data: dataRow
-      });
+    normalRecords.forEach(record => {
+      reportRows.push(this.convertRecordToRow(record));
     });
+    reportRows.push(calcTotals(normalRecords, "Consultants Total"), []);
 
-    reportRows.push({
-      rowStyle: "total",
-      data: [
-        "Total",
-        total.revenue,
-        total.expense,
-        total.salary,
-        total.payrolltax,
-        total.bonus,
-        total.leaveProvision,
-        total.leave,
-        total.cost,
-        total.gm,
-        "-"
-      ]
+    adminRecords.forEach(record => {
+      reportRows.push(this.convertRecordToRow(record));
     });
+    reportRows.push(calcTotals(adminRecords, "Admin Total"), []);
+    reportRows.push(calcTotals(records, "Total"));
 
     this.state = { reportRows };
   }
@@ -177,3 +166,47 @@ class DrilldownConsultants extends React.Component {
 }
 
 export default DrilldownConsultants;
+
+const calcTotals = (rows, name) => {
+  // calculate totals
+  const total = {
+    revenue: 0.0,
+    expense: 0.0,
+    salary: 0.0,
+    payrolltax: 0.0,
+    bonus: 0.0,
+    leaveProvision: 0.0,
+    leave: 0.0,
+    cost: 0.0,
+    gm: 0.0
+  };
+
+  rows.forEach(r => {
+    total.revenue += r.revenue;
+    total.expense += r.expense;
+    total.salary += r.salary;
+    total.payrolltax += r.payrolltax;
+    total.bonus += r.bonus;
+    total.leaveProvision += r.leaveProvision;
+    total.leave += r.leave;
+    total.cost += r.cost;
+    total.gm += r.gm;
+  });
+
+  return {
+    rowStyle: "total",
+    data: [
+      name,
+      total.revenue,
+      total.expense,
+      total.salary,
+      total.payrolltax,
+      total.bonus,
+      total.leaveProvision,
+      total.leave,
+      total.cost,
+      total.gm,
+      "-"
+    ]
+  };
+};

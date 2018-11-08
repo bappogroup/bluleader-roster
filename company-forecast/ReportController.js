@@ -1,11 +1,16 @@
 import React from "react";
-import { View, Text, styled, ActivityIndicator } from "bappo-components";
+import {
+  View,
+  Text,
+  styled,
+  ActivityIndicator,
+  TouchableView
+} from "bappo-components";
 import {
   getForecastBaseData,
   getMonthArray,
   calculateMainReport
 } from "./forecast-utils";
-import HybridButton from "hybrid-button";
 import MainReport from "./MainReport";
 import DrilldownConsultants from "./DrilldownConsultants";
 import DrillDownOneConsultant from "./DrillDownOneConsultant";
@@ -249,7 +254,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseButton = styled(HybridButton)`
+const CloseButton = styled(TouchableView)`
   width: 100px;
   height: 40px;
   position: absolute;
