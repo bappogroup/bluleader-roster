@@ -3,12 +3,11 @@ import {
   View,
   Text,
   styled,
-  TouchableView,
-  ActivityIndicator
+  ActivityIndicator,
+  TouchableView
 } from "bappo-components";
 import BappoTable from "./table";
-import { pcForecastElements } from "./profitcenter-utils";
-import HybridButton from "hybrid-button";
+import { overheadElements } from "./profitcenter-utils";
 
 class MainReport extends React.Component {
   constructor(props) {
@@ -23,85 +22,175 @@ class MainReport extends React.Component {
     // Month row
     const monthRow = [""];
     months.forEach(month => monthRow.push(month.label));
+    monthRow.push("Total");
     data.push(monthRow);
 
-    pcForecastElements.forEach(ele => {
-      const row = {
-        elementKey: ele,
-        data: [ele]
-      };
-      months.forEach(month =>
-        row.data.push(cells[`${ele}-${month.label}`].value)
-      );
-      data.push(row);
-    });
+    // revenueElements.forEach(ele => {
+    //   const row = {
+    //     elementKey: ele,
+    //     data: [ele]
+    //   };
+    //   months.forEach(month =>
+    //     row.data.push(cells[`${ele}-${month.label}`].value)
+    //   );
+    //   data.push(row);
+    // });
 
     // Project Reveue subtotal row
     const projectRevenueRow = {
-      rowStyle: "total",
-      data: ["Total Project Revenue"]
+      rowStyle: "data",
+      data: ["Project Revenue"]
     };
-    months.forEach(month =>
-      projectRevenueRow.data.push(
+
+    let totalRevenue = 0;
+    months.forEach(month => {
+      const value =
         cells[`T&M Project Revenue-${month.label}`].value +
-          cells[`Fixed Price Project Revenue-${month.label}`].value
-      )
-    );
-    data.splice(3, 0, projectRevenueRow, []);
+        cells[`Fixed Price Project Revenue-${month.label}`].value;
+      projectRevenueRow.data.push(value);
+      totalRevenue += value;
+    });
+    projectRevenueRow.data.push(totalRevenue);
+    data.push(projectRevenueRow);
+    // data.push(blankRow);
+
+    // cosElements.forEach(ele => {
+    //   const row = {
+    //     elementKey: ele,
+    //     data: [ele]
+    //   };
+    //   months.forEach(month =>
+    //     row.data.push(cells[`${ele}-${month.label}`].value)
+    //   );
+    //   data.push(row);
+    // });
 
     // Project Cost subtotal row
     const projectCostRow = {
-      rowStyle: "total",
-      data: ["Total Project Cost"]
+      rowStyle: "data",
+      data: ["Project Costs"]
     };
-    months.forEach(month =>
-      projectCostRow.data.push(
+    let totalProjectCost = 0.0;
+    months.forEach(month => {
+      const value =
         cells[`Fixed Price Costs-${month.label}`].value +
-          cells[`Roster Costs-${month.label}`].value +
-          cells[`Project Expense-${month.label}`].value
-      )
-    );
-    data.splice(8, 0, projectCostRow, []);
+        cells[`Roster Costs-${month.label}`].value +
+        cells[`Project Travel-${month.label}`].value;
+      projectCostRow.data.push(value);
+      totalProjectCost += value;
+    });
+    projectCostRow.data.push(totalProjectCost);
+    data.push(projectCostRow);
 
     // Project margin row
     const projectMarginRow = {
       rowStyle: "total",
       data: ["Project Margin"]
     };
-    months.forEach(month =>
-      projectMarginRow.data.push(
+    let totalMargin = 0;
+    months.forEach(month => {
+      const value =
         cells[`T&M Project Revenue-${month.label}`].value +
-          cells[`Fixed Price Project Revenue-${month.label}`].value -
-          cells[`Roster Costs-${month.label}`].value -
-          cells[`Project Expense-${month.label}`].value -
-          cells[`Fixed Price Costs-${month.label}`].value
-      )
-    );
-    data.splice(10, 0, projectMarginRow, []);
+        cells[`Fixed Price Project Revenue-${month.label}`].value -
+        cells[`Roster Costs-${month.label}`].value -
+        cells[`Project Travel-${month.label}`].value -
+        cells[`Fixed Price Costs-${month.label}`].value;
+      totalMargin += value;
+      projectMarginRow.data.push(value);
+    });
 
-    const peopleMarginRow = {
-      rowStyle: "total",
-      data: ["People Margin"]
+    projectMarginRow.data.push(totalMargin);
+    data.push(projectMarginRow, blankRow);
+
+    // peopleCostElements.forEach(ele => {
+    //   const row = {
+    //     elementKey: ele,
+    //     data: [ele]
+    //   };
+    //   months.forEach(month =>
+    //     row.data.push(cells[`${ele}-${month.label}`].value)
+    //   );
+    //   data.push(row);
+    // });
+    // costRecoveryElements.forEach(ele => {
+    //   const row = {
+    //     elementKey: ele,
+    //     data: [ele]
+    //   };
+    //   months.forEach(month =>
+    //     row.data.push(cells[`${ele}-${month.label}`].value)
+    //   );
+    //   data.push(row);
+    // });
+
+    const peopleCostRow = {
+      rowStyle: "data",
+      data: ["People Costs"]
     };
     const netProfitRow = {
       rowStyle: "total",
       data: ["Net Profit"]
     };
+
+    const netProfitPercentageRow = {
+      rowStyle: "info",
+      data: ["Net Profit %"]
+    };
+
+    let totalNetProfit = 0;
+    let totalPeopleCost = 0;
+
     months.forEach((month, index) => {
-      peopleMarginRow.data.push(
-        cells[`People Cost Recovery-${month.label}`].value -
-          cells[`Consultant Cost(permanent)-${month.label}`].value -
-          cells[`Consultant Cost(contractor)-${month.label}`].value
-      );
-      netProfitRow.data.push(
-        projectMarginRow.data[index + 1] +
-          peopleMarginRow.data[index + 1] +
-          cells[`Other Revenue-${month.label}`].value -
-          cells[`Overheads-${month.label}`].value
-      );
+      const pcost =
+        cells[`People Cost Recovery-${month.label}`].value +
+        cells[`Consultant Cost(permanent)-${month.label}`].value +
+        cells[`Contractor Wages-${month.label}`].value +
+        cells[`Payroll Tax (contractors)-${month.label}`].value;
+
+      const netProfit =
+        projectMarginRow.data[index + 1] -
+        pcost -
+        cells[`Overheads-${month.label}`].value;
+      totalNetProfit += netProfit;
+
+      const revenue = projectRevenueRow.data[index + 1];
+      const netProfitPercentage =
+        netProfit > 0 ? (netProfit / revenue) * 100 : 0;
+
+      peopleCostRow.data.push(pcost);
+      totalPeopleCost += pcost;
+
+      netProfitRow.data.push(netProfit);
+
+      netProfitPercentageRow.data.push(netProfitPercentage);
     });
-    data.splice(15, 0, peopleMarginRow, []);
-    data.push([], netProfitRow);
+
+    peopleCostRow.data.push(totalPeopleCost);
+    netProfitRow.data.push(totalNetProfit);
+
+    const totalNetProfitPercentage =
+      totalNetProfit > 0 ? (totalNetProfit / totalRevenue) * 100 : 0;
+    netProfitPercentageRow.data.push(totalNetProfitPercentage);
+
+    data.push(peopleCostRow);
+
+    overheadElements.forEach(ele => {
+      let totalOverheads = 0;
+      const row = {
+        elementKey: ele,
+        rowStyle: "data",
+        data: [ele]
+      };
+      months.forEach(month => {
+        const value = cells[`${ele}-${month.label}`].value;
+        row.data.push(value);
+        totalOverheads += value;
+      });
+      row.data.push(totalOverheads);
+      data.push(row);
+    });
+
+    data.push(netProfitRow, blankRow, netProfitPercentageRow);
 
     this.state = { data };
   }
@@ -143,10 +232,12 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const TouchableViewCell = styled(HybridButton)`
+const TouchableViewCell = styled(TouchableView)`
   flex-shrink: 1;
   width: 150px;
   justify-content: center;
-  align-items: right;
+  align-items: flex-end;
   padding-right: 10px;
 `;
+
+const blankRow = { rowStyle: "blank", data: [] };

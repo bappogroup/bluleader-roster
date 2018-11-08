@@ -7,9 +7,6 @@ import {
   styled
 } from "bappo-components";
 import { leaveProjectTypeIndexes } from "forecast-utils";
-import WideCard from "./cardwide";
-import NarrowCard from "./cardnarrow";
-import HybridButton from "hybrid-button";
 import Table from "./table";
 
 class DrilldownCards extends React.Component {
@@ -36,17 +33,25 @@ class DrilldownCards extends React.Component {
       "Project Travel..",
       "Fixed Price Costs",
       "Margin",
+      "Margin%",
       "",
       ""
     ]);
     // Projects
-    const projectCards = [];
+    // const projectCards = [];
+
+    projects.sort((a, b) => {
+      const string1 = `${a.projectType}${a.name}`;
+      const string2 = `${b.projectType}${b.name}`;
+      if (string1 === string2) return 0;
+      return string1 > string2 ? 1 : -1;
+    });
     projects.forEach(project => {
       if (leaveProjectTypeIndexes.includes(project.projectType)) return;
 
       let Revenue = 0;
       const Cost = cells[`Roster Costs-${monthLabel}`][project.id] || 0;
-      const Expense = cells[`Project Expense-${monthLabel}`][project.id] || 0;
+      const Expense = cells[`Project Travel-${monthLabel}`][project.id] || 0;
       let Overheads = 0;
 
       let projectTypeLabel;
@@ -69,6 +74,7 @@ class DrilldownCards extends React.Component {
         default:
       }
       const Margin = Revenue - Cost - Expense - Overheads;
+      const mp = Revenue > 0 && Margin > 0 ? (Margin / Revenue) * 100 : 0;
 
       // Don't show if the number is 0
       if (+Revenue === 0 && +Cost === 0 && +Margin === 0) return;
@@ -101,7 +107,7 @@ class DrilldownCards extends React.Component {
           Expense,
           Overheads,
           Margin,
-          "",
+          mp,
           ""
         ]
       });
@@ -112,6 +118,11 @@ class DrilldownCards extends React.Component {
       projectTotals.margin += Margin;
     });
 
+    projectTotals.marginPercent =
+      projectTotals.revenue > 0 && projectTotals.margin > 0
+        ? (projectTotals.margin / projectTotals.revenue) * 100
+        : 0;
+
     records.push({
       rowStyle: "total",
       data: [
@@ -121,12 +132,12 @@ class DrilldownCards extends React.Component {
         projectTotals.expense,
         projectTotals.overheads,
         projectTotals.margin,
-        "",
+        projectTotals.marginPercent,
         ""
       ]
     });
 
-    records.push([]);
+    records.push(blankRow);
 
     // const totalProjectRevenue =
     //   cells[`T&M Project Revenue-${monthLabel}`].value +
@@ -152,14 +163,14 @@ class DrilldownCards extends React.Component {
       rowStyle: "header",
       data: [
         "Consultant",
-        "Cost Recovery",
         "Salary",
         "PayrollTax",
         "Bonus",
         "Leave Provision",
         "Leave",
-        "Total Cost",
-        "Margin"
+        "Cost before Recovery",
+        "Cost Recovery",
+        "Total Cost"
       ]
     });
 
@@ -174,9 +185,11 @@ class DrilldownCards extends React.Component {
       margin: 0
     };
 
+    consultants.sort((a, b) => (a.name > b.name ? 1 : -1));
+
     consultants.forEach(consultant => {
       const Recovery =
-        cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
+        -cells[`People Cost Recovery-${monthLabel}`][consultant.id] || 0;
       let Cost;
       let Salary = 0;
       let LeaveProvision = 0;
@@ -195,31 +208,34 @@ class DrilldownCards extends React.Component {
             0;
           Leave = cells[`Leave(permanent)-${monthLabel}`][consultant.id] || 0;
           Bonus = cells[`Bonus(permanent)-${monthLabel}`][consultant.id] || 0;
-          PayrollTax =
-            cells[`Payroll Tax(permananet)-${monthLabel}`][consultant.id] || 0;
+          PayrollTax = cells[`Payroll Tax-${monthLabel}`][consultant.id] || 0;
           break;
         case "2":
-          Cost =
-            cells[`Consultant Cost(contractor)-${monthLabel}`][consultant.id] ||
+          PayrollTax =
+            cells[`Payroll Tax (contractors)-${monthLabel}`][consultant.id] ||
             0;
+          const wages =
+            cells[`Contractor Wages-${monthLabel}`][consultant.id] || 0;
+          Cost = wages + PayrollTax;
+
           break;
         default:
       }
 
-      const Margin = Recovery - Cost;
+      const PeopleCost = Recovery + Cost;
 
       records.push({
         consultant,
         data: [
           consultant.name,
-          Recovery,
           Salary,
           PayrollTax,
           Bonus,
           LeaveProvision,
           Leave,
           Cost,
-          Margin
+          Recovery,
+          PeopleCost
         ]
       });
 
@@ -230,7 +246,7 @@ class DrilldownCards extends React.Component {
       consultantTotals.bonus += Bonus;
       consultantTotals.leaveprovision += LeaveProvision;
       consultantTotals.leave += Leave;
-      consultantTotals.margin += Margin;
+      consultantTotals.margin += PeopleCost;
 
       // return {
       //   title: consultant.name,
@@ -252,13 +268,13 @@ class DrilldownCards extends React.Component {
       rowStyle: "total",
       data: [
         "Total",
-        consultantTotals.recovery,
         consultantTotals.salary,
         consultantTotals.payrolltax,
         consultantTotals.bonus,
         consultantTotals.leaveprovision,
         consultantTotals.leave,
         consultantTotals.cost,
+        consultantTotals.recovery,
         consultantTotals.margin
       ]
     });
@@ -282,7 +298,7 @@ class DrilldownCards extends React.Component {
 
     // Overheads
     const { value, ...properties } = cells[`Overheads-${monthLabel}`];
-    records.push([]);
+    records.push(blankRow);
     records.push({
       rowStyle: "header",
       data: ["Overheads"]
@@ -321,8 +337,8 @@ class DrilldownCards extends React.Component {
     const netProfit =
       projectTotals.margin + consultantTotals.margin - totalOverheads;
 
-    records.push([]);
-    records.push({ rowStyle: "total", data: ["Net Profit", netProfit] });
+    records.push(blankRow);
+    records.push({ rowStyle: "info", data: ["Net Profit", netProfit] });
 
     this.state = {
       records
@@ -359,7 +375,7 @@ class DrilldownCards extends React.Component {
   //     }
 
   //     return (
-  //       <HybridButton
+  //       <TouchableView
   //         onPress={() =>
   //           this.props.openReport({
   //             name: `${card.title}, ${month.label}`,
@@ -373,7 +389,7 @@ class DrilldownCards extends React.Component {
   //         ) : (
   //           <WideCard {...card} />
   //         )}
-  //       </HybridButton>
+  //       </TouchableView>
   //     );
   //   });
 
@@ -397,22 +413,6 @@ class DrilldownCards extends React.Component {
     const project = props.project;
     const consultant = props.consultant;
 
-    if (project && project.projectType === "2") {
-      this.props.openReport({
-        name: `${project.name}, ${month.label}`,
-        component: "DrilldownProjectTm",
-        params: { month, project }
-      });
-    }
-
-    if (project && project.projectType === "3") {
-      this.props.openReport({
-        name: `${project.name}, ${month.label}`,
-        component: "DrilldownProjectFixedPrice",
-        params: { month, project }
-      });
-    }
-
     if (consultant) {
       const component =
         consultant.consultantType === "1"
@@ -422,6 +422,27 @@ class DrilldownCards extends React.Component {
         name: `${consultant.name}, ${month.label}`,
         component,
         params: { month, consultant }
+      });
+      return;
+    }
+
+    if (
+      (project && project.projectType === "1") ||
+      project.projectType === "2"
+    ) {
+      this.props.openReport({
+        name: `${project.name}, ${month.label}`,
+        component: "DrilldownProjectTm",
+        params: { month, project }
+      });
+      return;
+    }
+
+    if (project && project.projectType === "3") {
+      this.props.openReport({
+        name: `${project.name}, ${month.label}`,
+        component: "DrilldownProjectFixedPrice",
+        params: { month, project }
       });
     }
   };
@@ -475,3 +496,5 @@ const NetContainer = styled(View)`
   margin-top: 30px;
   margin-bottom: 30px;
 `;
+
+const blankRow = { rowStyle: "blank", data: [] };

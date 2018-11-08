@@ -4,12 +4,15 @@ import {
   Text,
   TouchableView,
   styled,
-  ScrollView
+  ScrollView,
+  Icon,
+  Platform
 } from "bappo-components";
+import fileDownload from "js-file-download";
 
 function formatNumber(n) {
   const num = +n;
-  if (Number.isNaN(num)) return n;
+  if (n === "" || Number.isNaN(num)) return n;
   // if (number % 1 === 0) return n;
   // return number.toFixed(2);
   const c = 2;
@@ -37,6 +40,7 @@ class Table extends React.Component {
     fixedCols: this.props.fixedCols || 1,
     firstCol: this.props.fixedCols || 1,
     colCount: 3,
+    header: this.props.data[0],
     screenWidth: 300,
     cellWidth: this.props.cellWidth || 100,
     fixedCellWidth: this.props.fixedCellWidth || 150
@@ -144,11 +148,11 @@ class Table extends React.Component {
             ...otherProperties
           })
         )}
-        {cells
+        {this.state.header
+          .map((h, index) => cells[index] || "")
           .slice(this.state.firstCol, this.state.firstCol + this.state.colCount)
           .map((data, index) =>
             renderCell(data, {
-              Cell,
               rowStyle,
               key: `c${index}`,
               index: index + this.state.firstCol - 1,
@@ -160,8 +164,8 @@ class Table extends React.Component {
   };
 
   renderRow = props =>
-    typeof props.onPress === "function" ? (
-      <DrillDownRow onPress={() => props.onPress(props)}>
+    this.props.rowPress ? (
+      <DrillDownRow onPress={() => this.props.rowPress(props)}>
         {this.renderRowInner(props)}
       </DrillDownRow>
     ) : (
@@ -176,8 +180,31 @@ class Table extends React.Component {
     </Row>
   );
 
+  download = () => {
+    const data = this.props.data.map(row => {
+      const cells1 = row.constructor === Object ? row.data : row;
+      const cells2 = cells1.map(cell => {
+        const value =
+          cell.constructor === Object ? cell.data || " " : cell || " ";
+        if (typeof value === "string") return value.replace(",", " ");
+        return value;
+      });
+      return cells2.join(",");
+    });
+    fileDownload(data.join("\n"), "data.csv");
+  };
+
+  renderDownloadButton = () => {
+    if (Platform.OS === "web")
+      return (
+        <DownloadButton onPress={this.download}>
+          <Icon name="file-download" style={{ fontSize: 24 }} />
+        </DownloadButton>
+      );
+  };
+
   render() {
-    const { data } = this.props;
+    let { data } = this.props;
 
     if (!data || data.length < 1) {
       return (
@@ -196,6 +223,7 @@ class Table extends React.Component {
           <NavButton onPress={() => this.scrollHorizontally(1)}>
             <NavButtonText>→</NavButtonText>
           </NavButton>
+          {this.renderDownloadButton()}
         </NavBar>
         <TableContainer>
           <TableHeader>
@@ -231,13 +259,27 @@ const cssForBold = `
 `;
 
 const cssForTotal = `
-  border-bottom-width: 2px;
-  border-top-width: 2px;
-  border-left-width: 0;
-  border-right-width: 0;
-  border-color: #888;
+  border-bottom-width: 1px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-color: #eeeef8;
   border-style: solid;
+  background-color #f8f8fc;
 `;
+
+const cssForInfo = `
+  border-bottom-width: 1px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-color: #eeeef8;
+  border-style: solid;
+  background-color #f8f8fc;
+  margin-top: 5px;
+`;
+
+const cssForBlank = ``;
 
 const cssForHeader = `
   height: 40px;
@@ -273,6 +315,8 @@ const RowInner = styled(View)`
   ${props => props.rowStyle === "data" && cssForData}
   ${props => props.rowStyle === "bold" && cssForData}
   ${props => props.rowStyle === "total" && cssForTotal}
+  ${props => props.rowStyle === "info" && cssForInfo}
+  ${props => props.rowStyle === "blank" && cssForBlank}
   ${props => props.rowStyle === "header" && cssForHeader}
 `;
 
@@ -297,12 +341,14 @@ const Cell = styled(View)`
 `;
 
 const CellText = styled(Text)`
-  color: ${props => (props.rowStyle === "total" ? "black" : "#aae")};
+  color: ${props =>
+    props.rowStyle === "total" || props.rowStyle === "info" ? "black" : "#aae"};
   text-align: ${props => (props.justifyRight ? "right" : "left")};
 `;
 
 const LabelText = styled(Text)`
-  color: ${props => (props.rowStyle === "total" ? "black" : "#aae")};
+  color: ${props =>
+    props.rowStyle === "total" || props.rowStyle === "info" ? "black" : "#aae"};
 `;
 
 const HeaderText = styled(Text)`
@@ -328,4 +374,13 @@ const NavButton = styled(TouchableView)`
   padding-left: 20px;
   padding-right: 20px;
   justify-content: center;
+`;
+
+const DownloadButton = styled(TouchableView)`
+  height: 50px;
+  padding-left: 20px;
+  padding-right: 20px;
+  justify-content: center;
+  position: absolute;
+  right: 0;
 `;

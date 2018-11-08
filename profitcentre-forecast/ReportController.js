@@ -11,8 +11,6 @@ import {
   calculateProfitCentreMainReport
 } from "./profitcenter-utils";
 import { getMonthArray } from "forecast-utils";
-
-import HybridButton from "hybrid-button";
 import MainReport from "./MainReport";
 import DrilldownPCForOneMonth from "./DrilldownPCForOneMonth";
 import DrilldownConsultant from "./DrilldownConsultant";
@@ -107,17 +105,17 @@ class ReportController extends React.Component {
       this.setState({ reports: [...this.state.reports, report] });
   };
 
-  renderSwitchHybridButton = () => (
+  renderSwitchTouchableView = () => (
     <SwitchTouchableViewContainer>
-      <HybridButton
+      <TouchableView
         onPress={() => this.setState({ drilldownMode: "Cards" })}
         style={{ marginRight: 7 }}
       >
         <Text>cards</Text>
-      </HybridButton>
-      <HybridButton onPress={() => this.setState({ drilldownMode: "Table" })}>
+      </TouchableView>
+      <TouchableView onPress={() => this.setState({ drilldownMode: "Table" })}>
         <Text>table</Text>
-      </HybridButton>
+      </TouchableView>
     </SwitchTouchableViewContainer>
   );
 
@@ -246,7 +244,7 @@ const CrumbLabel = styled(Text)`
   flex: none;
 `;
 
-const CloseTouchableView = styled(HybridButton)`
+const CloseTouchableView = styled(TouchableView)`
   width: 100px;
   height: 40px;
   position: absolute;
