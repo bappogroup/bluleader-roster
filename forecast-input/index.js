@@ -7,6 +7,7 @@ import {
   Text,
   ActivityIndicator
 } from "bappo-components";
+import HybridButton from "hybrid-button";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import SelectionDisplay from "selectiondisplay";
 import { sortPeriods, getAuthorisedProfitCentres } from "forecast-utils";
@@ -300,7 +301,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(TouchableView)`
+const RunButton = styled(HybridButton)`
   height: 50px;
   margin-left: 20px;
   margin-right: 20px;

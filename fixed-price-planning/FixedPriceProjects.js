@@ -7,6 +7,7 @@ import {
   styled,
   ActivityIndicator
 } from "bappo-components";
+import HybridButton from "hybrid-button";
 import Planner from "./Planner";
 
 class Projects extends React.Component {
@@ -64,11 +65,21 @@ class Projects extends React.Component {
     );
   };
 
+  closePlanner = () => {
+    this.setState({ project: null });
+  };
+
   render() {
     if (this.state.loading)
       return <ActivityIndicator style={{ marginTop: 30 }} />;
     if (this.state.project)
-      return <Planner {...this.props} project={this.state.project} />;
+      return (
+        <Planner
+          {...this.props}
+          project={this.state.project}
+          onClose={this.closePlanner}
+        />
+      );
     if (this.state.results.length === 0) {
       return (
         <View>
@@ -85,7 +96,7 @@ class Projects extends React.Component {
 
 export default Projects;
 
-const Row = styled(TouchableView)`
+const Row = styled(HybridButton)`
   height: 40px;
   background-color: #f8f8f8;
   margin: 2px;

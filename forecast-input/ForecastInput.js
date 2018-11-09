@@ -1,6 +1,7 @@
 import React from "react";
 import { Text, View, styled, TouchableView } from "bappo-components";
 import Table from "bappo-table";
+import HybridButton from "hybrid-button";
 import ForecastEntryForm from "./ForecastEntryForm";
 
 const add = "1";
@@ -167,7 +168,9 @@ class ForecastInput extends React.Component {
   newEntry = (values = {}) => {
     const initialValues = {
       periodFrom_id: values.periodFrom_id || this.state.sortedPeriods[0].id,
-      periodTo_id: values.periodTo_id || this.state.sortedPeriods[0].id,
+      periodTo_id:
+        values.periodTo_id ||
+        this.state.sortedPeriods[this.state.sortedPeriods.length - 1].id,
       forecastElement_id: values.forecastElement_id,
       description: values.description,
       amount: values.amount,
@@ -332,7 +335,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const CloseButton = styled(TouchableView)`
+const CloseButton = styled(HybridButton)`
   margin-left: 20px;
   margin-top: 20px;
 `;
@@ -344,14 +347,14 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const BlankCell = styled(TouchableView)`
+const BlankCell = styled(HybridButton)`
   justify-content: center;
   align-items: center;
   flex: 1;
   height: 40px;
 `;
 
-const SmallButton = styled(TouchableView)`
+const SmallButton = styled(HybridButton)`
   border-radius: 3px;
   height: 30px;
   width: 30px;
@@ -360,7 +363,7 @@ const SmallButton = styled(TouchableView)`
   align-items: center;
 `;
 
-const MiniCell = styled(TouchableView)`
+const MiniCell = styled(HybridButton)`
   height: 40px;
   margin: 2px;
   padding: 0 3px;

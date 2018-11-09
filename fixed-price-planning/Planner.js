@@ -1,7 +1,8 @@
 import React from "react";
 import { styled, View, TouchableView, Text, TextInput } from "bappo-components";
 import BappoTable from "bappo-table";
-import HybridButton from "hybrid-button";
+import formatNumber from "./formatNumber";
+import { OldSelect } from "bappo-components";
 
 function dateBetween(date1, date2) {
   return {
@@ -28,14 +29,26 @@ class Planner extends React.Component {
   }
 
   loadData = async () => {
-    const { FinancialPeriod, ProjectForecastEntry } = this.props.$models;
-    const { project } = this.props;
+    const {
+      FinancialPeriod,
+      ProjectForecastEntry,
+      Probability,
+      Project
+    } = this.props.$models;
+    // const { project } = this.props;
+
+    const project = await Project.findById(this.props.project.id);
 
     const entries = await ProjectForecastEntry.findAll({
       where: {
         project_id: project.id
       }
     });
+
+    const probs = await Probability.findAll();
+    const prob_options = probs
+      .sort((a, b) => ~~a.sortNumber - ~~b.sortNumber)
+      .map(p => ({ value: p.id, label: p.name }));
 
     if (!project.endDate || !project.startDate) {
       this.setState({
@@ -54,7 +67,9 @@ class Planner extends React.Component {
 
     for (const entry of entries) {
       const key = `${entry.period_id}-${entry.forecastType}`;
-      cells[key] = entry;
+      const e = { ...entry };
+      e.amount = `${~~e.amount}`;
+      cells[key] = e;
     }
 
     const headerCells = periods.map(p => p.name);
@@ -65,12 +80,14 @@ class Planner extends React.Component {
       periods,
       cells,
       header,
+      probability_id: project.probability_id,
+      prob_options,
       loading: false
     });
   };
 
   save = async () => {
-    const { ProjectForecastEntry } = this.props.$models;
+    const { ProjectForecastEntry, Project } = this.props.$models;
 
     await ProjectForecastEntry.destroy({
       where: {
@@ -114,6 +131,15 @@ class Planner extends React.Component {
     }
 
     await ProjectForecastEntry.bulkCreate(data);
+    await Project.update(
+      { probability_id: this.state.probability_id },
+      {
+        where: {
+          id: this.state.project.id
+        }
+      }
+    );
+
     alert("saved successfully");
   };
 
@@ -130,16 +156,25 @@ class Planner extends React.Component {
     this.setState({ cells });
   };
 
-  renderCell = cell => (
-    <Cell>
-      <TextInput
-        style={{ textAlign: "center" }}
-        key={cell.period.id}
-        value={cell.entry.amount}
-        onValueChange={v => this.handleValueChange(cell, v)}
-      />
-    </Cell>
-  );
+  renderCell = (cell, options) => {
+    const Cell = options.Cell;
+    if (cell.type === "margin")
+      return (
+        <Cell justifyRight={true}>
+          <MarginText>{cell.margin}</MarginText>
+        </Cell>
+      );
+
+    return (
+      <Cell>
+        <Input
+          key={cell.period.id}
+          value={cell.entry.amount}
+          onValueChange={v => this.handleValueChange(cell, v)}
+        />
+      </Cell>
+    );
+  };
 
   render() {
     if (this.state.error) return <Text> {this.state.error} </Text>;
@@ -166,44 +201,167 @@ class Planner extends React.Component {
       entry: this.state.cells[`${p.id}-3`] || 0.0
     }));
 
+    let totalMargin = 0;
+    let totalRevenue = 0;
+    const marginCells = this.state.periods.map(p => {
+      const expenseEntry = this.state.cells[`${p.id}-3`];
+      const costEntry = this.state.cells[`${p.id}-1`];
+      const revenueEntry = this.state.cells[`${p.id}-2`];
+      const exp = ~~(expenseEntry && expenseEntry.amount);
+      const cost = ~~(costEntry && costEntry.amount);
+      const rev = ~~(revenueEntry && revenueEntry.amount);
+      const margin = rev - (cost + exp);
+      totalMargin += margin;
+      totalRevenue += rev;
+
+      return {
+        type: "margin",
+        margin: margin
+      };
+    });
+
     const rows = [this.state.header];
-    rows.push(["Revenue", ...revenueCells]);
-    rows.push(["Planned Cost (Roster)", ...costCells]);
-    rows.push(["Overheads (hits P/L)", ...expenseCells]);
+    rows.push({ rowStyle: "none", data: ["Revenue", ...revenueCells] });
+    rows.push({
+      rowStyle: "none",
+      data: ["Planned Cost (Roster)", ...costCells]
+    });
+    rows.push({
+      rowStyle: "none",
+      data: ["Fixed price Costs (hits P/L)", ...expenseCells]
+    });
+    rows.push({ rowStyle: "total", data: ["Margin", ...marginCells] });
 
     return (
-      <View style={{ flex: 1 }}>
-        <BappoTable data={rows} renderCell={this.renderCell} />
+      <Container style={{ flex: 1 }}>
+        <Header>
+          <BackButton onPress={this.props.onClose}>
+            {" "}
+            <Text> ← Back to Projects </Text>{" "}
+          </BackButton>
+        </Header>
+        <TableContainer>
+          <BappoTable data={rows} renderCell={this.renderCell} />
+        </TableContainer>
+        <TotalsContainer>
+          <TotalContainer>
+            <Label>Project Revenue</Label>{" "}
+            <Text>{formatNumber(totalRevenue)}</Text>
+          </TotalContainer>
+          <TotalContainer>
+            <Label>Project Margin</Label>{" "}
+            <Text>{formatNumber(totalMargin)}</Text>
+          </TotalContainer>
+        </TotalsContainer>
+        <View>
+          <TotalContainer>
+            <Label>Probability</Label>
+            <Select
+              options={this.state.prob_options}
+              value={this.state.probability_id}
+              onValueChange={v => this.setState({ probability_id: v })}
+            />
+          </TotalContainer>
+        </View>
         <ButtonContainer>
           <SaveButton onPress={this.save}>
             <Text>Save</Text>
           </SaveButton>
         </ButtonContainer>
-      </View>
+      </Container>
     );
   }
 }
 
 export default Planner;
 
-const Cell = styled(View)`
-  justify-content: center;
-  align-items: center;
-  display: flex;
-  flex: 1;
+const Container = styled(View)`
+  justify-content: flex-begin;
 `;
 
-const SaveButton = styled(HybridButton)`
+const TableContainer = styled(View)`
+  height: 260px;
+`;
+
+const Select = styled(OldSelect)`
+  width: 100px;
+`;
+
+// const Cell = styled(View)`
+//   justify-content: center;
+//   align-items: flex-end;
+//   display: flex;
+//   width: 150px;
+//   flex-shrink: 1;
+//   margin: 0 4px;
+//   overflow: hidden;
+// `;
+
+const MarginText = styled(Text)`
+  flex: 1;
+  margin-right: 12px;
+  text-align: right;
+`;
+
+const TotalContainer = styled(View)`
+  margin: 0 10px 5px 10px;
+  padding: 10px 20px;
+  flex-direction: row;
+  border-color: #f8f8f8;
+  border-style: solid;
+  border-width: 1px;
+`;
+
+const Label = styled(Text)`
+  color: #999;
+  width: 150px;
+`;
+
+const TotalsContainer = styled(View)`
+  margin-top: 10px;
+`;
+
+const Total = styled(View)`
+  border
+`;
+
+const SaveButton = styled(TouchableView)`
   background-color: #f8f8f8;
   border-radius: 3px;
-  width: 100px;
+  flex: 1;
   justify-content: center;
   align-items: center;
   height: 50px;
-  margin: 0 20px;
+`;
+
+const Header = styled(View)`
+  flex: none;
+  height: 40px;
+  padding: 0 10px;
+`;
+
+const BackButton = styled(TouchableView)`
+  flex: none;
+  height: 40px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 200px;
 `;
 
 const ButtonContainer = styled(View)`
+  display: flex;
   flex-direction: row;
-  justify-content: flex-end;
+  justify-content: center;
+  padding: 0 10px;
+  margin-top: 15px;
+`;
+
+const Input = styled(TextInput)`
+  text-align: right;
+  border-color: #ddd;
+  border-style: solid;
+  border-width: 1px;
+  width: 100%;
+  height: 24px;
+  padding-right: 10px;
 `;

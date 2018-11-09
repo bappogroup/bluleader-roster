@@ -13,12 +13,12 @@ import { setUserPreferences, getUserPreferences } from "user-preferences";
 import {
   dateFormat,
   datesToArray,
-  getEntryFormFields,
   updateRosterEntryRecords,
   deleteRosterEntryRecords,
   projectAssignmentsToOptions
 } from "roster-utils";
 import SingleRoster from "single-roster";
+import RosterEntryForm from "./RosterEntryForm";
 
 const dateRangeOptions = [
   {
@@ -66,7 +66,12 @@ class Roster extends React.Component {
       commonProjects: [],
       consultants: [],
       projectAssignments: [],
-      consultantOffset: 0
+      consultantOffset: 0,
+      entryForm: {
+        show: false,
+        projectOptions: [],
+        title: ""
+      }
     };
   }
 
@@ -146,7 +151,7 @@ class Roster extends React.Component {
     ] = await Promise.all(promises);
 
     this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
-      id: p.id,
+      value: p.id,
       label: p.name,
       pos: index
     }));
@@ -497,22 +502,18 @@ class Roster extends React.Component {
     const date = entryList[0][columnIndex].date.format(dateFormat);
     const projectOptions = this.getConsultantAssignments(consultant.id);
 
-    this.props.$popup.form({
-      objectKey: "RosterEntry",
-      fields: getEntryFormFields(projectOptions, this.data.probabilityOptions),
-      title: `${consultant.name}, ${date}`,
-      initialValues: {
-        ...entry,
-        consultant_id: consultant.id,
-        startDate: date,
-        endDate: date,
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true
-      },
-      onSubmit: this.updateRosterEntry
+    this.setState({
+      entryForm: {
+        show: true,
+        title: `${consultant.name}'s Rosters`,
+        projectOptions,
+        initialValues: {
+          ...entry,
+          startDate: date,
+          endDate: date
+        },
+        consultant_id: consultant.id
+      }
     });
   };
 
@@ -587,16 +588,43 @@ class Roster extends React.Component {
   };
 
   render() {
-    const { initializing, consultantCount, costCenter, entryList } = this.state;
+    const {
+      initializing,
+      consultantCount,
+      costCenter,
+      entryList,
+      entryForm
+    } = this.state;
 
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
-
-    const title = `Cost center: ${(costCenter && costCenter.name) || "all"}`;
+    // const title = `Cost center: ${(costCenter && costCenter.name) || "all"}`;
 
     return (
       <Container>
+        {entryForm.show && (
+          <RosterEntryForm
+            title={entryForm.title}
+            onClose={() =>
+              this.setState(({ entryForm }) => ({
+                entryForm: {
+                  ...entryForm,
+                  show: false
+                }
+              }))
+            }
+            projectOptions={entryForm.projectOptions}
+            probabilityOptions={this.data.probabilityOptions}
+            onSubmit={values =>
+              this.updateRosterEntry({
+                ...values,
+                consultant_id: entryForm.consultant_id
+              })
+            }
+            initialValues={entryForm.initialValues}
+          />
+        )}
         <HeaderContainer>
           <HeaderSubContainer>
             <Heading>

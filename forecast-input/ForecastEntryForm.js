@@ -1,5 +1,6 @@
 import React from "react";
 import { TouchableView, TextInput, styled, View, Text } from "bappo-components";
+import HybridButton from "hybrid-button";
 
 class Form extends React.Component {
   state = {
@@ -48,7 +49,7 @@ const Buttons = styled(View)`
   justify-content: flex-end;
 `;
 
-const StyledButton = styled(TouchableView)`
+const StyledButton = styled(HybridButton)`
   height: 40px;
   padding: 10px 10px;
   background-color: #eee;

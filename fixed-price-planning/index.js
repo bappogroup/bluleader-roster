@@ -2,12 +2,12 @@ import React from "react";
 import {
   styled,
   View,
-  TouchableView,
   Text,
-  ActivityIndicator
+  ActivityIndicator,
+  Form,
+  SelectField
 } from "bappo-components";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
-import SelectionDisplay from "selectiondisplay";
 import { getAuthorisedProfitCentres } from "forecast-utils";
 import FixedPriceProjects from "./FixedPriceProjects";
 
@@ -96,8 +96,55 @@ class Main extends React.Component {
     });
   };
 
+  renderSelectionForm = () => {
+    const initialValues = {
+      profitCentreId: this.state.profitCentre && this.state.profitCentre.id
+    };
+    const onSubmit = ({ profitCentreId }) => {
+      const profitCentre = this.data.profitCentres.find(
+        c => c.id === profitCentreId
+      );
+
+      this.setState({
+        profitCentre,
+        loading: false,
+        currentAction: "run"
+      });
+
+      setUserPreferences(
+        this.props.$global.currentUser.id,
+        this.props.$models,
+        { profitCentreId }
+      );
+    };
+
+    return (
+      <Form
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        style={{ width: 300 }}
+      >
+        <Form.Field
+          name="profitCentreId"
+          label="Profit Center"
+          component={SelectField}
+          props={{
+            options: this.data.profitCentres.map((c, index) => ({
+              value: c.id,
+              label: c.name,
+              pos: index
+            }))
+          }}
+        />
+        <SubmitButton>
+          <Text style={{ color: "white" }}>Run</Text>
+        </SubmitButton>
+      </Form>
+    );
+  };
+
   render() {
-    const { loading, error, profitCentre } = this.state;
+    const { loading, error } = this.state;
 
     if (loading) return <ActivityIndicator style={{ marginTop: 30 }} />;
 
@@ -108,21 +155,8 @@ class Main extends React.Component {
         </Container>
       );
 
-    const options = [{ label: "Profit Center", value: profitCentre.name }];
-
     if (this.state.currentAction === "select") {
-      return (
-        <Container>
-          <SelectionDisplay
-            options={options}
-            onChangeClick={() => this.setFilters()}
-          />
-
-          <RunButton onPress={() => this.setState({ currentAction: "run" })}>
-            <RunButtonText> Run </RunButtonText>
-          </RunButton>
-        </Container>
-      );
+      return <SelectContainer>{this.renderSelectionForm()}</SelectContainer>;
     }
 
     if (this.state.currentAction === "run") {
@@ -146,16 +180,16 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const RunButton = styled(TouchableView)`
-  height: 50px;
-  margin-left: 20px;
-  margin-right: 20px;
-  background-color: orange;
-  border-radius: 3px;
-  justify-content: center;
+const SelectContainer = styled(View)`
+  flex: 1;
   align-items: center;
+  margin-top: 40px;
 `;
 
-const RunButtonText = styled(Text)`
-  color: white;
+const SubmitButton = styled(Form.SubmitButton)`
+  align-items: center;
+  justify-content: center;
+  background-color: ${({ theme }) => theme.bappo.primaryColor};
+  border-radius: 4px;
+  height: 48px;
 `;

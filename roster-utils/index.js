@@ -271,6 +271,7 @@ export const projectAssignmentsToOptions = (
     })
     .map((op, index) => ({
       ...op,
+      value: op.id,
       pos: index
     }));
 };
