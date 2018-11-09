@@ -40,8 +40,7 @@ class Main extends React.Component {
 
     const { forecastProfitCentreId } = prefs;
 
-    if (!forecastProfitCentreId) this.setFilters();
-    else {
+    if (forecastProfitCentreId) {
       const profitCentre = profitCentres.find(
         pc => pc.id === forecastProfitCentreId
       );
@@ -50,59 +49,19 @@ class Main extends React.Component {
         profitCentre,
         loading: false
       });
+    } else {
+      this.setState({ loading: false });
     }
   }
 
-  setFilters = () => {
-    const { $models, $popup } = this.props;
-    const { profitCentres } = this.data;
-
-    const profitCentreOptions = profitCentres.map((c, index) => ({
-      id: c.id,
-      label: c.name,
-      pos: index
-    }));
-
-    $popup.form({
-      title: "Select Profit Centre and Time Range",
-      fields: [
-        {
-          name: "forecastProfitCentreId",
-          label: "ProfitCentre",
-          type: "FixedList",
-          properties: {
-            options: profitCentreOptions
-          }
-        }
-      ],
-      initialValues: {
-        forecastProfitCentreId:
-          this.state.profitCentre && this.state.profitCentre.id
-      },
-      onSubmit: ({ forecastProfitCentreId }) => {
-        const profitCentre = profitCentres.find(
-          c => c.id === forecastProfitCentreId
-        );
-
-        this.setState({
-          profitCentre,
-          loading: false
-        });
-
-        setUserPreferences(this.props.$global.currentUser.id, $models, {
-          forecastProfitCentreId
-        });
-      }
-    });
-  };
-
   renderSelectionForm = () => {
     const initialValues = {
-      profitCentreId: this.state.profitCentre && this.state.profitCentre.id
+      forecastProfitCentreId:
+        this.state.profitCentre && this.state.profitCentre.id
     };
-    const onSubmit = ({ profitCentreId }) => {
+    const onSubmit = ({ forecastProfitCentreId }) => {
       const profitCentre = this.data.profitCentres.find(
-        c => c.id === profitCentreId
+        c => c.id === forecastProfitCentreId
       );
 
       this.setState({
@@ -114,7 +73,7 @@ class Main extends React.Component {
       setUserPreferences(
         this.props.$global.currentUser.id,
         this.props.$models,
-        { profitCentreId }
+        { forecastProfitCentreId }
       );
     };
 
@@ -125,7 +84,7 @@ class Main extends React.Component {
         style={{ width: 300 }}
       >
         <Form.Field
-          name="profitCentreId"
+          name="forecastProfitCentreId"
           label="Profit Center"
           component={SelectField}
           props={{

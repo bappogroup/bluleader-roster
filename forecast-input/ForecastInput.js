@@ -1,7 +1,6 @@
 import React from "react";
 import { Text, View, styled, TouchableView } from "bappo-components";
 import Table from "bappo-table";
-import HybridButton from "hybrid-button";
 import ForecastEntryForm from "./ForecastEntryForm";
 
 const add = "1";
@@ -335,7 +334,7 @@ const Container = styled(View)`
   flex: 1;
 `;
 
-const CloseButton = styled(HybridButton)`
+const CloseButton = styled(TouchableView)`
   margin-left: 20px;
   margin-top: 20px;
 `;
@@ -347,14 +346,14 @@ const Cell = styled(View)`
   flex: 1;
 `;
 
-const BlankCell = styled(HybridButton)`
+const BlankCell = styled(TouchableView)`
   justify-content: center;
   align-items: center;
   flex: 1;
   height: 40px;
 `;
 
-const SmallButton = styled(HybridButton)`
+const SmallButton = styled(TouchableView)`
   border-radius: 3px;
   height: 30px;
   width: 30px;
@@ -363,7 +362,7 @@ const SmallButton = styled(HybridButton)`
   align-items: center;
 `;
 
-const MiniCell = styled(HybridButton)`
+const MiniCell = styled(TouchableView)`
   height: 40px;
   margin: 2px;
   padding: 0 3px;
