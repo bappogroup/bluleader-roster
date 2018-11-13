@@ -4,15 +4,15 @@ import {
   FlatList,
   View,
   Text,
-  styled
+  styled,
+  TouchableView
 } from "bappo-components";
-import HybridButton from "hybrid-button";
 import {
-  getEntryFormFields,
   updateRosterEntryRecords,
   deleteRosterEntryRecords,
   projectAssignmentsToOptions
 } from "roster-utils";
+import RosterEntryForm from "roster-entry-form";
 import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
@@ -32,7 +32,8 @@ class SingleRoster extends React.Component {
     projectOptions: [],
     projectLookup: {}, // Find a project by id
     projectAssignmentLookup: {},
-    commonProjects: []
+    commonProjects: [],
+    leaveProjects: []
   };
 
   constructor(props) {
@@ -47,7 +48,8 @@ class SingleRoster extends React.Component {
       firstLoaded: false,
       loading: false,
       weeklyEntries: [], // Array of array, containing entries of each week
-      consultant: null
+      consultant: null,
+      entryForm: { show: false }
     };
   }
 
@@ -108,8 +110,12 @@ class SingleRoster extends React.Component {
     probabilities.forEach(p => (probabilityLookup[p.id] = p));
 
     this.data.commonProjects = commonProjects;
-    this.data.probabilityOptions = probabilities.map((p, index) => ({
-      id: p.id,
+    const leaveProjects = commonProjects.filter(p =>
+      ["4", "5", "6"].includes(p.projectType)
+    );
+    this.data.leaveProjects = leaveProjects;
+    this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
+      value: p.id,
       label: p.name,
       pos: index
     }));
@@ -178,25 +184,22 @@ class SingleRoster extends React.Component {
   };
 
   openEntryForm = entry => {
-    this.props.$popup.form({
-      objectKey: "RosterEntry",
-      fields: getEntryFormFields(
-        this.data.projectOptions,
-        this.data.probabilityOptions
-      ),
-      title: `${entry.date}`,
-      initialValues: {
-        ...entry,
-        consultant_id: this.state.consultant.id,
-        startDate: entry.date,
-        endDate: entry.date,
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true
-      },
-      onSubmit: this.updateRosterEntry
+    this.setState({
+      entryForm: {
+        show: true,
+        title: `${entry.date}`,
+        initialValues: {
+          ...entry,
+          consultant_id: this.state.consultant.id,
+          startDate: entry.date,
+          endDate: entry.date,
+          monday: true,
+          tuesday: true,
+          wednesday: true,
+          thursday: true,
+          friday: true
+        }
+      }
     });
   };
 
@@ -211,15 +214,11 @@ class SingleRoster extends React.Component {
     };
     const newWeeklyEntries = this.state.weeklyEntries.slice();
 
-    const leaveProjects = this.data.commonProjects.filter(p =>
-      ["4", "5", "6"].includes(p.projectType)
-    );
-
     if (!data.project_id) {
       // delete records
       const deletedCount = await deleteRosterEntryRecords(
         payload,
-        leaveProjects
+        this.data.leaveProjects
       );
 
       // reload roster entries
@@ -232,7 +231,7 @@ class SingleRoster extends React.Component {
       // update records
       const updatedRecords = await updateRosterEntryRecords(
         payload,
-        leaveProjects
+        this.data.leaveProjects
       );
 
       // Update records in state
@@ -318,7 +317,7 @@ class SingleRoster extends React.Component {
 
   renderLoadPreviousButton = () => (
     <ButtonRow>
-      <HybridButton
+      <TouchableView
         onPress={() =>
           this.loadRosterEntries(
             addWeeks(this.state.startDate, -10),
@@ -328,18 +327,41 @@ class SingleRoster extends React.Component {
         }
       >
         <Text>load previous</Text>
-      </HybridButton>
+      </TouchableView>
     </ButtonRow>
   );
 
   render() {
-    const { consultant, weeklyEntries, firstLoaded } = this.state;
+    const { consultant, weeklyEntries, firstLoaded, entryForm } = this.state;
     if (!(consultant && firstLoaded)) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
 
     return (
       <Container>
+        {entryForm.show && (
+          <RosterEntryForm
+            title={entryForm.title}
+            onClose={() =>
+              this.setState(({ entryForm }) => ({
+                entryForm: {
+                  ...entryForm,
+                  show: false
+                }
+              }))
+            }
+            projectOptions={this.data.projectOptions}
+            probabilityOptions={this.data.probabilityOptions}
+            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
+            onSubmit={values =>
+              this.updateRosterEntry({
+                ...values,
+                consultant_id: consultant.id
+              })
+            }
+            initialValues={entryForm.initialValues}
+          />
+        )}
         <Text>{this.state.longString}</Text>
         <HeaderRow>
           {weekdays.map(date => (
@@ -402,7 +424,7 @@ const HeaderCell = styled(Text)`
   align-self: center;
 `;
 
-const ButtonCell = styled(HybridButton)`
+const ButtonCell = styled(TouchableView)`
   ${cellStyle} border: 1px solid #eee;
   background-color: ${props => props.backgroundColor};
 `;
