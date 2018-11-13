@@ -48,7 +48,12 @@ class Roster extends React.Component {
 
   highestRowIndex = 0;
   isLoading = false;
-  data = {};
+
+  data = {
+    commonProjects: [], // Superset of leave projects
+    leaveProjects: [],
+    probabilityOptions: []
+  };
 
   constructor(props) {
     super(props);
@@ -63,7 +68,7 @@ class Roster extends React.Component {
       initializing: true,
       mode: "small",
       entryList: [],
-      commonProjects: [],
+
       consultants: [],
       projectAssignments: [],
       consultantOffset: 0,
@@ -189,13 +194,18 @@ class Roster extends React.Component {
         consultants,
         consultantCount: consultants.length,
         consultantOffset: 0,
-        commonProjects,
         startDate,
         endDate,
         includeCrossTeamConsultants
       },
       () => this.loadData()
     );
+
+    const leaveProjects = commonProjects.filter(p =>
+      ["4", "5", "6"].includes(p.projectType)
+    );
+    this.data.commonProjects = commonProjects;
+    this.data.leaveProjects = leaveProjects;
   };
 
   loadData = async () => {
@@ -303,12 +313,14 @@ class Roster extends React.Component {
   };
 
   getConsultantAssignments = consultantId => {
-    const { commonProjects, projectAssignments } = this.state;
-    const hisProjectAssignments = projectAssignments.filter(
+    const hisProjectAssignments = this.state.projectAssignments.filter(
       pa => pa.consultant_id === consultantId
     );
 
-    return projectAssignmentsToOptions(hisProjectAssignments, commonProjects);
+    return projectAssignmentsToOptions(
+      hisProjectAssignments,
+      this.data.commonProjects
+    );
   };
 
   // Bring up a popup asking which cost centre and start time
@@ -451,7 +463,9 @@ class Roster extends React.Component {
     // Render roster entry cell
     if (entry) {
       backgroundColor =
-        entry.project.backgroundColour || entry.probability.backgroundColor;
+        entry.project.backgroundColour ||
+        (entry.probability && entry.probability.backgroundColor) ||
+        "white";
       label =
         mode === "large"
           ? entry.project.name
@@ -529,9 +543,7 @@ class Roster extends React.Component {
       $models: this.props.$models
     };
 
-    const leaveProjects = this.state.commonProjects.filter(p =>
-      ["4", "5", "6"].includes(p.projectType)
-    );
+    const { leaveProjects } = this.data;
 
     // Set the probability of leave projects to 'NA', if the probability exists
     if (leaveProjects.find(p => p.id === data.project_id)) {
@@ -616,6 +628,7 @@ class Roster extends React.Component {
             }
             projectOptions={entryForm.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
+            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
             onSubmit={values =>
               this.updateRosterEntry({
                 ...values,
