@@ -362,7 +362,6 @@ class SingleRoster extends React.Component {
             initialValues={entryForm.initialValues}
           />
         )}
-        <Text>{this.state.longString}</Text>
         <HeaderRow>
           {weekdays.map(date => (
             <HeaderCell key={date}>{date}</HeaderCell>
@@ -385,7 +384,8 @@ export default SingleRoster;
 
 const Container = styled(View)`
   flex: 1;
-  margin-right: 20px;
+  padding-right: 20px;
+  background-color: white;
 `;
 
 // Style in MS Edge

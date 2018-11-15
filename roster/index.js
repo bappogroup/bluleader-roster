@@ -6,7 +6,8 @@ import {
   Text,
   TouchableView,
   styled,
-  Button
+  Button,
+  Overlay
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
@@ -18,7 +19,8 @@ import {
   projectAssignmentsToOptions
 } from "roster-utils";
 import SingleRoster from "single-roster";
-import RosterEntryForm from "roster-entry-form";
+// import RosterEntryForm from "roster-entry-form";
+import RosterEntryForm from "./RosterEntryForm";
 
 const dateRangeOptions = [
   {
@@ -59,6 +61,9 @@ class Roster extends React.Component {
     super(props);
 
     this.state = {
+      singleConsultantPopup: {
+        show: false
+      },
       costCenter: null,
       weeks: "12",
       startDate: moment().startOf("week"),
@@ -490,24 +495,12 @@ class Roster extends React.Component {
   };
 
   handleClickConsultant = consultant => {
-    const projectOptions = this.getConsultantAssignments(consultant.id);
-
-    this.props.$popup.open(
-      <SingleRoster
-        {...this.props}
-        consultant={consultant}
-        projectOptions={projectOptions}
-        onUpdate={() => this.reloadConsultantData(consultant.id)}
-      />,
-      {
-        style: {
-          width: Infinity,
-          height: Infinity
-        },
-        title: `${consultant.name}'s Roster`,
-        headerLeftTitle: "Back"
+    this.setState({
+      singleConsultantPopup: {
+        show: true,
+        consultant
       }
-    );
+    });
   };
 
   openEntryForm = async (rowIndex, columnIndex, entry) => {
@@ -599,6 +592,29 @@ class Roster extends React.Component {
     return index === 0 ? 160 : columnWidth;
   };
 
+  renderSingleRoster = () => {
+    const { show, consultant } = this.state.singleConsultantPopup;
+    if (!show) return null;
+
+    return (
+      <Overlay
+        visible
+        showCloseButton
+        closeButtonStyle={{ color: "black" }}
+        onClose={() =>
+          this.setState({ singleConsultantPopup: { show: false } })
+        }
+      >
+        <SingleRoster
+          {...this.props}
+          consultant={consultant}
+          projectOptions={this.getConsultantAssignments(consultant.id)}
+          onUpdate={() => this.reloadConsultantData(consultant.id)}
+        />
+      </Overlay>
+    );
+  };
+
   render() {
     const {
       initializing,
@@ -611,10 +627,12 @@ class Roster extends React.Component {
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
-    // const title = `Cost center: ${(costCenter && costCenter.name) || "all"}`;
 
+    console.log(this.state.entryList);
+    console.log(this.data);
     return (
       <Container>
+        {this.renderSingleRoster()}
         {entryForm.show && (
           <RosterEntryForm
             title={entryForm.title}
@@ -721,9 +739,7 @@ const BodyContainer = styled.div`
   margin-bottom: 15px;
 `;
 
-const FunctionButton = styled(Button)`
-  // margin-left: 10px;
-`;
+const FunctionButton = styled(Button)``;
 
 const baseStyle = `
   margin-left: 2px;

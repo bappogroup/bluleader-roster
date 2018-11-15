@@ -1,12 +1,20 @@
 import React from "react";
 import moment from "moment";
 import {
-  ModalForm,
+  styled,
+  Colors,
+  Modal,
   Form,
   TextField,
   SelectField,
   DatePickerField,
-  SwitchField
+  SwitchField,
+  ScrollView,
+  View,
+  Text,
+  Button,
+  Heading,
+  Separator
 } from "bappo-components";
 
 class RosterEntryForm extends React.Component {
@@ -20,33 +28,31 @@ class RosterEntryForm extends React.Component {
     ).value;
 
     this.state = {
+      step: 1,
       isLeaveProject,
-      NAProbabilityValue
+      NAProbabilityValue,
+      submitting: false,
+      submitValues: {}
     };
   }
 
-  onSubmit = rawValues => {
-    const values = { ...rawValues };
+  submit = () => {
+    this.setState({ submitting: true });
+    const values = { ...this.state.submitValues };
     if (this.state.isLeaveProject) values.shouldOverrideLeaves = true;
-    return this.props.onSubmit(values);
+    return this.props.onSubmit(values).then(() => this.props.onClose());
   };
 
-  render() {
+  renderFilterForm = () => {
     const {
-      title = "Manage Roster",
       projectOptions = [],
       probabilityOptions,
-      onClose,
       initialValues,
       leaveProjectIds
     } = this.props;
 
     return (
-      <ModalForm
-        title={title}
-        onRequestClose={onClose}
-        onSubmit={this.onSubmit}
-        visible={true}
+      <Form
         initialValues={{
           monday: true,
           tuesday: true,
@@ -57,6 +63,7 @@ class RosterEntryForm extends React.Component {
           sunday: false,
           ...initialValues
         }}
+        onSubmit={submitValues => this.setState({ submitValues, step: 2 })}
       >
         {({ getFieldValue, actions: { changeValue } }) => {
           const startDate = getFieldValue("startDate");
@@ -158,11 +165,11 @@ class RosterEntryForm extends React.Component {
                     props={{ options: probabilityOptions }}
                     validate={value => (value ? undefined : "Required")}
                   />
-                  <Form.Field
+                  {/* <Form.Field
                     name="shouldOverrideLeaves"
                     label="Overwrites Leave"
                     component={SwitchField}
-                  />
+                  /> */}
                 </React.Fragment>
               )}
               <Form.Field
@@ -173,12 +180,78 @@ class RosterEntryForm extends React.Component {
                   multiline: true
                 }}
               />
+              <ButtonGroup>
+                <Button
+                  text="Cancel"
+                  type="tertiary"
+                  onPress={this.props.onClose}
+                />
+                <SubmitButton>
+                  <Text style={{ color: Colors.BLUE }}>Preview</Text>
+                </SubmitButton>
+              </ButtonGroup>
             </React.Fragment>
           );
         }}
-      </ModalForm>
+      </Form>
+    );
+  };
+
+  renderPreview = () => {
+    return (
+      <View>
+        <Text>Preview!</Text>
+        <Button
+          style={{ alignSelf: "flex-end" }}
+          type="primary"
+          text="Submit"
+          onPress={this.submit}
+          loading={this.state.submitting}
+        />
+      </View>
+    );
+  };
+
+  render() {
+    let body;
+    let title;
+
+    switch (this.state.step) {
+      case 1:
+        body = this.renderFilterForm();
+        title = "Manage Roster";
+        break;
+      case 2:
+        body = this.renderPreview();
+        title = "Preview";
+        break;
+      default:
+    }
+
+    return (
+      <Modal visible onRequestClose={this.props.onClose}>
+        <Container>
+          <Heading style={{ alignSelf: "center" }}>{title}</Heading>
+          <Separator />
+          {body}
+        </Container>
+      </Modal>
     );
   }
 }
 
 export default RosterEntryForm;
+
+const Container = styled(ScrollView)`
+  padding: 16px 32px;
+`;
+
+const ButtonGroup = styled(View)`
+  align-items: center;
+  align-self: flex-end;
+  flex-direction: row;
+`;
+
+const SubmitButton = styled(Form.SubmitButton)`
+  margin-left: 4px;
+`;
