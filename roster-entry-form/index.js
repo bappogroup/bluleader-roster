@@ -13,9 +13,9 @@ import {
   View,
   Text,
   Button,
-  Heading,
   Separator
 } from "bappo-components";
+import MiniPreview from "./MiniPreview";
 
 class RosterEntryForm extends React.Component {
   constructor(props) {
@@ -53,6 +53,7 @@ class RosterEntryForm extends React.Component {
 
     return (
       <Form
+        style={{ flex: 1 }}
         initialValues={{
           monday: true,
           tuesday: true,
@@ -84,102 +85,117 @@ class RosterEntryForm extends React.Component {
 
           return (
             <React.Fragment>
-              <Form.Field
-                name="project_id"
-                label="Project"
-                component={SelectField}
-                props={{
-                  options: projectOptions,
-                  onValueChange: id => {
-                    if (leaveProjectIds.includes(id)) {
-                      this.setState({ isLeaveProject: true });
-                      // Set probability to NA for leave projects
-                      changeValue(
-                        "probability_id",
-                        this.state.NAProbabilityValue
-                      );
-                    } else {
-                      this.setState({ isLeaveProject: false });
+              <FormFieldsContainer>
+                <Form.Field
+                  name="project_id"
+                  label="Project"
+                  component={SelectField}
+                  props={{
+                    options: projectOptions,
+                    onValueChange: id => {
+                      if (leaveProjectIds.includes(id)) {
+                        this.setState({ isLeaveProject: true });
+                        // Set probability to NA for leave projects
+                        changeValue(
+                          "probability_id",
+                          this.state.NAProbabilityValue
+                        );
+                      } else {
+                        this.setState({ isLeaveProject: false });
+                      }
                     }
+                  }}
+                />
+                <Form.Field
+                  name="startDate"
+                  label="From"
+                  component={DatePickerField}
+                />
+                <Form.Field
+                  name="endDate"
+                  label="Until"
+                  component={DatePickerField}
+                  validate={end =>
+                    moment(end).isSameOrAfter(moment(startDate))
+                      ? undefined
+                      : "Invalid date range"
                   }
-                }}
-              />
-              <Form.Field
-                name="startDate"
-                label="From"
-                component={DatePickerField}
-              />
-              <Form.Field
-                name="endDate"
-                label="Until"
-                component={DatePickerField}
-                validate={end =>
-                  moment(end).isSameOrAfter(moment(startDate))
-                    ? undefined
-                    : "Invalid date range"
-                }
-              />
-              {showWeekdays[1] && (
-                <Form.Field name="monday" label="Mon" component={SwitchField} />
-              )}
-              {showWeekdays[2] && (
-                <Form.Field
-                  name="tuesday"
-                  label="Tue"
-                  component={SwitchField}
                 />
-              )}
-              {showWeekdays[3] && (
-                <Form.Field
-                  name="wednesday"
-                  label="Wed"
-                  component={SwitchField}
-                />
-              )}
-              {showWeekdays[4] && (
-                <Form.Field
-                  name="thursday"
-                  label="Thu"
-                  component={SwitchField}
-                />
-              )}
-              {showWeekdays[5] && (
-                <Form.Field name="friday" label="Fri" component={SwitchField} />
-              )}
-              {showWeekdays[6] && (
-                <Form.Field
-                  name="saturday"
-                  label="Sat"
-                  component={SwitchField}
-                />
-              )}
-              {showWeekdays[0] && (
-                <Form.Field name="sunday" label="Sun" component={SwitchField} />
-              )}
-              {!this.state.isLeaveProject && (
-                <React.Fragment>
+                {showWeekdays[1] && (
                   <Form.Field
-                    name="probability_id"
-                    label="Probability"
-                    component={SelectField}
-                    props={{ options: probabilityOptions }}
-                    validate={value => (value ? undefined : "Required")}
+                    name="monday"
+                    label="Mon"
+                    component={SwitchField}
                   />
-                  {/* <Form.Field
+                )}
+                {showWeekdays[2] && (
+                  <Form.Field
+                    name="tuesday"
+                    label="Tue"
+                    component={SwitchField}
+                  />
+                )}
+                {showWeekdays[3] && (
+                  <Form.Field
+                    name="wednesday"
+                    label="Wed"
+                    component={SwitchField}
+                  />
+                )}
+                {showWeekdays[4] && (
+                  <Form.Field
+                    name="thursday"
+                    label="Thu"
+                    component={SwitchField}
+                  />
+                )}
+                {showWeekdays[5] && (
+                  <Form.Field
+                    name="friday"
+                    label="Fri"
+                    component={SwitchField}
+                  />
+                )}
+                {showWeekdays[6] && (
+                  <Form.Field
+                    name="saturday"
+                    label="Sat"
+                    component={SwitchField}
+                  />
+                )}
+                {showWeekdays[0] && (
+                  <Form.Field
+                    name="sunday"
+                    label="Sun"
+                    component={SwitchField}
+                  />
+                )}
+                {!this.state.isLeaveProject && (
+                  <React.Fragment>
+                    <Form.Field
+                      name="probability_id"
+                      label="Probability"
+                      component={SelectField}
+                      props={{ options: probabilityOptions }}
+                      validate={value => (value ? undefined : "Required")}
+                    />
+                    {/* <Form.Field
                     name="shouldOverrideLeaves"
                     label="Overwrites Leave"
                     component={SwitchField}
                   /> */}
-                </React.Fragment>
-              )}
-              <Form.Field
-                name="comment"
-                label="Comment"
-                component={TextField}
-                props={{
-                  multiline: true
-                }}
-              />
+                  </React.Fragment>
+                )}
+                <Form.Field
+                  name="comment"
+                  label="Comment"
+                  component={TextField}
+                  props={{
+                    multiline: true
+                  }}
+                />
+              </FormFieldsContainer>
+
               <ButtonGroup>
                 <Button
                   text="Cancel"
@@ -198,16 +214,31 @@ class RosterEntryForm extends React.Component {
   };
 
   renderPreview = () => {
+    const { submitValues } = this.state;
+
     return (
-      <View>
-        <Text>Preview!</Text>
-        <Button
-          style={{ alignSelf: "flex-end" }}
-          type="primary"
-          text="Submit"
-          onPress={this.submit}
-          loading={this.state.submitting}
+      <View style={{ flex: 1 }}>
+        <MiniPreview
+          formValues={submitValues}
+          consultant={this.props.consultant}
+          leaveProjectIds={this.props.leaveProjectIds}
+          dateToExistingEntryMap={this.props.dateToExistingEntryMap}
+          onClickDate={date => console.log("update date", date)}
         />
+        <ButtonGroup style={{ marginTop: 16 }}>
+          <Button
+            type="secondary"
+            text="Back"
+            onPress={() => this.setState({ step: 1 })}
+          />
+          <Button
+            style={{ marginLeft: 16 }}
+            type="primary"
+            text="Submit"
+            onPress={this.submit}
+            loading={this.state.submitting}
+          />
+        </ButtonGroup>
       </View>
     );
   };
@@ -223,18 +254,23 @@ class RosterEntryForm extends React.Component {
         break;
       case 2:
         body = this.renderPreview();
-        title = "Preview";
+        const selectedProject = this.props.projectOptions.find(
+          p => p.value === this.state.submitValues.project_id
+        );
+        title = `${this.props.consultant.name} will do ${
+          selectedProject.label
+        }, on these days:`;
         break;
       default:
     }
 
     return (
       <Modal visible onRequestClose={this.props.onClose}>
-        <Container>
-          <Heading style={{ alignSelf: "center" }}>{title}</Heading>
-          <Separator />
-          {body}
-        </Container>
+        <HeadingContainer>
+          <Heading>{title}</Heading>
+        </HeadingContainer>
+        <Separator style={{ marginTop: 0 }} />
+        {body}
       </Modal>
     );
   }
@@ -242,14 +278,29 @@ class RosterEntryForm extends React.Component {
 
 export default RosterEntryForm;
 
-const Container = styled(ScrollView)`
+// background-color: rgb(241, 241, 240);
+
+const HeadingContainer = styled(View)`
+  padding: 16px;
+  align-items: center;
+  justify-content: center;
+`;
+
+const FormFieldsContainer = styled(ScrollView)`
+  flex: 1;
   padding: 16px 32px;
 `;
 
+const Heading = styled(Text)`
+  font-size: 18px;
+`;
+
 const ButtonGroup = styled(View)`
+  background-color: rgb(241, 241, 240);
+  padding: 16px 32px;
   align-items: center;
-  align-self: flex-end;
   flex-direction: row;
+  justify-content: flex-end;
 `;
 
 const SubmitButton = styled(Form.SubmitButton)`

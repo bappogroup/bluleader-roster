@@ -509,6 +509,15 @@ class Roster extends React.Component {
     const date = entryList[0][columnIndex].date.format(dateFormat);
     const projectOptions = this.getConsultantAssignments(consultant.id);
 
+    // All roster entries of this consultant
+    const rosterEntries = entryList[rowIndex];
+    const dateToExistingEntryMap = new Map();
+    rosterEntries.forEach(entry => {
+      if (entry && entry.date) {
+        dateToExistingEntryMap.set(entry.date, entry);
+      }
+    });
+
     this.setState({
       entryForm: {
         show: true,
@@ -519,7 +528,8 @@ class Roster extends React.Component {
           startDate: date,
           endDate: date
         },
-        consultant_id: consultant.id
+        consultant,
+        dateToExistingEntryMap
       }
     });
   };
@@ -628,8 +638,6 @@ class Roster extends React.Component {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
 
-    console.log(this.state.entryList);
-    console.log(this.data);
     return (
       <Container>
         {this.renderSingleRoster()}
@@ -644,13 +652,15 @@ class Roster extends React.Component {
                 }
               }))
             }
+            consultant={entryForm.consultant}
             projectOptions={entryForm.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
+            dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
             leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
             onSubmit={values =>
               this.updateRosterEntry({
                 ...values,
-                consultant_id: entryForm.consultant_id
+                consultant_id: entryForm.consultant.id
               })
             }
             initialValues={entryForm.initialValues}
