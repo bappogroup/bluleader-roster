@@ -10,7 +10,7 @@ import {
   styled,
   TouchableView,
   Button,
-  Switch
+  SelectField
 } from "bappo-components";
 
 const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -64,6 +64,11 @@ function datesToArray(start, end) {
   return list;
 }
 
+// Gets diff between two arrays
+function arrayDiff(a, b) {
+  return [...a.filter(x => !b.includes(x)), ...b.filter(x => !a.includes(x))];
+}
+
 /**
  * Mini Single Roster used to confirm selected dates
  * Only shows pre-selected date range
@@ -72,15 +77,13 @@ function datesToArray(start, end) {
 class MiniPreview extends React.Component {
   constructor(props) {
     super(props);
-    const { formValues, dateToExistingEntryMap } = this.props;
+    const { formValues, dateToExistingEntryMap, projectOptions } = this.props;
 
     // Calculate previous roster entries - weeklyEntries
     const weeklyEntries = [];
-    const dates = datesToArray(
-      getMonday(formValues.startDate),
-      getSunday(formValues.endDate),
-      true
-    );
+    const start = getMonday(formValues.startDate);
+    const end = getSunday(formValues.endDate);
+    const dates = datesToArray(start, end, true);
     for (let i = 0; i < dates.length; i += 7) {
       weeklyEntries.push(
         dates
@@ -90,32 +93,44 @@ class MiniPreview extends React.Component {
     }
 
     let autoSubmit = false;
-    let overridesLeave = false;
     if (formValues.startDate === formValues.endDate) {
       // Only 1 day is selected - don't show preview, auto submit
       autoSubmit = true;
-      overridesLeave = true;
     }
+
+    // Get already booked project options
+    const bookedProjectIds = {};
+    dateToExistingEntryMap.forEach(entry => {
+      if (!bookedProjectIds[entry.project_id])
+        bookedProjectIds[entry.project_id] = true;
+    });
+    const bookedProjectOptions = projectOptions.filter(
+      po => bookedProjectIds[po.value]
+    );
 
     // Calculate newly selected entries
     this.state = {
+      start,
+      end,
       weeklyEntries,
-      overridesLeave,
       submitting: false,
       autoSubmit,
       selectedWeekdays: defaultWeekdays,
-      dateToNewEntryMap: new Map()
+      selectedProjectIds: [],
+      dateToNewEntryMap: new Map(),
+      bookedProjectOptions
     };
   }
 
   async componentDidMount() {
-    await this.updateDateToNewEntryMap();
+    await this.buildDateToNewEntryMap();
     if (this.state.autoSubmit) this.submit();
   }
 
-  // Calculate and update dateToNewEntryMap, selectedWeekdays nad overridesLeave in state
+  // Calculate and update dateToNewEntryMap and selectedWeekdays in state
+  // Re-calculate from scratch
   // Params are optional - can get from state instead
-  updateDateToNewEntryMap = (_selectedWeekdays, _overridesLeave) => {
+  buildDateToNewEntryMap = _selectedWeekdays => {
     const {
       formValues,
       consultant,
@@ -124,27 +139,24 @@ class MiniPreview extends React.Component {
     } = this.props;
 
     const selectedWeekdays = _selectedWeekdays || this.state.selectedWeekdays;
-    let overridesLeave = _overridesLeave;
-    if (typeof overridesLeave === "undefined")
-      overridesLeave = this.state.overridesLeave;
 
     const newEntries = [];
     for (
-      let d = moment(formValues.startDate).clone();
-      d.isSameOrBefore(moment(formValues.endDate));
+      let d = moment(this.state.start).clone();
+      d.isSameOrBefore(moment(this.state.end));
       d.add(1, "day")
     ) {
       let weekdayIndex = d.day();
       if (selectedWeekdays[weekdayIndex]) {
         // Only pick chosen days
-        const date = d.format("YYYY-MM-DD");
+        const date = d.format(dateFormat);
         const existingEntry = dateToExistingEntryMap.get(date);
         const isLeaveEntry =
           existingEntry &&
           existingEntry.project_id &&
           leaveProjectIds.includes(existingEntry.project_id);
 
-        if (!isLeaveEntry || overridesLeave) {
+        if (!isLeaveEntry) {
           newEntries.push({
             date,
             consultant_id: consultant.id,
@@ -159,28 +171,97 @@ class MiniPreview extends React.Component {
     newEntries.forEach(e => dateToNewEntryMap.set(e.date, e));
     return this.setState({
       selectedWeekdays,
-      overridesLeave,
       dateToNewEntryMap
     });
   };
 
-  handleSelectAllWeekdays = () => this.updateDateToNewEntryMap(defaultWeekdays);
+  handleSelectAllWeekdays = () => this.buildDateToNewEntryMap(defaultWeekdays);
 
   handleClear = () =>
     this.setState({
       dateToNewEntryMap: new Map(),
-      selectedWeekdays: { 1: false, 2: false, 3: false, 4: false, 5: false }
+      selectedWeekdays: { 1: false, 2: false, 3: false, 4: false, 5: false },
+      selectedProjectIds: []
     });
 
-  handleToggleOverridesLeaves = overridesLeave =>
-    this.updateDateToNewEntryMap(null, overridesLeave);
-
+  /**
+   * Select/deselect all appearances of a weekday in the range
+   */
   handleSelectHeader = index => {
+    const { selectedWeekdays, dateToNewEntryMap } = this.state;
+    const selected = !selectedWeekdays[index];
+
     const newSelectedWeekdays = {
-      ...this.state.selectedWeekdays,
-      [index]: !this.state.selectedWeekdays[index]
+      ...selectedWeekdays,
+      [index]: selected
     };
-    this.updateDateToNewEntryMap(newSelectedWeekdays);
+    const newDateToNewEntryMap = new Map(dateToNewEntryMap);
+
+    for (
+      let d = moment(this.state.start).clone();
+      d.isSameOrBefore(moment(this.state.end));
+      d.add(1, "day")
+    ) {
+      const date = d.format(dateFormat);
+      if (d.day() === index) {
+        if (selected) {
+          // Weekday selected
+          newDateToNewEntryMap.set(date, {
+            date,
+            consultant_id: this.props.consultant.id,
+            project_id: this.props.formValues.project_id,
+            probability_id: this.props.formValues.probability_id
+          });
+        } else {
+          // Weekday deselected
+          newDateToNewEntryMap.delete(date);
+        }
+      }
+    }
+
+    return this.setState({
+      selectedWeekdays: newSelectedWeekdays,
+      dateToNewEntryMap: newDateToNewEntryMap
+    });
+  };
+
+  /**
+   * Select/deselect all appearances of a project in the range
+   */
+  handleSelectProject = newSelectedProjectIds => {
+    const { dateToNewEntryMap, selectedProjectIds } = this.state;
+
+    const projectId = arrayDiff(selectedProjectIds, newSelectedProjectIds)[0];
+    const selected = newSelectedProjectIds.length > selectedProjectIds.length;
+    const newDateToNewEntryMap = new Map(dateToNewEntryMap);
+
+    for (
+      let d = moment(this.state.start).clone();
+      d.isSameOrBefore(moment(this.state.end));
+      d.add(1, "day")
+    ) {
+      const date = d.format(dateFormat);
+      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      if (existingEntry && existingEntry.project_id === projectId) {
+        if (selected) {
+          // Project selected
+          newDateToNewEntryMap.set(date, {
+            date,
+            consultant_id: this.props.consultant.id,
+            project_id: this.props.formValues.project_id,
+            probability_id: this.props.formValues.probability_id
+          });
+        } else {
+          // Project deselected
+          newDateToNewEntryMap.delete(date);
+        }
+      }
+    }
+
+    return this.setState({
+      selectedProjectIds: newSelectedProjectIds,
+      dateToNewEntryMap: newDateToNewEntryMap
+    });
   };
 
   submit = async () => {
@@ -311,14 +392,15 @@ class MiniPreview extends React.Component {
               type="secondary"
               onPress={this.handleClear}
             />
-          </TopButtonContainer>
-          <LeaveSwitchContainer>
-            <Text style={{ marginRight: 8 }}>Overrides Leaves</Text>
-            <Switch
-              value={this.state.overridesLeave}
-              onValueChange={this.handleToggleOverridesLeaves}
+            <SelectField
+              style={{ width: 280 }}
+              label="Select by Project"
+              options={this.state.bookedProjectOptions}
+              value={this.state.selectedProjectIds}
+              onValueChange={this.handleSelectProject}
+              multi
             />
-          </LeaveSwitchContainer>
+          </TopButtonContainer>
           <HeaderRow>
             {weekdays.map((date, index) =>
               date ? (
@@ -372,10 +454,14 @@ const BodyContainer = styled(View)`
 
 const TopButtonContainer = styled(View)`
   flex-direction: row;
+  align-items: center;
+  padding: 8px;
 `;
 
 const TopButton = styled(Button)`
+  height: 40px;
   margin-right: 8px;
+  margin-bottom: 8px;
 `;
 
 const HeaderRow = styled(View)`
@@ -415,13 +501,6 @@ const ButtonCell = styled(TouchableView)`
 
 const CellText = styled(Text)`
   font-size: 12px;
-`;
-
-const LeaveSwitchContainer = styled(View)`
-  margin: 8px 0;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-start;
 `;
 
 const ButtonGroup = styled(View)`

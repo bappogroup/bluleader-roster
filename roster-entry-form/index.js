@@ -144,6 +144,7 @@ class RosterEntryForm extends React.Component {
     return (
       <MiniPreview
         $models={this.props.$models}
+        projectOptions={this.props.projectOptions}
         operatorName={this.props.operatorName}
         formValues={submitValues}
         consultant={this.props.consultant}

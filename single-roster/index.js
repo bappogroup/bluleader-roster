@@ -7,13 +7,9 @@ import {
   styled,
   TouchableView
 } from "bappo-components";
-import {
-  updateRosterEntryRecords,
-  deleteRosterEntryRecords,
-  projectAssignmentsToOptions
-} from "roster-utils";
+import { projectAssignmentsToOptions } from "roster-utils";
 import RosterEntryForm from "roster-entry-form";
-import { formatDate, getMonday, addWeeks, getWeeksDifference } from "./utils";
+import { formatDate, getMonday, addWeeks } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
 const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -55,15 +51,15 @@ class SingleRoster extends React.Component {
 
   async componentDidMount() {
     const { consultant, projectOptions, $models, consultantId } = this.props;
-    // let recordId = "6275";
-    let recordId;
-    if (consultant) {
-      recordId = consultant.id;
-    } else if (consultantId) {
-      recordId = consultantId;
-    } else {
-      ({ recordId } = this.props.$navigation.state.params);
-    }
+    let recordId = "2";
+    // let recordId;
+    // if (consultant) {
+    //   recordId = consultant.id;
+    // } else if (consultantId) {
+    //   recordId = consultantId;
+    // } else {
+    //   ({ recordId } = this.props.$navigation.state.params);
+    // }
 
     const promises = [];
 
@@ -192,71 +188,74 @@ class SingleRoster extends React.Component {
           ...entry,
           consultant_id: this.state.consultant.id,
           startDate: entry.date,
-          endDate: entry.date,
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true
+          endDate: entry.date
         }
       }
     });
   };
 
-  updateRosterEntry = async data => {
-    const { consultant, startDate } = this.state;
+  // updateRosterEntry = async data => {
+  //   const { consultant, startDate } = this.state;
 
-    const payload = {
-      data,
-      consultant,
-      operatorName: this.props.$global.currentUser.name,
-      $models: this.props.$models
-    };
-    const newWeeklyEntries = this.state.weeklyEntries.slice();
+  //   const payload = {
+  //     data,
+  //     consultant,
+  //     operatorName: this.props.$global.currentUser.name,
+  //     $models: this.props.$models
+  //   };
+  //   const newWeeklyEntries = this.state.weeklyEntries.slice();
 
-    if (!data.project_id) {
-      // delete records
-      const deletedCount = await deleteRosterEntryRecords(
-        payload,
-        this.data.leaveProjects
-      );
+  //   if (!data.project_id) {
+  //     // delete records
+  //     const deletedCount = await deleteRosterEntryRecords(
+  //       payload,
+  //       this.data.leaveProjects
+  //     );
 
-      // reload roster entries
-      if (deletedCount > 0) {
-        await this.setState({ weeklyEntries: [] }, () =>
-          this.loadRosterEntries(this.state.startDate, this.state.endDate)
-        );
-      }
-    } else {
-      // update records
-      const updatedRecords = await updateRosterEntryRecords(
-        payload,
-        this.data.leaveProjects
-      );
+  //     // reload roster entries
+  //     if (deletedCount > 0) {
+  //       await this.setState({ weeklyEntries: [] }, () =>
+  //         this.loadRosterEntries(this.state.startDate, this.state.endDate)
+  //       );
+  //     }
+  //   } else {
+  //     // update records
+  //     const updatedRecords = await updateRosterEntryRecords(
+  //       payload,
+  //       this.data.leaveProjects
+  //     );
 
-      // Update records in state
-      updatedRecords.forEach(entry => {
-        const entryDate = new Date(entry.date);
-        const weekIndex = getWeeksDifference(entryDate, startDate);
-        let dayIndex = entryDate.getDay();
-        if (dayIndex === 0) dayIndex = 7;
-        dayIndex -= 1;
+  //     // Update records in state
+  //     updatedRecords.forEach(entry => {
+  //       const entryDate = new Date(entry.date);
+  //       const weekIndex = getWeeksDifference(entryDate, startDate);
+  //       let dayIndex = entryDate.getDay();
+  //       if (dayIndex === 0) dayIndex = 7;
+  //       dayIndex -= 1;
 
-        newWeeklyEntries[weekIndex][dayIndex] = entry;
-      });
-      this.setState({ weeklyEntries: newWeeklyEntries });
-    }
+  //       newWeeklyEntries[weekIndex][dayIndex] = entry;
+  //     });
+  //     this.setState({ weeklyEntries: newWeeklyEntries });
+  //   }
 
-    if (typeof this.props.onUpdate === "function") {
-      this.props.onUpdate();
-    }
-  };
+  //   if (typeof this.props.onUpdate === "function") {
+  //     this.props.onUpdate();
+  //   }
+  // };
 
   handleLoadMore = () => {
     const { endDate, firstLoaded } = this.state;
     if (!firstLoaded) return;
     this.loadRosterEntries(endDate, addWeeks(endDate, WEEKS_PER_LOAD));
   };
+
+  closeEntryForm = () =>
+    this.setState(({ entryForm }) => ({
+      entryForm: {
+        ...entryForm,
+        show: false
+      }
+    }));
 
   rowKeyExtractor = row => {
     if (!row.length) return null;
@@ -337,28 +336,21 @@ class SingleRoster extends React.Component {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
 
+    // TODO - dateToExistingEntryMap
     return (
       <Container>
         {entryForm.show && (
           <RosterEntryForm
+            $models={this.props.$models}
+            operatorName={this.props.$global.currentUser.name}
             title={entryForm.title}
-            onClose={() =>
-              this.setState(({ entryForm }) => ({
-                entryForm: {
-                  ...entryForm,
-                  show: false
-                }
-              }))
-            }
+            onClose={this.closeEntryForm}
+            consultant={consultant}
             projectOptions={this.data.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
             leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-            onSubmit={values =>
-              this.updateRosterEntry({
-                ...values,
-                consultant_id: consultant.id
-              })
-            }
+            dateToExistingEntryMap
+            afterSubmit={this.props.onUpdate}
             initialValues={entryForm.initialValues}
           />
         )}
