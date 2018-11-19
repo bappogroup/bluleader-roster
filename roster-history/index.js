@@ -40,12 +40,12 @@ const renderRow = row => (
   <Row>
     <Cell>
       <Label>{row.consultant}</Label>
-      <Text>
+      <Text style={{ flex: 1 }}>
         booked from {row.startDate} to {row.endDate}
       </Text>
     </Cell>
     <Cell>
-      <Text>including: {row.includedDates}</Text>
+      <Text style={{ flex: 1 }}>including: {row.includedDates}</Text>
     </Cell>
     <Cell>
       <Text>on {row.project && row.project.name}</Text>

@@ -15,6 +15,15 @@ import {
 
 const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const dateFormat = "YYYY-MM-DD";
+const defaultWeekdays = {
+  0: false,
+  1: true,
+  2: true,
+  3: true,
+  4: true,
+  5: true,
+  6: false
+}; // Mon-Fri by default
 
 // Truncate string to 18 characters at most
 function truncString(str, max = 18, add = "...") {
@@ -93,15 +102,20 @@ class MiniPreview extends React.Component {
       weeklyEntries,
       overridesLeave,
       submitting: false,
-      autoSubmit
+      autoSubmit,
+      selectedWeekdays: defaultWeekdays,
+      dateToNewEntryMap: new Map()
     };
-    const dateToNewEntryMap = this.calculateDateToNewEntryMap();
-    this.state.dateToNewEntryMap = dateToNewEntryMap;
-
-    if (autoSubmit) this.submit();
   }
 
-  calculateDateToNewEntryMap = (_selectedDays, _overridesLeave) => {
+  async componentDidMount() {
+    await this.updateDateToNewEntryMap();
+    if (this.state.autoSubmit) this.submit();
+  }
+
+  // Calculate and update dateToNewEntryMap, selectedWeekdays nad overridesLeave in state
+  // Params are optional - can get from state instead
+  updateDateToNewEntryMap = (_selectedWeekdays, _overridesLeave) => {
     const {
       formValues,
       consultant,
@@ -109,18 +123,7 @@ class MiniPreview extends React.Component {
       dateToExistingEntryMap
     } = this.props;
 
-    let selectedDays = _selectedDays;
-    if (!selectedDays) {
-      // Use selection from the form
-      selectedDays = [];
-      if (formValues.sunday) selectedDays.push(0);
-      if (formValues.monday) selectedDays.push(1);
-      if (formValues.tuesday) selectedDays.push(2);
-      if (formValues.wednesday) selectedDays.push(3);
-      if (formValues.thursday) selectedDays.push(4);
-      if (formValues.friday) selectedDays.push(5);
-      if (formValues.saturday) selectedDays.push(6);
-    }
+    const selectedWeekdays = _selectedWeekdays || this.state.selectedWeekdays;
     let overridesLeave = _overridesLeave;
     if (typeof overridesLeave === "undefined")
       overridesLeave = this.state.overridesLeave;
@@ -132,7 +135,7 @@ class MiniPreview extends React.Component {
       d.add(1, "day")
     ) {
       let weekdayIndex = d.day();
-      if (selectedDays.includes(weekdayIndex)) {
+      if (selectedWeekdays[weekdayIndex]) {
         // Only pick chosen days
         const date = d.format("YYYY-MM-DD");
         const existingEntry = dateToExistingEntryMap.get(date);
@@ -154,21 +157,30 @@ class MiniPreview extends React.Component {
 
     const dateToNewEntryMap = new Map();
     newEntries.forEach(e => dateToNewEntryMap.set(e.date, e));
-    return dateToNewEntryMap;
+    return this.setState({
+      selectedWeekdays,
+      overridesLeave,
+      dateToNewEntryMap
+    });
   };
 
-  handleSelectAllWeekdays = () => {
-    const selectedDays = [1, 2, 3, 4, 5];
-    const dateToNewEntryMap = this.calculateDateToNewEntryMap(selectedDays);
-    this.setState({ dateToNewEntryMap });
-  };
+  handleSelectAllWeekdays = () => this.updateDateToNewEntryMap(defaultWeekdays);
 
-  handleToggleOverridesLeaves = overridesLeave => {
-    const newDateToNewEntryMap = this.calculateDateToNewEntryMap(
-      null,
-      overridesLeave
-    );
-    this.setState({ overridesLeave, dateToNewEntryMap: newDateToNewEntryMap });
+  handleClear = () =>
+    this.setState({
+      dateToNewEntryMap: new Map(),
+      selectedWeekdays: { 1: false, 2: false, 3: false, 4: false, 5: false }
+    });
+
+  handleToggleOverridesLeaves = overridesLeave =>
+    this.updateDateToNewEntryMap(null, overridesLeave);
+
+  handleSelectHeader = index => {
+    const newSelectedWeekdays = {
+      ...this.state.selectedWeekdays,
+      [index]: !this.state.selectedWeekdays[index]
+    };
+    this.updateDateToNewEntryMap(newSelectedWeekdays);
   };
 
   submit = async () => {
@@ -297,7 +309,7 @@ class MiniPreview extends React.Component {
             <TopButton
               text="Clear"
               type="secondary"
-              onPress={() => this.setState({ dateToNewEntryMap: new Map() })}
+              onPress={this.handleClear}
             />
           </TopButtonContainer>
           <LeaveSwitchContainer>
@@ -308,9 +320,18 @@ class MiniPreview extends React.Component {
             />
           </LeaveSwitchContainer>
           <HeaderRow>
-            {weekdays.map(date => (
-              <HeaderCell key={date}>{date}</HeaderCell>
-            ))}
+            {weekdays.map((date, index) =>
+              date ? (
+                <TouchableView
+                  style={{ flex: 1 }}
+                  onPress={() => this.handleSelectHeader(index)}
+                >
+                  <HeaderCell key={date}>{date}</HeaderCell>
+                </TouchableView>
+              ) : (
+                <HeaderCell />
+              )
+            )}
           </HeaderRow>
           <ScrollView>
             <StyledList

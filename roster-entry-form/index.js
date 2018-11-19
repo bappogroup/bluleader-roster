@@ -8,7 +8,6 @@ import {
   TextField,
   SelectField,
   DatePickerField,
-  SwitchField,
   ScrollView,
   View,
   Text,
@@ -44,16 +43,7 @@ class RosterEntryForm extends React.Component {
     } = this.props;
 
     const _initialValues = Object.assign(
-      {
-        monday: true,
-        tuesday: true,
-        wednesday: true,
-        thursday: true,
-        friday: true,
-        saturday: false,
-        sunday: false,
-        ...initialValues
-      },
+      {},
       initialValues,
       this.state.submitValues
     );
@@ -66,21 +56,7 @@ class RosterEntryForm extends React.Component {
       >
         {({ getFieldValue, actions: { changeValue } }) => {
           const startDate = getFieldValue("startDate");
-          const endDate = getFieldValue("endDate");
           const project_id = getFieldValue("project_id");
-          const showWeekdays = new Array(7).fill(false);
-
-          if (startDate && endDate) {
-            const start = moment(startDate);
-            const end = moment(endDate);
-            let day = start.clone();
-
-            // Loop the duration to check which weekdays are included
-            for (let i = 1; i < 8 && day.isSameOrBefore(end); i++) {
-              showWeekdays[day.weekday()] = true;
-              day = start.clone().add(i, "days");
-            }
-          }
 
           return (
             <React.Fragment>
@@ -126,55 +102,6 @@ class RosterEntryForm extends React.Component {
                       : "Invalid date range"
                   }
                 />
-                {showWeekdays[1] && (
-                  <Form.Field
-                    name="monday"
-                    label="Mon"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[2] && (
-                  <Form.Field
-                    name="tuesday"
-                    label="Tue"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[3] && (
-                  <Form.Field
-                    name="wednesday"
-                    label="Wed"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[4] && (
-                  <Form.Field
-                    name="thursday"
-                    label="Thu"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[5] && (
-                  <Form.Field
-                    name="friday"
-                    label="Fri"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[6] && (
-                  <Form.Field
-                    name="saturday"
-                    label="Sat"
-                    component={SwitchField}
-                  />
-                )}
-                {showWeekdays[0] && (
-                  <Form.Field
-                    name="sunday"
-                    label="Sun"
-                    component={SwitchField}
-                  />
-                )}
                 {project_id && !this.state.isLeaveProject && (
                   <Form.Field
                     name="probability_id"
