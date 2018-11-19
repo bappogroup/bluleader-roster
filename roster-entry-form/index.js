@@ -31,17 +31,9 @@ class RosterEntryForm extends React.Component {
       step: 1,
       isLeaveProject,
       NAProbabilityValue,
-      submitting: false,
       submitValues: {}
     };
   }
-
-  submit = () => {
-    this.setState({ submitting: true });
-    const values = { ...this.state.submitValues };
-    if (this.state.isLeaveProject) values.shouldOverrideLeaves = true;
-    return this.props.onSubmit(values).then(() => this.props.onClose());
-  };
 
   renderFilterForm = () => {
     const {
@@ -51,24 +43,31 @@ class RosterEntryForm extends React.Component {
       leaveProjectIds
     } = this.props;
 
+    const _initialValues = Object.assign(
+      {
+        monday: true,
+        tuesday: true,
+        wednesday: true,
+        thursday: true,
+        friday: true,
+        saturday: false,
+        sunday: false,
+        ...initialValues
+      },
+      initialValues,
+      this.state.submitValues
+    );
+
     return (
       <Form
         style={{ flex: 1 }}
-        initialValues={{
-          monday: true,
-          tuesday: true,
-          wednesday: true,
-          thursday: true,
-          friday: true,
-          saturday: false,
-          sunday: false,
-          ...initialValues
-        }}
+        initialValues={_initialValues}
         onSubmit={submitValues => this.setState({ submitValues, step: 2 })}
       >
         {({ getFieldValue, actions: { changeValue } }) => {
           const startDate = getFieldValue("startDate");
           const endDate = getFieldValue("endDate");
+          const project_id = getFieldValue("project_id");
           const showWeekdays = new Array(7).fill(false);
 
           if (startDate && endDate) {
@@ -93,7 +92,13 @@ class RosterEntryForm extends React.Component {
                   props={{
                     options: projectOptions,
                     onValueChange: id => {
-                      if (leaveProjectIds.includes(id)) {
+                      if (!id) {
+                        // to remove entries
+                        changeValue(
+                          "probability_id",
+                          this.state.NAProbabilityValue
+                        );
+                      } else if (leaveProjectIds.includes(id)) {
                         this.setState({ isLeaveProject: true });
                         // Set probability to NA for leave projects
                         changeValue(
@@ -170,21 +175,14 @@ class RosterEntryForm extends React.Component {
                     component={SwitchField}
                   />
                 )}
-                {!this.state.isLeaveProject && (
-                  <React.Fragment>
-                    <Form.Field
-                      name="probability_id"
-                      label="Probability"
-                      component={SelectField}
-                      props={{ options: probabilityOptions }}
-                      validate={value => (value ? undefined : "Required")}
-                    />
-                    {/* <Form.Field
-                    name="shouldOverrideLeaves"
-                    label="Overwrites Leave"
-                    component={SwitchField}
-                  /> */}
-                  </React.Fragment>
+                {project_id && !this.state.isLeaveProject && (
+                  <Form.Field
+                    name="probability_id"
+                    label="Probability"
+                    component={SelectField}
+                    props={{ options: probabilityOptions }}
+                    validate={value => (value ? undefined : "Required")}
+                  />
                 )}
                 <Form.Field
                   name="comment"
@@ -217,29 +215,16 @@ class RosterEntryForm extends React.Component {
     const { submitValues } = this.state;
 
     return (
-      <View style={{ flex: 1 }}>
-        <MiniPreview
-          formValues={submitValues}
-          consultant={this.props.consultant}
-          leaveProjectIds={this.props.leaveProjectIds}
-          dateToExistingEntryMap={this.props.dateToExistingEntryMap}
-          onClickDate={date => console.log("update date", date)}
-        />
-        <ButtonGroup style={{ marginTop: 16 }}>
-          <Button
-            type="secondary"
-            text="Back"
-            onPress={() => this.setState({ step: 1 })}
-          />
-          <Button
-            style={{ marginLeft: 16 }}
-            type="primary"
-            text="Submit"
-            onPress={this.submit}
-            loading={this.state.submitting}
-          />
-        </ButtonGroup>
-      </View>
+      <MiniPreview
+        $models={this.props.$models}
+        operatorName={this.props.operatorName}
+        formValues={submitValues}
+        consultant={this.props.consultant}
+        leaveProjectIds={this.props.leaveProjectIds}
+        dateToExistingEntryMap={this.props.dateToExistingEntryMap}
+        goBack={() => this.setState({ step: 1 })}
+        afterSubmit={this.props.afterSubmit}
+      />
     );
   };
 
@@ -254,12 +239,23 @@ class RosterEntryForm extends React.Component {
         break;
       case 2:
         body = this.renderPreview();
-        const selectedProject = this.props.projectOptions.find(
-          p => p.value === this.state.submitValues.project_id
-        );
-        title = `${this.props.consultant.name} will do ${
-          selectedProject.label
-        }, on these days:`;
+        const { project_id, startDate, endDate } = this.state.submitValues;
+        if (project_id) {
+          // add/update entries
+          const selectedProject = this.props.projectOptions.find(
+            p => p.value === this.state.submitValues.project_id
+          );
+          title = `${this.props.consultant.name} will be booked for ${
+            selectedProject.label
+          }, on these days:`;
+        } else {
+          // remove entries
+          title = `Removing schedules for ${
+            this.props.consultant.name
+          }, on these days:`;
+        }
+
+        if (startDate === endDate) title = "Manage Roster";
         break;
       default:
     }
@@ -277,8 +273,6 @@ class RosterEntryForm extends React.Component {
 }
 
 export default RosterEntryForm;
-
-// background-color: rgb(241, 241, 240);
 
 const HeadingContainer = styled(View)`
   padding: 16px;

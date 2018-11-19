@@ -1,20 +1,21 @@
-import React from 'react';
-import { Text, styled } from 'bappo-components';
+import React from "react";
+import { Text, View, ScrollView, styled } from "bappo-components";
 
 class Report extends React.Component {
   state = {
     loading: true,
-    changes: [],
+    changes: []
   };
 
   loadData = async () => {
     const changes = await this.props.$models.RosterChange.findAll({
       where: {},
-      include: [{ as: 'project' }, { as: 'probability' }],
+      include: [{ as: "project" }, { as: "probability" }],
+      limit: 1000
     });
     this.setState({
       loading: false,
-      changes: changes.sort((a, b) => b.id - a.id),
+      changes: changes.sort((a, b) => b.id - a.id)
     });
   };
 
@@ -23,58 +24,61 @@ class Report extends React.Component {
   }
 
   render() {
-    if (this.state.loading) return <div> loading </div>;
-    return <Container>{this.state.changes.map(renderRow)}</Container>;
+    if (this.state.loading)
+      return (
+        <View>
+          <Text>Loading...</Text>
+        </View>
+      );
+    return <ScrollView>{this.state.changes.map(renderRow)}</ScrollView>;
   }
 }
 
 export default Report;
 
-const renderRow = row => {
-  return (
-    <Row>
-      <Cell>
-        {row.consultant} booked from {row.startDate} to {row.endDate}
-        <SideNote>
-          {weekdays[row.weekdayFrom]} to {weekdays[row.weekdayTo]}
-        </SideNote>
-      </Cell>
-      <Cell>
-        on {row.project && row.project.name}{' '}
-        <SideNote>probability: {row.probability && row.probability.name}</SideNote>
-      </Cell>
-      <Cell>
-        {' '}
+const renderRow = row => (
+  <Row>
+    <Cell>
+      <Label>{row.consultant}</Label>
+      <Text>
+        booked from {row.startDate} to {row.endDate}
+      </Text>
+    </Cell>
+    <Cell>
+      <Text>including: {row.includedDates}</Text>
+    </Cell>
+    <Cell>
+      <Text>on {row.project && row.project.name}</Text>
+      <SideNote>
+        probability: {row.probability && row.probability.name}
+      </SideNote>
+    </Cell>
+    <Cell>
+      <Text>
         Changed by {row.changedBy} on {row.changeDate}
-      </Cell>
-    </Row>
-  );
-};
+      </Text>
+    </Cell>
+  </Row>
+);
 
-const weekdays = {};
-weekdays[1] = 'Mon';
-weekdays[2] = 'Tue';
-weekdays[3] = 'Wed';
-weekdays[4] = 'Thu';
-weekdays[5] = 'Fri';
-weekdays[6] = 'Sat';
-weekdays[7] = 'Sun';
-
-const Container = styled.div`
-  overflow-y: scroll;
-`;
-
-const Row = styled.div`
+const Row = styled(View)`
   border: 1px solid #eee;
   border-radius: 3px;
   padding: 10px 20px;
   margin: 10px 20px;
 `;
 
-const SideNote = styled.span`
+const SideNote = styled(Text)`
   color: #ddd;
-  font-size: 10pt;
   padding-left: 10px;
 `;
 
-const Cell = styled.div``;
+const Cell = styled(View)`
+  flex-direction: row;
+  flex-wrap: wrap;
+`;
+
+const Label = styled(Text)`
+  font-weight: bold;
+  padding-right: 10px;
+`;

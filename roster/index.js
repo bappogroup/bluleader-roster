@@ -14,8 +14,6 @@ import { setUserPreferences, getUserPreferences } from "user-preferences";
 import {
   dateFormat,
   datesToArray,
-  updateRosterEntryRecords,
-  deleteRosterEntryRecords,
   projectAssignmentsToOptions
 } from "roster-utils";
 import SingleRoster from "single-roster";
@@ -534,32 +532,6 @@ class Roster extends React.Component {
     });
   };
 
-  updateRosterEntry = async data => {
-    const consultant = this.state.consultants.find(
-      c => c.id === data.consultant_id
-    );
-
-    const payload = {
-      data,
-      consultant,
-      operatorName: this.props.$global.currentUser.name,
-      $models: this.props.$models
-    };
-
-    const { leaveProjects } = this.data;
-
-    // Set the probability of leave projects to 'NA', if the probability exists
-    if (leaveProjects.find(p => p.id === data.project_id)) {
-      const naProb = this.data.probabilityOptions.find(pr => pr.label === "NA");
-      if (naProb) data.probability_id = naProb.id;
-    }
-
-    if (data.project_id) await updateRosterEntryRecords(payload, leaveProjects);
-    else await deleteRosterEntryRecords(payload, leaveProjects);
-
-    await this.reloadConsultantData(data.consultant_id);
-  };
-
   reloadConsultantData = async consultant_id => {
     const { startDate, endDate, consultants } = this.state;
 
@@ -602,6 +574,14 @@ class Roster extends React.Component {
     return index === 0 ? 160 : columnWidth;
   };
 
+  closeEntryForm = () =>
+    this.setState(({ entryForm }) => ({
+      entryForm: {
+        ...entryForm,
+        show: false
+      }
+    }));
+
   renderSingleRoster = () => {
     const { show, consultant } = this.state.singleConsultantPopup;
     if (!show) return null;
@@ -643,26 +623,19 @@ class Roster extends React.Component {
         {this.renderSingleRoster()}
         {entryForm.show && (
           <RosterEntryForm
+            $models={this.props.$models}
+            operatorName={this.props.$global.currentUser.name}
             title={entryForm.title}
-            onClose={() =>
-              this.setState(({ entryForm }) => ({
-                entryForm: {
-                  ...entryForm,
-                  show: false
-                }
-              }))
-            }
+            onClose={this.closeEntryForm}
             consultant={entryForm.consultant}
             projectOptions={entryForm.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
             dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
             leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-            onSubmit={values =>
-              this.updateRosterEntry({
-                ...values,
-                consultant_id: entryForm.consultant.id
-              })
-            }
+            afterSubmit={async () => {
+              await this.reloadConsultantData(entryForm.consultant.id);
+              this.closeEntryForm();
+            }}
             initialValues={entryForm.initialValues}
           />
         )}

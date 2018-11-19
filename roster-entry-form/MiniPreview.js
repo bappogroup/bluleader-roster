@@ -12,9 +12,9 @@ import {
   Button,
   Switch
 } from "bappo-components";
-import { datesToArray } from "roster-utils";
 
 const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const dateFormat = "YYYY-MM-DD";
 
 // Truncate string to 18 characters at most
 function truncString(str, max = 18, add = "...") {
@@ -42,6 +42,19 @@ function getSunday(d) {
   return new Date(_d.setDate(diff));
 }
 
+// Converts differences in two dates to an array
+function datesToArray(start, end) {
+  const list = [];
+  for (
+    let dt = moment.utc(start), dend = moment.utc(end);
+    dt <= dend;
+    dt.add(1, "d")
+  ) {
+    list.push(dt.format(dateFormat));
+  }
+  return list;
+}
+
 /**
  * Mini Single Roster used to confirm selected dates
  * Only shows pre-selected date range
@@ -67,10 +80,25 @@ class MiniPreview extends React.Component {
       );
     }
 
-    // Calculate newly selected entries
-    const dateToNewEntryMap = this.calculateDateToNewEntryMap();
+    let autoSubmit = false;
+    let overridesLeave = false;
+    if (formValues.startDate === formValues.endDate) {
+      // Only 1 day is selected - don't show preview, auto submit
+      autoSubmit = true;
+      overridesLeave = true;
+    }
 
-    this.state = { weeklyEntries, dateToNewEntryMap, overridesLeave: false };
+    // Calculate newly selected entries
+    this.state = {
+      weeklyEntries,
+      overridesLeave,
+      submitting: false,
+      autoSubmit
+    };
+    const dateToNewEntryMap = this.calculateDateToNewEntryMap();
+    this.state.dateToNewEntryMap = dateToNewEntryMap;
+
+    if (autoSubmit) this.submit();
   }
 
   calculateDateToNewEntryMap = (_selectedDays, _overridesLeave) => {
@@ -94,7 +122,8 @@ class MiniPreview extends React.Component {
       if (formValues.saturday) selectedDays.push(6);
     }
     let overridesLeave = _overridesLeave;
-    if (overridesLeave) overridesLeave = this.state.overridesLeave;
+    if (typeof overridesLeave === "undefined")
+      overridesLeave = this.state.overridesLeave;
 
     const newEntries = [];
     for (
@@ -142,9 +171,60 @@ class MiniPreview extends React.Component {
     this.setState({ overridesLeave, dateToNewEntryMap: newDateToNewEntryMap });
   };
 
-  submit = () => {
+  submit = async () => {
+    this.setState({ submitting: true });
     const { dateToNewEntryMap } = this.state;
-    // convert to new entries array then bulk update
+    const {
+      $models,
+      consultant,
+      afterSubmit,
+      formValues,
+      operatorName
+    } = this.props;
+
+    const pendingEntries = [];
+    const pendingDates = [];
+    let datesString = "";
+    dateToNewEntryMap.forEach((entry, date) => {
+      pendingEntries.push(entry);
+      pendingDates.push(date);
+      datesString += `${date}, `;
+    });
+
+    if (datesString.endsWith(", "))
+      datesString = datesString.substr(0, datesString.length - 2);
+
+    if (pendingEntries.length !== 0) {
+      // Create Roster Change Logs
+      $models.RosterChange.create({
+        changedBy: operatorName,
+        changeDate: moment().format(dateFormat),
+        comment: formValues.comment,
+        consultant: consultant.name,
+        startDate: formValues.startDate,
+        endDate: formValues.endDate,
+        project_id: formValues.project_id,
+        probability_id: formValues.probability_id,
+        includedDates: datesString
+      });
+
+      // 1. Remove existing entries on chosen dates
+      await $models.RosterEntry.destroy({
+        where: {
+          consultant_id: consultant.id,
+          date: {
+            $in: pendingDates
+          }
+        }
+      });
+
+      // 2. Create/Update entries
+      if (formValues.project_id) {
+        await $models.RosterEntry.bulkCreate(pendingEntries);
+      }
+    }
+
+    typeof afterSubmit === "function" && afterSubmit();
   };
 
   rowKeyExtractor = row => {
@@ -166,7 +246,7 @@ class MiniPreview extends React.Component {
         onPress={() =>
           this.setState(({ dateToNewEntryMap }) => {
             const newMap = new Map(dateToNewEntryMap);
-            if (newEntry) newMap.set(date, null);
+            if (newEntry) newMap.delete(date);
             else {
               newMap.set(date, {
                 date,
@@ -202,43 +282,56 @@ class MiniPreview extends React.Component {
   };
 
   render() {
+    if (this.state.autoSubmit)
+      return <ActivityIndicator style={{ margin: 30 }} />;
+
     return (
       <Container>
-        <TopButtonContainer>
-          <TopButton
-            text="Select all"
-            type="secondary"
-            onPress={this.handleSelectAllWeekdays}
+        <BodyContainer>
+          <TopButtonContainer>
+            <TopButton
+              text="Select all"
+              type="secondary"
+              onPress={this.handleSelectAllWeekdays}
+            />
+            <TopButton
+              text="Clear"
+              type="secondary"
+              onPress={() => this.setState({ dateToNewEntryMap: new Map() })}
+            />
+          </TopButtonContainer>
+          <LeaveSwitchContainer>
+            <Text style={{ marginRight: 8 }}>Overrides Leaves</Text>
+            <Switch
+              value={this.state.overridesLeave}
+              onValueChange={this.handleToggleOverridesLeaves}
+            />
+          </LeaveSwitchContainer>
+          <HeaderRow>
+            {weekdays.map(date => (
+              <HeaderCell key={date}>{date}</HeaderCell>
+            ))}
+          </HeaderRow>
+          <ScrollView>
+            <StyledList
+              data={this.state.weeklyEntries}
+              extraData={this.state.dateToNewEntryMap}
+              renderItem={this.renderRow}
+              keyExtractor={this.rowKeyExtractor}
+            />
+          </ScrollView>
+        </BodyContainer>
+
+        <ButtonGroup style={{ marginTop: 16 }}>
+          <Button type="secondary" text="Back" onPress={this.props.goBack} />
+          <Button
+            style={{ marginLeft: 16 }}
+            type="primary"
+            text="Submit"
+            onPress={this.submit}
+            loading={this.state.submitting}
           />
-          <TopButton
-            text="Clear"
-            type="secondary"
-            onPress={() => this.setState({ dateToNewEntryMap: new Map() })}
-          />
-        </TopButtonContainer>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ margin: 8 }}>Overrides Leaves</Text>
-          <Switch
-            value={this.state.overridesLeave}
-            onValueChange={this.handleToggleOverridesLeaves}
-          />
-        </View>
-        <HeaderRow>
-          {weekdays.map(date => (
-            <HeaderCell key={date}>{date}</HeaderCell>
-          ))}
-        </HeaderRow>
-        <ScrollView>
-          <StyledList
-            data={this.state.weeklyEntries}
-            extraData={this.state.dateToNewEntryMap}
-            ListHeaderComponent={this.renderLoadPreviousButton}
-            renderItem={this.renderRow}
-            keyExtractor={this.rowKeyExtractor}
-            onEndReached={this.handleLoadMore}
-            onEndThreshold={0}
-          />
-        </ScrollView>
+        </ButtonGroup>
       </Container>
     );
   }
@@ -248,8 +341,12 @@ export default MiniPreview;
 
 const Container = styled(View)`
   flex: 1;
-  padding: 0px 32px 16px 16px;
   background-color: white;
+`;
+
+const BodyContainer = styled(View)`
+  flex: 1;
+  padding: 8px 16px;
 `;
 
 const TopButtonContainer = styled(View)`
@@ -297,4 +394,19 @@ const ButtonCell = styled(TouchableView)`
 
 const CellText = styled(Text)`
   font-size: 12px;
+`;
+
+const LeaveSwitchContainer = styled(View)`
+  margin: 8px 0;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+`;
+
+const ButtonGroup = styled(View)`
+  background-color: rgb(241, 241, 240);
+  padding: 16px 32px;
+  align-items: center;
+  flex-direction: row;
+  justify-content: flex-end;
 `;
