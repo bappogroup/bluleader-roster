@@ -127,6 +127,7 @@ class Roster extends React.Component {
         date
       };
     });
+    console.log(dateArray);
     dateArray.unshift("");
 
     const consultantQuery = {

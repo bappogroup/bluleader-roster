@@ -117,8 +117,6 @@ class MiniPreview extends React.Component {
 
     // Calculate newly selected entries
     this.state = {
-      start,
-      end,
       weeklyEntries,
       submitting: false,
       autoSubmit,
@@ -185,7 +183,7 @@ class MiniPreview extends React.Component {
   };
 
   handleSelectAllWeekdays = () =>
-    this.buildDateToNewEntryMap(defaultWeekdays, true);
+    this.buildDateToNewEntryMap(defaultWeekdays, false);
 
   handleClear = () =>
     this.setState({
@@ -203,8 +201,8 @@ class MiniPreview extends React.Component {
     const newDateToNewEntryMap = new Map(dateToNewEntryMap);
 
     for (
-      let d = moment(this.state.start).clone();
-      d.isSameOrBefore(moment(this.state.end));
+      let d = moment(this.props.formValues.startDate).clone();
+      d.isSameOrBefore(moment(this.props.formValues.endDate));
       d.add(1, "day")
     ) {
       const date = d.format(dateFormat);
@@ -237,12 +235,20 @@ class MiniPreview extends React.Component {
     const newDateToNewEntryMap = new Map(dateToNewEntryMap);
 
     for (
-      let d = moment(this.state.start).clone();
-      d.isSameOrBefore(moment(this.state.end));
+      let d = moment(this.props.formValues.startDate).clone();
+      d.isSameOrBefore(moment(this.props.formValues.endDate));
       d.add(1, "day")
     ) {
       const date = d.format(dateFormat);
-      if (d.day() === index) {
+
+      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      const isLeaveEntry =
+        existingEntry &&
+        existingEntry.project_id &&
+        this.props.leaveProjectIds.includes(existingEntry.project_id);
+
+      if (d.day() === index && !isLeaveEntry) {
+        // Only select non-leave entries
         if (selected) {
           // Weekday selected
           newDateToNewEntryMap.set(date, {
@@ -278,8 +284,8 @@ class MiniPreview extends React.Component {
     const newDateToNewEntryMap = new Map(dateToNewEntryMap);
 
     for (
-      let d = moment(this.state.start).clone();
-      d.isSameOrBefore(moment(this.state.end));
+      let d = moment(this.props.formValues.startDate).clone();
+      d.isSameOrBefore(moment(this.props.formValues.endDate));
       d.add(1, "day")
     ) {
       const date = d.format(dateFormat);
@@ -368,6 +374,19 @@ class MiniPreview extends React.Component {
   };
 
   renderCell = ({ date, entry }) => {
+    const { formValues } = this.props;
+    const dateMoment = moment(date);
+    if (
+      date &&
+      (dateMoment.isBefore(moment(formValues.startDate)) ||
+        dateMoment.isAfter(moment(formValues.endDate)))
+    )
+      return (
+        <DummyCell>
+          <Text>--</Text>
+        </DummyCell>
+      );
+
     const projectName = truncString(
       entry && entry.project && (entry.project.key || entry.project.name)
     );
@@ -561,6 +580,10 @@ const StyledList = styled(FlatList)`
 const Row = styled(View)`
   flex-direction: row;
   height: 40px;
+`;
+
+const DummyCell = styled(View)`
+  ${cellStyle} border: 1px solid white;
 `;
 
 const ButtonCell = styled(TouchableView)`
