@@ -471,7 +471,7 @@ class MiniPreview extends React.Component {
               onPress={this.handleClear}
             />
             <TopButton
-              text="Select empty"
+              text="Select free days"
               type="secondary"
               onPress={this.handleSelectEmpty}
             />
