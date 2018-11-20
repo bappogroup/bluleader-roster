@@ -78,10 +78,20 @@ class MiniPreview extends React.Component {
     super(props);
     const { formValues, dateToExistingEntryMap, projectOptions } = this.props;
 
+    let start, end;
+    let autoSubmit = false;
+    if (formValues.startDate === formValues.endDate) {
+      // Only 1 day is selected - don't show preview, auto submit
+      autoSubmit = true;
+      start = formValues.startDate;
+      end = formValues.endDate;
+    } else {
+      start = getMonday(formValues.startDate);
+      end = getSunday(formValues.endDate);
+    }
+
     // Calculate previous roster entries - weeklyEntries
     const weeklyEntries = [];
-    const start = getMonday(formValues.startDate);
-    const end = getSunday(formValues.endDate);
     const dates = datesToArray(start, end, true);
     for (let i = 0; i < dates.length; i += 7) {
       weeklyEntries.push(
@@ -89,12 +99,6 @@ class MiniPreview extends React.Component {
           .slice(i, i + 7)
           .map(date => ({ date, entry: dateToExistingEntryMap.get(date) }))
       );
-    }
-
-    let autoSubmit = false;
-    if (formValues.startDate === formValues.endDate) {
-      // Only 1 day is selected - don't show preview, auto submit
-      autoSubmit = true;
     }
 
     // Get already booked project options
@@ -107,6 +111,10 @@ class MiniPreview extends React.Component {
       po => bookedProjectIds[po.value]
     );
 
+    const clickedEntry = props.dateToExistingEntryMap.get(formValues.startDate);
+    const clickedIsLeave =
+      clickedEntry && props.leaveProjectIds.includes(clickedEntry.project_id);
+
     // Calculate newly selected entries
     this.state = {
       start,
@@ -118,12 +126,13 @@ class MiniPreview extends React.Component {
       selectedProjects: {}, // id-boolean map
       dateToNewEntryMap: new Map(),
       showProjects: false,
-      bookedProjectOptions
+      bookedProjectOptions,
+      overridesLeaves: autoSubmit || clickedIsLeave
     };
   }
 
   async componentDidMount() {
-    await this.buildDateToNewEntryMap();
+    await this.buildDateToNewEntryMap(null, this.state.overridesLeaves);
     if (this.state.autoSubmit) this.submit();
   }
 
@@ -142,8 +151,8 @@ class MiniPreview extends React.Component {
 
     const newEntries = [];
     for (
-      let d = moment(this.state.start).clone();
-      d.isSameOrBefore(moment(this.state.end));
+      let d = moment(formValues.startDate).clone();
+      d.isSameOrBefore(moment(formValues.endDate));
       d.add(1, "day")
     ) {
       let weekdayIndex = d.day();
