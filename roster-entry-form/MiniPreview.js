@@ -515,10 +515,12 @@ const TopButtonContainer = styled(View)`
   flex-direction: row;
   align-items: center;
   padding: 8px;
+  flex-wrap: wrap;
 `;
 
 const TopButton = styled(Button)`
   margin-right: 8px;
+  margin-bottom: 8px;
 `;
 
 const HeaderRow = styled(View)`

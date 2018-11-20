@@ -17,8 +17,8 @@ import {
   projectAssignmentsToOptions
 } from "roster-utils";
 import SingleRoster from "single-roster";
-// import RosterEntryForm from "roster-entry-form";
-import RosterEntryForm from "./RosterEntryForm";
+import RosterEntryForm from "roster-entry-form";
+// import RosterEntryForm from "./RosterEntryForm";
 
 const dateRangeOptions = [
   {
