@@ -5,10 +5,9 @@ import {
   Colors,
   Modal,
   Form,
-  TextField,
+  // TextField,
   SelectField,
   DatePickerField,
-  ScrollView,
   View,
   Text,
   Button,
@@ -111,14 +110,14 @@ class RosterEntryForm extends React.Component {
                     validate={value => (value ? undefined : "Required")}
                   />
                 )}
-                <Form.Field
+                {/* <Form.Field
                   name="comment"
                   label="Comment"
                   component={TextField}
                   props={{
                     multiline: true
                   }}
-                />
+                /> */}
               </FormFieldsContainer>
 
               <ButtonGroup>
@@ -208,9 +207,9 @@ const HeadingContainer = styled(View)`
   justify-content: center;
 `;
 
-const FormFieldsContainer = styled(ScrollView)`
+const FormFieldsContainer = styled(View)`
   flex: 1;
-  padding: 16px 32px;
+  padding: 0 32px;
 `;
 
 const Heading = styled(Text)`

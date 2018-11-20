@@ -382,7 +382,7 @@ class MiniPreview extends React.Component {
         dateMoment.isAfter(moment(formValues.endDate)))
     )
       return (
-        <DummyCell>
+        <DummyCell key={date}>
           <Text>--</Text>
         </DummyCell>
       );
@@ -442,6 +442,7 @@ class MiniPreview extends React.Component {
         <TopButtonContainer>
           {this.state.bookedProjectOptions.map(po => (
             <TopButton
+              key={po.value}
               text={po.label}
               type="secondary"
               onPress={() => this.handleSelectProject(po.value)}
@@ -490,6 +491,7 @@ class MiniPreview extends React.Component {
             {weekdays.map((date, index) =>
               date ? (
                 <TouchableView
+                  key={date}
                   style={{ flex: 1 }}
                   onPress={() =>
                     this.handleSelectHeader(index === 7 ? 0 : index)
@@ -498,7 +500,7 @@ class MiniPreview extends React.Component {
                   <HeaderCell key={date}>{date}</HeaderCell>
                 </TouchableView>
               ) : (
-                <HeaderCell />
+                <HeaderCell key={`header-${index}`} />
               )
             )}
           </HeaderRow>
