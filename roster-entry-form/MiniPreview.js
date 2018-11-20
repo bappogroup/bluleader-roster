@@ -9,8 +9,7 @@ import {
   Text,
   styled,
   TouchableView,
-  Button,
-  SelectField
+  Button
 } from "bappo-components";
 
 const weekdays = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -65,9 +64,9 @@ function datesToArray(start, end) {
 }
 
 // Gets diff between two arrays
-function arrayDiff(a, b) {
-  return [...a.filter(x => !b.includes(x)), ...b.filter(x => !a.includes(x))];
-}
+// function arrayDiff(a, b) {
+//   return [...a.filter(x => !b.includes(x)), ...b.filter(x => !a.includes(x))];
+// }
 
 /**
  * Mini Single Roster used to confirm selected dates
@@ -115,9 +114,10 @@ class MiniPreview extends React.Component {
       weeklyEntries,
       submitting: false,
       autoSubmit,
-      selectedWeekdays: defaultWeekdays,
-      selectedProjectIds: [],
+      selectedWeekdays: defaultWeekdays, // id-boolean map
+      selectedProjects: {}, // id-boolean map
       dateToNewEntryMap: new Map(),
+      showProjects: false,
       bookedProjectOptions
     };
   }
@@ -130,7 +130,7 @@ class MiniPreview extends React.Component {
   // Calculate and update dateToNewEntryMap and selectedWeekdays in state
   // Re-calculate from scratch
   // Params are optional - can get from state instead
-  buildDateToNewEntryMap = _selectedWeekdays => {
+  buildDateToNewEntryMap = (_selectedWeekdays, overridesLeaves = false) => {
     const {
       formValues,
       consultant,
@@ -156,7 +156,7 @@ class MiniPreview extends React.Component {
           existingEntry.project_id &&
           leaveProjectIds.includes(existingEntry.project_id);
 
-        if (!isLeaveEntry) {
+        if (!isLeaveEntry || overridesLeaves) {
           newEntries.push({
             date,
             consultant_id: consultant.id,
@@ -175,14 +175,44 @@ class MiniPreview extends React.Component {
     });
   };
 
-  handleSelectAllWeekdays = () => this.buildDateToNewEntryMap(defaultWeekdays);
+  handleSelectAllWeekdays = () =>
+    this.buildDateToNewEntryMap(defaultWeekdays, true);
 
   handleClear = () =>
     this.setState({
       dateToNewEntryMap: new Map(),
       selectedWeekdays: { 1: false, 2: false, 3: false, 4: false, 5: false },
-      selectedProjectIds: []
+      selectedProjects: {}
     });
+
+  /**
+   * Select all empty cells
+   */
+  handleSelectEmpty = () => {
+    const { dateToNewEntryMap } = this.state;
+
+    const newDateToNewEntryMap = new Map(dateToNewEntryMap);
+
+    for (
+      let d = moment(this.state.start).clone();
+      d.isSameOrBefore(moment(this.state.end));
+      d.add(1, "day")
+    ) {
+      const date = d.format(dateFormat);
+      const weekdayIndex = d.day();
+      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      if (!existingEntry && weekdayIndex !== 0 && weekdayIndex !== 6) {
+        newDateToNewEntryMap.set(date, {
+          date,
+          consultant_id: this.props.consultant.id,
+          project_id: this.props.formValues.project_id,
+          probability_id: this.props.formValues.probability_id
+        });
+      }
+    }
+
+    return this.setState({ dateToNewEntryMap: newDateToNewEntryMap });
+  };
 
   /**
    * Select/deselect all appearances of a weekday in the range
@@ -228,11 +258,14 @@ class MiniPreview extends React.Component {
   /**
    * Select/deselect all appearances of a project in the range
    */
-  handleSelectProject = newSelectedProjectIds => {
-    const { dateToNewEntryMap, selectedProjectIds } = this.state;
+  handleSelectProject = projectId => {
+    const { dateToNewEntryMap, selectedProjects } = this.state;
+    const selected = !selectedProjects[projectId];
 
-    const projectId = arrayDiff(selectedProjectIds, newSelectedProjectIds)[0];
-    const selected = newSelectedProjectIds.length > selectedProjectIds.length;
+    const newSelectedProjects = {
+      ...selectedProjects,
+      [projectId]: selected
+    };
     const newDateToNewEntryMap = new Map(dateToNewEntryMap);
 
     for (
@@ -259,7 +292,7 @@ class MiniPreview extends React.Component {
     }
 
     return this.setState({
-      selectedProjectIds: newSelectedProjectIds,
+      selectedProjects: newSelectedProjects,
       dateToNewEntryMap: newDateToNewEntryMap
     });
   };
@@ -374,6 +407,23 @@ class MiniPreview extends React.Component {
     );
   };
 
+  renderProjectButtons = () => {
+    return (
+      <View>
+        <Text style={{ padding: 8 }}>Projects:</Text>
+        <TopButtonContainer>
+          {this.state.bookedProjectOptions.map(po => (
+            <TopButton
+              text={po.label}
+              type="secondary"
+              onPress={() => this.handleSelectProject(po.value)}
+            />
+          ))}
+        </TopButtonContainer>
+      </View>
+    );
+  };
+
   render() {
     if (this.state.autoSubmit)
       return <ActivityIndicator style={{ margin: 30 }} />;
@@ -392,21 +442,30 @@ class MiniPreview extends React.Component {
               type="secondary"
               onPress={this.handleClear}
             />
-            <SelectField
-              style={{ width: 280 }}
-              label="Select by Project"
-              options={this.state.bookedProjectOptions}
-              value={this.state.selectedProjectIds}
-              onValueChange={this.handleSelectProject}
-              multi
+            <TopButton
+              text="Select empty"
+              type="secondary"
+              onPress={this.handleSelectEmpty}
+            />
+            <TopButton
+              text="By Project"
+              type="secondary"
+              onPress={() =>
+                this.setState(({ showProjects }) => ({
+                  showProjects: !showProjects
+                }))
+              }
             />
           </TopButtonContainer>
+          {this.state.showProjects && this.renderProjectButtons()}
           <HeaderRow>
             {weekdays.map((date, index) =>
               date ? (
                 <TouchableView
                   style={{ flex: 1 }}
-                  onPress={() => this.handleSelectHeader(index)}
+                  onPress={() =>
+                    this.handleSelectHeader(index === 7 ? 0 : index)
+                  }
                 >
                   <HeaderCell key={date}>{date}</HeaderCell>
                 </TouchableView>
@@ -459,15 +518,14 @@ const TopButtonContainer = styled(View)`
 `;
 
 const TopButton = styled(Button)`
-  height: 40px;
   margin-right: 8px;
-  margin-bottom: 8px;
 `;
 
 const HeaderRow = styled(View)`
   flex-direction: row;
   justify-content: center;
   height: 40px;
+  margin-top: 8px;
 `;
 
 const cellStyle = `
