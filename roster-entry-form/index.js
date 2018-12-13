@@ -7,6 +7,7 @@ import {
   Form,
   // TextField,
   SelectField,
+  ScrollView,
   DatePickerField,
   View,
   Text,
@@ -207,7 +208,7 @@ const HeadingContainer = styled(View)`
   justify-content: center;
 `;
 
-const FormFieldsContainer = styled(View)`
+const FormFieldsContainer = styled(ScrollView)`
   flex: 1;
   padding: 0 32px;
 `;
