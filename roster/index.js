@@ -18,7 +18,6 @@ import {
 } from "roster-utils";
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
-// import RosterEntryForm from "./RosterEntryForm";
 
 const dateRangeOptions = [
   {
@@ -127,7 +126,6 @@ class Roster extends React.Component {
         date
       };
     });
-    console.log(dateArray);
     dateArray.unshift("");
 
     const consultantQuery = {
