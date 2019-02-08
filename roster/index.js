@@ -18,6 +18,7 @@ import {
 } from "roster-utils";
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
+// import RosterEntryForm from "./RosterEntryForm";
 
 const dateRangeOptions = [
   {
@@ -472,7 +473,7 @@ class Roster extends React.Component {
         mode === "large"
           ? entry.project.name
           : entry.project.key || entry.project.name;
-      if (mode === "small" && label.length > 3) label = label.slice(0, 3);
+      if (mode === "small" && label.length > 0) label = label.slice(0, 4);
     }
 
     // Apply weekend cell style
