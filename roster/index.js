@@ -294,7 +294,11 @@ class Roster extends React.Component {
       })
     );
 
-    const [newProjectAssignments, newEntryList] = await Promise.all(promises);
+    const [allProjectAssignments, newEntryList] = await Promise.all(promises);
+
+    const newProjectAssignments = allProjectAssignments.filter(
+      pa => pa.project && pa.project._deletedAt === null
+    );
 
     this.setState(
       {
