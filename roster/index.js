@@ -477,7 +477,7 @@ class Roster extends React.Component {
         mode === "large"
           ? entry.project.name
           : entry.project.key || entry.project.name;
-      if (mode === "small" && label.length > 0) label = label.slice(0, 4);
+      if (mode === "small" && label.length > 0) label = label.slice(0, 6);
     }
 
     // Apply weekend cell style

@@ -260,10 +260,12 @@ class SingleRoster extends React.Component {
       backgroundColor = project.backgroundColour;
     }
 
+    const shortProjectName = projectName && projectName.slice(0, 8);
+
     if (readOnly) {
       return (
         <TextCell key={entry.date} backgroundColor={backgroundColor}>
-          <CellText>{projectName}</CellText>
+          <CellText>{shortProjectName}</CellText>
         </TextCell>
       );
     }
@@ -274,7 +276,7 @@ class SingleRoster extends React.Component {
         onPress={() => this.openEntryForm(entry)}
         backgroundColor={backgroundColor}
       >
-        <CellText>{projectName}</CellText>
+        <CellText>{shortProjectName}</CellText>
       </ButtonCell>
     );
   };

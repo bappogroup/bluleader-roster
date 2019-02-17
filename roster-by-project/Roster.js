@@ -174,8 +174,8 @@ class RosterByProject extends React.Component {
           backgroundColor={backgroundColor}
           color={color}
         >
-          <div>{entry.weekday}</div>
-          <div>{entry.formattedDate}</div>
+          <Text>{entry.weekday}</Text>
+          <Text>{entry.formattedDate}</Text>
         </Label>
       );
     } else if (columnIndex === 0) {
@@ -188,7 +188,7 @@ class RosterByProject extends React.Component {
 
       return (
         <Label key={key} style={style} backgroundColor={backgroundColor}>
-          {consultantName}
+          <Text>{consultantName}</Text>
         </Label>
       );
     }
@@ -209,7 +209,7 @@ class RosterByProject extends React.Component {
         backgroundColor={backgroundColor}
         isWeekend={isWeekend}
       >
-        {label}
+        <Text>{label}</Text>
       </Cell>
     );
   };
