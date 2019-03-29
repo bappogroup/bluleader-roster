@@ -8,13 +8,14 @@ import {
   Button,
   FlatList
 } from "bappo-components";
-import RosterEntryForm from "roster-entry-form";
+import RosterEntryForm from "./RosterEntryForm";
 import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
-  arr.map(element => ({ label: element.name, id: element.id }));
+  arr.map(element => ({ label: element.name, value: element.id }));
 
 // TODO - infinite scroll?
+// TODO - show existing entries when creating a request?
 
 class Page extends React.Component {
   state = {
@@ -27,17 +28,24 @@ class Page extends React.Component {
   data = {
     probabilityOptions: [],
     consultantOptions: [],
-    projectOptions: []
+    projectOptions: [],
+    leaveProjects: []
   };
 
   async componentDidMount() {
     const { $models } = this.props;
-    const [probabilityArr, consultantArr, rawRequests] = await Promise.all([
+    const [
+      probabilityArr,
+      consultantArr,
+      projectArr,
+      rawRequests
+    ] = await Promise.all([
       $models.Probability.findAll({}),
       $models.Consultant.findAll({}),
+      $models.Project.findAll({}),
       $models.ResourceRequest.findAll({
         where: {},
-        include: [{ as: "requestedBy" }, { as: "project" }]
+        include: [{ as: "requestedBy" }]
       })
     ]);
 
@@ -45,20 +53,39 @@ class Page extends React.Component {
     probabilityArr.forEach(p => probabilityMap.set(p.id, p));
     const consultantMap = new Map();
     consultantArr.forEach(c => consultantMap.set(c.id, c));
+    const projectMap = new Map();
+    projectArr.forEach(p => projectMap.set(p.id, p));
+    const leaveProjects = projectArr.filter(p =>
+      ["4", "5", "6"].includes(p.projectType)
+    );
     const requests = rawRequests.map(r => ({
       ...r,
       probability: probabilityMap.get(r.probability_id),
-      consultant: consultantMap.get(r.consultant_id)
+      consultant: consultantMap.get(r.consultant_id),
+      project: projectMap.get(r.project_id)
     }));
 
     this.data = {
       probabilityOptions: arrToOptions(probabilityArr),
-      consultantOptions: arrToOptions(consultantArr)
+      consultantOptions: arrToOptions(consultantArr),
+      projectOptions: arrToOptions(projectArr),
+      leaveProjects: leaveProjects
     };
     this.setState({ requests, loading: false });
   }
 
-  handleCreateRequest = () => {};
+  handleSubmit = values =>
+    this.props.$models.ResourceRequest.create({
+      startDate: values.startDate,
+      endDate: values.endDate,
+      comments: values.comments,
+      skillsRequired: values.skillsRequired,
+      consultant_id: values.consultant_id,
+      project_id: values.project_id,
+      requestedBy_id: values.userId,
+      probability_id: values.probability_id,
+      requestDate: values.changeDate
+    });
 
   renderRow = ({ item, index }) => {
     return <RequestRow {...item} key={index} />;
@@ -72,26 +99,28 @@ class Page extends React.Component {
         {this.state.loading ? (
           <ActivityIndicator style={{ margin: 32 }} />
         ) : (
-          <FlatList data={this.state.requests} renderItem={this.renderRow} />
+          <View>
+            <FlatList data={this.state.requests} renderItem={this.renderRow} />
+            <NewRequestButton
+              onPress={() => this.setState({ showEntryForm: true })}
+              text="New Request"
+              icon="add"
+              type="primary"
+            />
+          </View>
         )}
-        <NewRequestButton
-          onPress={this.handleCreateRequest}
-          text="New Request"
-          icon="add"
-          type="primary"
-        />
         {this.state.showEntryForm && (
           <RosterEntryForm
             $models={this.props.$models}
-            operatorName={this.props.$global.currentUser.name}
+            currentUser={this.props.$global.currentUser}
             title="New Request"
             onClose={() => this.setState({ showEntryForm: false })}
-            consultant={consultant}
+            consultantOptions={this.data.consultantOptions}
             projectOptions={this.data.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
             leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-            dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
-            afterSubmit={this.afterSubmit}
+            dateToExistingEntryMap={new Map()}
+            onSubmit={this.handleSubmit}
           />
         )}
       </Container>

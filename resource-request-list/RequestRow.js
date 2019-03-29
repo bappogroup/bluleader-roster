@@ -9,18 +9,17 @@ class RequestRow extends React.Component {
       consultant,
       project,
       probability,
-      beginDate,
+      startDate,
       endDate,
       comments,
       skillsRequired
     } = this.props;
-    console.log(this.props);
 
     return (
       <Container>
         <Text>
           {consultant.name} on project {project.name} ({probability.name}), from{" "}
-          {beginDate} to {endDate}
+          {startDate} to {endDate}
         </Text>
         <Text>
           {requestedBy.name} requested on {requestDate}

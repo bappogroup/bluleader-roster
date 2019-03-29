@@ -119,6 +119,9 @@ class MiniPreview extends React.Component {
     this.state = {
       weeklyEntries,
       submitting: false,
+      consultantId: props.consultant
+        ? props.consultant.id
+        : formValues.consultant_id,
       autoSubmit,
       selectedWeekdays: defaultWeekdays, // id-boolean map
       selectedProjects: {}, // id-boolean map
@@ -138,12 +141,7 @@ class MiniPreview extends React.Component {
   // Re-calculate from scratch
   // Params are optional - can get from state instead
   buildDateToNewEntryMap = (_selectedWeekdays, overridesLeaves = false) => {
-    const {
-      formValues,
-      consultant,
-      leaveProjectIds,
-      dateToExistingEntryMap
-    } = this.props;
+    const { formValues, leaveProjectIds, dateToExistingEntryMap } = this.props;
 
     const selectedWeekdays = _selectedWeekdays || this.state.selectedWeekdays;
 
@@ -166,7 +164,7 @@ class MiniPreview extends React.Component {
         if (!isLeaveEntry || overridesLeaves) {
           newEntries.push({
             date,
-            consultant_id: consultant.id,
+            consultant_id: this.state.consultantId,
             project_id: formValues.project_id,
             probability_id: formValues.probability_id
           });
@@ -211,7 +209,7 @@ class MiniPreview extends React.Component {
       if (!existingEntry && weekdayIndex !== 0 && weekdayIndex !== 6) {
         newDateToNewEntryMap.set(date, {
           date,
-          consultant_id: this.props.consultant.id,
+          consultant_id: this.state.consultantId,
           project_id: this.props.formValues.project_id,
           probability_id: this.props.formValues.probability_id
         });
@@ -253,7 +251,7 @@ class MiniPreview extends React.Component {
           // Weekday selected
           newDateToNewEntryMap.set(date, {
             date,
-            consultant_id: this.props.consultant.id,
+            consultant_id: this.state.consultantId,
             project_id: this.props.formValues.project_id,
             probability_id: this.props.formValues.probability_id
           });
@@ -295,7 +293,7 @@ class MiniPreview extends React.Component {
           // Project selected
           newDateToNewEntryMap.set(date, {
             date,
-            consultant_id: this.props.consultant.id,
+            consultant_id: this.state.consultantId,
             project_id: this.props.formValues.project_id,
             probability_id: this.props.formValues.probability_id
           });
@@ -312,15 +310,22 @@ class MiniPreview extends React.Component {
     });
   };
 
+  /**
+   * Submit the form
+   * onSubmit can be specified
+   * or by default: create change logs and update roster entries
+   */
   submit = async () => {
     this.setState({ submitting: true });
+
     const { dateToNewEntryMap } = this.state;
     const {
       $models,
       consultant,
+      onSubmit,
       afterSubmit,
       formValues,
-      operatorName
+      onClose
     } = this.props;
 
     const pendingEntries = [];
@@ -332,40 +337,49 @@ class MiniPreview extends React.Component {
       datesString += `${date}, `;
     });
 
-    if (datesString.endsWith(", "))
-      datesString = datesString.substr(0, datesString.length - 2);
-
     if (pendingEntries.length !== 0) {
-      // Create Roster Change Logs
-      $models.RosterChange.create({
-        changedBy: operatorName,
-        changeDate: moment().format(dateFormat),
-        comment: formValues.comment,
-        consultant: consultant.name,
-        startDate: formValues.startDate,
-        endDate: formValues.endDate,
-        project_id: formValues.project_id,
-        probability_id: formValues.probability_id,
-        includedDates: datesString
-      });
+      const data = {
+        ...formValues,
+        includedDates: datesString,
+        userId: this.props.currentUser.id,
+        changedBy: this.props.currentUser.name,
+        changeDate: moment().format(dateFormat)
+      };
 
-      // 1. Remove existing entries on chosen dates
-      await $models.RosterEntry.destroy({
-        where: {
-          consultant_id: consultant.id,
-          date: {
-            $in: pendingDates
+      if (typeof onSubmit === "function") {
+        // onSubmit has been specified - use it
+        // used by resource requests
+        await onSubmit(data);
+      } else {
+        // onSubmit not specified - create roster change log and update entries
+        if (datesString.endsWith(", "))
+          datesString = datesString.substr(0, datesString.length - 2);
+
+        // Create Roster Change Logs
+        $models.RosterChange.create({
+          ...data,
+          consultant: consultant.name
+        });
+
+        // 1. Remove existing entries on chosen dates
+        await $models.RosterEntry.destroy({
+          where: {
+            consultant_id: consultant.id,
+            date: {
+              $in: pendingDates
+            }
           }
-        }
-      });
+        });
 
-      // 2. Create/Update entries
-      if (formValues.project_id) {
-        await $models.RosterEntry.bulkCreate(pendingEntries);
+        // 2. Create/Update entries
+        if (formValues.project_id) {
+          await $models.RosterEntry.bulkCreate(pendingEntries);
+        }
       }
     }
 
     typeof afterSubmit === "function" && afterSubmit();
+    onClose();
   };
 
   rowKeyExtractor = row => {
@@ -404,7 +418,7 @@ class MiniPreview extends React.Component {
             else {
               newMap.set(date, {
                 date,
-                consultant_id: this.props.consultant.id,
+                consultant_id: this.state.consultantId,
                 project_id: this.props.formValues.project_id,
                 probability_id: this.props.formValues.probability_id
               });
@@ -516,6 +530,12 @@ class MiniPreview extends React.Component {
 
         <ButtonGroup style={{ marginTop: 16 }}>
           <Button type="secondary" text="Back" onPress={this.props.goBack} />
+          <Button
+            style={{ marginLeft: 16 }}
+            type="secondary"
+            text="Cancel"
+            onPress={this.props.onClose}
+          />
           <Button
             style={{ marginLeft: 16 }}
             type="primary"

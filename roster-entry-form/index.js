@@ -20,7 +20,7 @@ class RosterEntryForm extends React.Component {
   constructor(props) {
     super(props);
     const isLeaveProject = props.leaveProjectIds.includes(
-      props.initialValues.project_id
+      props.initialValues && props.initialValues.project_id
     );
     const NAProbabilityValue = props.probabilityOptions.find(
       p => p.label === "NA"
@@ -36,6 +36,7 @@ class RosterEntryForm extends React.Component {
 
   renderFilterForm = () => {
     const {
+      consultantOptions,
       projectOptions = [],
       probabilityOptions,
       initialValues,
@@ -61,6 +62,15 @@ class RosterEntryForm extends React.Component {
           return (
             <React.Fragment>
               <FormFieldsContainer>
+                {consultantOptions && (
+                  <Form.Field
+                    name="consultant_id"
+                    label="Consultant"
+                    component={SelectField}
+                    props={{ options: consultantOptions }}
+                    validate={value => (value ? undefined : "Required")}
+                  />
+                )}
                 <Form.Field
                   name="project_id"
                   label="Project"
@@ -92,16 +102,19 @@ class RosterEntryForm extends React.Component {
                   label="From"
                   component={DatePickerField}
                 />
-                <Form.Field
-                  name="endDate"
-                  label="Until"
-                  component={DatePickerField}
-                  validate={end =>
-                    moment(end).isSameOrAfter(moment(startDate))
-                      ? undefined
-                      : "Invalid date range"
-                  }
-                />
+                {startDate && (
+                  <Form.Field
+                    name="endDate"
+                    label="Until"
+                    component={DatePickerField}
+                    validate={endDate =>
+                      moment(endDate).isSameOrAfter(moment(startDate))
+                        ? undefined
+                        : "Invalid date range"
+                    }
+                  />
+                )}
+
                 {project_id && !this.state.isLeaveProject && (
                   <Form.Field
                     name="probability_id"
@@ -144,13 +157,15 @@ class RosterEntryForm extends React.Component {
     return (
       <MiniPreview
         $models={this.props.$models}
+        currentUser={this.props.currentUser}
         projectOptions={this.props.projectOptions}
-        operatorName={this.props.operatorName}
         formValues={submitValues}
         consultant={this.props.consultant}
         leaveProjectIds={this.props.leaveProjectIds}
         dateToExistingEntryMap={this.props.dateToExistingEntryMap}
         goBack={() => this.setState({ step: 1 })}
+        onClose={this.props.onClose}
+        onSubmit={this.props.onSubmit}
         afterSubmit={this.props.afterSubmit}
       />
     );
@@ -166,6 +181,13 @@ class RosterEntryForm extends React.Component {
         title = "Manage Roster";
         break;
       case 2:
+        let consultantName =
+          this.props.consultant && this.props.consultant.name;
+        if (!consultantName) {
+          consultantName = this.props.consultantOptions.find(
+            c => c.value === this.state.submitValues.consultant_id
+          ).label;
+        }
         body = this.renderPreview();
         const { project_id, startDate, endDate } = this.state.submitValues;
         if (project_id) {
@@ -173,14 +195,12 @@ class RosterEntryForm extends React.Component {
           const selectedProject = this.props.projectOptions.find(
             p => p.value === this.state.submitValues.project_id
           );
-          title = `${this.props.consultant.name} will be booked for ${
+          title = `${consultantName} will be booked for ${
             selectedProject.label
           }, on these days:`;
         } else {
           // remove entries
-          title = `Removing schedules for ${
-            this.props.consultant.name
-          }, on these days:`;
+          title = `Removing schedules for ${consultantName}, on these days:`;
         }
 
         if (startDate === endDate) title = "Manage Roster";
@@ -189,7 +209,7 @@ class RosterEntryForm extends React.Component {
     }
 
     return (
-      <Modal visible onRequestClose={this.props.onClose}>
+      <Modal visible onRequestClose={() => {}}>
         <HeadingContainer>
           <Heading>{title}</Heading>
         </HeadingContainer>
