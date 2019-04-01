@@ -336,6 +336,8 @@ class MiniPreview extends React.Component {
       pendingDates.push(date);
       datesString += `${date}, `;
     });
+    if (datesString.endsWith(", "))
+      datesString = datesString.substr(0, datesString.length - 2);
 
     if (pendingEntries.length !== 0) {
       const data = {
@@ -352,8 +354,6 @@ class MiniPreview extends React.Component {
         await onSubmit(data);
       } else {
         // onSubmit not specified - create roster change log and update entries
-        if (datesString.endsWith(", "))
-          datesString = datesString.substr(0, datesString.length - 2);
 
         // Create Roster Change Logs
         $models.RosterChange.create({

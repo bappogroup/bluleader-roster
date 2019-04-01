@@ -9,7 +9,6 @@ import {
 } from "bappo-components";
 import { projectAssignmentsToOptions } from "roster-utils";
 import RosterEntryForm from "roster-entry-form";
-// import RosterEntryForm from "./RosterEntryForm";
 import { formatDate, getMonday, addWeeks } from "./utils";
 
 const WEEKS_PER_LOAD = 20;
@@ -318,7 +317,7 @@ class SingleRoster extends React.Component {
         {entryForm.show && (
           <RosterEntryForm
             $models={this.props.$models}
-            operatorName={this.props.$global.currentUser.name}
+            currentUser={this.props.$global.currentUser}
             title={entryForm.title}
             onClose={this.closeEntryForm}
             consultant={consultant}

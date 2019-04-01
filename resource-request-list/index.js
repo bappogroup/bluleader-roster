@@ -6,9 +6,10 @@ import {
   View,
   Heading,
   Button,
-  FlatList
+  FlatList,
+  SwitchField
 } from "bappo-components";
-import RosterEntryForm from "./RosterEntryForm";
+import RosterEntryForm from "roster-entry-form";
 import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
@@ -22,11 +23,15 @@ class Page extends React.Component {
     filter: null,
     requests: [],
     loading: true,
-    showEntryForm: false
+    showNewRequestForm: false,
+    showAllRequests: false
   };
 
   data = {
-    probabilityOptions: [],
+    probabilityMap: [], // id to record Map
+    consultantMap: [],
+    projectMap: [],
+    probabilityOptions: [], // [{ value, label }]
     consultantOptions: [],
     projectOptions: [],
     leaveProjects: []
@@ -43,12 +48,21 @@ class Page extends React.Component {
       $models.Probability.findAll({}),
       $models.Consultant.findAll({}),
       $models.Project.findAll({}),
-      $models.ResourceRequest.findAll({
+      $models.Request.findAll({
         where: {},
-        include: [{ as: "requestedBy" }]
+        include: [{ as: "_conversations" }]
       })
     ]);
 
+    // Fetch all versions for requests
+    const rawVersions = await $models.RequestVersion.findAll({
+      where: {
+        request_id: { $in: rawRequests.map(rr => rr.id) }
+      },
+      include: [{ as: "requestedBy" }]
+    });
+
+    // Build id-to-entity maps for relationships
     const probabilityMap = new Map();
     probabilityArr.forEach(p => probabilityMap.set(p.id, p));
     const consultantMap = new Map();
@@ -58,24 +72,51 @@ class Page extends React.Component {
     const leaveProjects = projectArr.filter(p =>
       ["4", "5", "6"].includes(p.projectType)
     );
-    const requests = rawRequests.map(r => ({
-      ...r,
-      probability: probabilityMap.get(r.probability_id),
-      consultant: consultantMap.get(r.consultant_id),
-      project: projectMap.get(r.project_id)
-    }));
 
     this.data = {
+      probabilityMap,
+      consultantMap,
+      projectMap,
+      leaveProjects,
       probabilityOptions: arrToOptions(probabilityArr),
       consultantOptions: arrToOptions(consultantArr),
-      projectOptions: arrToOptions(projectArr),
-      leaveProjects: leaveProjects
+      projectOptions: arrToOptions(projectArr)
     };
+
+    // Populate versions with relationships
+    const versions = rawVersions
+      .map(rcv => this.getPopulatedVersion(rcv))
+      .sort((a, b) => a.name - b.name);
+
+    // Populate requests with current versions
+    const requests = rawRequests.map(r => {
+      const versionsForThisRequest = versions.filter(
+        cv => cv.request_id === r.id
+      );
+      return {
+        ...r,
+        versions: versionsForThisRequest
+      };
+    });
+
     this.setState({ requests, loading: false });
   }
 
-  handleSubmit = values =>
-    this.props.$models.ResourceRequest.create({
+  // Populate probability, consultant and project into a raw request
+  getPopulatedVersion = rawVersion => ({
+    ...rawVersion,
+    probability: this.data.probabilityMap.get(rawVersion.probability_id),
+    consultant: this.data.consultantMap.get(rawVersion.consultant_id),
+    project: this.data.projectMap.get(rawVersion.project_id)
+  });
+
+  handleSubmitNewRequest = async values => {
+    const { $models } = this.props;
+
+    // Create new request
+    const createdRequest = await $models.Request.create({});
+
+    const rawCreatedVersion = await $models.RequestVersion.create({
       startDate: values.startDate,
       endDate: values.endDate,
       comments: values.comments,
@@ -84,17 +125,51 @@ class Page extends React.Component {
       project_id: values.project_id,
       requestedBy_id: values.userId,
       probability_id: values.probability_id,
-      requestDate: values.changeDate
+      requestDate: values.changeDate,
+      includedDates: values.includedDates,
+      request_id: createdRequest.id,
+      versionNumber: "1",
+      isCurrentVersion: true
     });
 
-  renderRow = ({ item, index }) => {
-    return <RequestRow {...item} key={index} />;
+    // Put the new request into local state
+    const createdVersion = this.getPopulatedVersion(rawCreatedVersion);
+    const user = await $models.User.findById(rawCreatedVersion.requestedBy_id);
+    createdVersion.requestedBy = user;
+    createdRequest.versions = [createdVersion];
+
+    await this.setState(({ requests }) => ({
+      requests: [createdRequest, ...requests]
+    }));
   };
+
+  renderFilters = () => {
+    return (
+      <FiltersContainer>
+        <SwitchField
+          label="Show all"
+          onValueChange={() =>
+            this.setState(({ showAllRequests }) =>
+              this.setState({ showAllRequests: !showAllRequests })
+            )
+          }
+          value={this.state.showAllRequests}
+        />
+      </FiltersContainer>
+    );
+  };
+
+  renderRow = ({ item, index }) => (
+    <RequestRow key={index} request={item} chat={this.props.$chat} />
+  );
 
   render() {
     return (
       <Container>
-        <Title>Requests</Title>
+        <Heading>Requests</Heading>
+        <View style={{ flexDirection: "row", marginTop: 8 }}>
+          {this.renderFilters()}
+        </View>
         <Separator />
         {this.state.loading ? (
           <ActivityIndicator style={{ margin: 32 }} />
@@ -102,25 +177,25 @@ class Page extends React.Component {
           <View>
             <FlatList data={this.state.requests} renderItem={this.renderRow} />
             <NewRequestButton
-              onPress={() => this.setState({ showEntryForm: true })}
+              onPress={() => this.setState({ showNewRequestForm: true })}
               text="New Request"
               icon="add"
               type="primary"
             />
           </View>
         )}
-        {this.state.showEntryForm && (
+        {this.state.showNewRequestForm && (
           <RosterEntryForm
             $models={this.props.$models}
             currentUser={this.props.$global.currentUser}
             title="New Request"
-            onClose={() => this.setState({ showEntryForm: false })}
+            onClose={() => this.setState({ showNewRequestForm: false })}
             consultantOptions={this.data.consultantOptions}
             projectOptions={this.data.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
             leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
             dateToExistingEntryMap={new Map()}
-            onSubmit={this.handleSubmit}
+            onSubmit={this.handleSubmitNewRequest}
           />
         )}
       </Container>
@@ -131,12 +206,16 @@ class Page extends React.Component {
 export default Page;
 
 const Container = styled(View)`
+  flex: 1;
+  background-color: #fafafa;
   padding: 8px;
 `;
-
-const Title = styled(Heading)``;
 
 const NewRequestButton = styled(Button)`
   align-self: center;
   margin-top: 16px;
+`;
+
+const FiltersContainer = styled(View)`
+  flex-direction: row;
 `;

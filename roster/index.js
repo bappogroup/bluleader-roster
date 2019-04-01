@@ -628,7 +628,7 @@ class Roster extends React.Component {
         {entryForm.show && (
           <RosterEntryForm
             $models={this.props.$models}
-            operatorName={this.props.$global.currentUser.name}
+            currentUser={this.props.$global.currentUser}
             title={entryForm.title}
             onClose={this.closeEntryForm}
             consultant={entryForm.consultant}
