@@ -5,7 +5,9 @@ import {
   Text,
   Separator,
   TouchableView,
-  Icon
+  Icon,
+  Modal,
+  Button
 } from "bappo-components";
 import Version from "./Version";
 
@@ -16,7 +18,8 @@ class RequestRow extends React.Component {
     const currentVersion = props.request.versions.find(v => v.isCurrentVersion);
 
     this.state = {
-      currentVersion
+      currentVersion,
+      showMenu: false
     };
   }
 
@@ -26,6 +29,29 @@ class RequestRow extends React.Component {
   };
 
   toggleMenu = () => this.setState(({ showMenu }) => ({ showMenu: !showMenu }));
+
+  renderMenu = () => {
+    return (
+      <Modal
+        visible
+        onRequestClose={this.toggleMenu}
+        onOverlayPress={this.toggleMenu}
+      >
+        <MenuContainer>
+          <Button
+            onPress={() => {
+              this.toggleMenu();
+              this.props.showRosterForm({ title: "New Version" });
+            }}
+            type="secondary"
+            text="Create New Version"
+          />
+          <Button type="secondary" text="Approve" />
+          <Button type="secondary" text="Reject" />
+        </MenuContainer>
+      </Modal>
+    );
+  };
 
   render() {
     const { name, versions, _conversations } = this.props.request;
@@ -52,6 +78,7 @@ class RequestRow extends React.Component {
             <Icon name="chat" color={iconColor} />
           </IconButton>
         </Body>
+        {this.state.showMenu && this.renderMenu()}
       </Container>
     );
   }
@@ -85,4 +112,11 @@ const VersionsContainer = styled(View)`
 
 const IconButton = styled(TouchableView)`
   flex-shrink: 0;
+`;
+
+const MenuContainer = styled(View)`
+  flex: 1;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
 `;

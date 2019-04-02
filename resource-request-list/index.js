@@ -16,14 +16,20 @@ const arrToOptions = arr =>
   arr.map(element => ({ label: element.name, value: element.id }));
 
 // TODO - infinite scroll?
-// TODO - show existing entries when creating a request?
+// TODO - show existing entries when creating a request
 
 class Page extends React.Component {
   state = {
     filter: null,
     requests: [],
     loading: true,
-    showNewRequestForm: false,
+    rosterForm: {
+      show: false,
+      props: {
+        title: null,
+        onSubmit: () => {}
+      }
+    },
     showAllRequests: false
   };
 
@@ -39,28 +45,11 @@ class Page extends React.Component {
 
   async componentDidMount() {
     const { $models } = this.props;
-    const [
-      probabilityArr,
-      consultantArr,
-      projectArr,
-      rawRequests
-    ] = await Promise.all([
+    const [probabilityArr, consultantArr, projectArr] = await Promise.all([
       $models.Probability.findAll({}),
       $models.Consultant.findAll({}),
-      $models.Project.findAll({}),
-      $models.Request.findAll({
-        where: {},
-        include: [{ as: "_conversations" }]
-      })
+      $models.Project.findAll({})
     ]);
-
-    // Fetch all versions for requests
-    const rawVersions = await $models.RequestVersion.findAll({
-      where: {
-        request_id: { $in: rawRequests.map(rr => rr.id) }
-      },
-      include: [{ as: "requestedBy" }]
-    });
 
     // Build id-to-entity maps for relationships
     const probabilityMap = new Map();
@@ -83,6 +72,28 @@ class Page extends React.Component {
       projectOptions: arrToOptions(projectArr)
     };
 
+    this.fetchRequests();
+  }
+
+  // Fetch requets & versions and put in state
+  fetchRequests = async () => {
+    this.setState({ loading: true });
+
+    const { $models } = this.props;
+    // Fetch requests
+    const rawRequests = await $models.Request.findAll({
+      where: {},
+      include: [{ as: "_conversations" }]
+    });
+
+    // Fetch all versions for requests
+    const rawVersions = await $models.RequestVersion.findAll({
+      where: {
+        request_id: { $in: rawRequests.map(rr => rr.id) }
+      },
+      include: [{ as: "requestedBy" }]
+    });
+
     // Populate versions with relationships
     const versions = rawVersions
       .map(rcv => this.getPopulatedVersion(rcv))
@@ -100,7 +111,7 @@ class Page extends React.Component {
     });
 
     this.setState({ requests, loading: false });
-  }
+  };
 
   // Populate probability, consultant and project into a raw request
   getPopulatedVersion = rawVersion => ({
@@ -110,13 +121,31 @@ class Page extends React.Component {
     project: this.data.projectMap.get(rawVersion.project_id)
   });
 
-  handleSubmitNewRequest = async values => {
+  handleSubmitRosterForm = async values => {
     const { $models } = this.props;
+    let request = this.state.rosterForm.request;
+    let versionNumber;
 
-    // Create new request
-    const createdRequest = await $models.Request.create({});
+    if (!request) {
+      // Create new request
+      request = await $models.Request.create({});
+      versionNumber = "1";
+    } else {
+      // update previous 'current version'
+      const currentVersion = request.versions[request.versions.length - 1];
+      await $models.RequestVersion.update(
+        { isCurrentVersion: false },
+        {
+          where: {
+            id: currentVersion.id
+          }
+        }
+      );
+      versionNumber = currentVersion.versionNumber + 1;
+    }
 
-    const rawCreatedVersion = await $models.RequestVersion.create({
+    // Create new version
+    await $models.RequestVersion.create({
       startDate: values.startDate,
       endDate: values.endDate,
       comments: values.comments,
@@ -127,20 +156,13 @@ class Page extends React.Component {
       probability_id: values.probability_id,
       requestDate: values.changeDate,
       includedDates: values.includedDates,
-      request_id: createdRequest.id,
-      versionNumber: "1",
+      request_id: request.id,
+      versionNumber,
       isCurrentVersion: true
     });
 
-    // Put the new request into local state
-    const createdVersion = this.getPopulatedVersion(rawCreatedVersion);
-    const user = await $models.User.findById(rawCreatedVersion.requestedBy_id);
-    createdVersion.requestedBy = user;
-    createdRequest.versions = [createdVersion];
-
-    await this.setState(({ requests }) => ({
-      requests: [createdRequest, ...requests]
-    }));
+    // Refetch updated requests
+    this.fetchRequests();
   };
 
   renderFilters = () => {
@@ -160,44 +182,69 @@ class Page extends React.Component {
   };
 
   renderRow = ({ item, index }) => (
-    <RequestRow key={index} request={item} chat={this.props.$chat} />
+    <RequestRow
+      key={index}
+      request={item}
+      chat={this.props.$chat}
+      showRosterForm={({ title }) =>
+        this.setState({
+          rosterForm: {
+            show: true,
+            title,
+            request: item
+          }
+        })
+      }
+    />
   );
+
+  renderRosterForm = () => {
+    const { show, title, request } = this.state.rosterForm;
+    if (!(show && this.data.consultantOptions.length)) return null;
+
+    const initialValues = request
+      ? request.versions[request.versions.length - 1]
+      : {};
+
+    return (
+      <RosterEntryForm
+        $models={this.props.$models}
+        currentUser={this.props.$global.currentUser}
+        title={title}
+        onClose={() => this.setState({ rosterForm: { show: false } })}
+        consultantOptions={this.data.consultantOptions}
+        projectOptions={this.data.projectOptions}
+        probabilityOptions={this.data.probabilityOptions}
+        leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
+        dateToExistingEntryMap={new Map()}
+        onSubmit={this.handleSubmitRosterForm}
+        initialValues={initialValues}
+      />
+    );
+  };
 
   render() {
     return (
       <Container>
         <Heading>Requests</Heading>
-        <View style={{ flexDirection: "row", marginTop: 8 }}>
-          {this.renderFilters()}
-        </View>
+        {this.renderFilters()}
         <Separator />
-        {this.state.loading ? (
-          <ActivityIndicator style={{ margin: 32 }} />
-        ) : (
-          <View>
-            <FlatList data={this.state.requests} renderItem={this.renderRow} />
-            <NewRequestButton
-              onPress={() => this.setState({ showNewRequestForm: true })}
-              text="New Request"
-              icon="add"
-              type="primary"
-            />
-          </View>
-        )}
-        {this.state.showNewRequestForm && (
-          <RosterEntryForm
-            $models={this.props.$models}
-            currentUser={this.props.$global.currentUser}
-            title="New Request"
-            onClose={() => this.setState({ showNewRequestForm: false })}
-            consultantOptions={this.data.consultantOptions}
-            projectOptions={this.data.projectOptions}
-            probabilityOptions={this.data.probabilityOptions}
-            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-            dateToExistingEntryMap={new Map()}
-            onSubmit={this.handleSubmitNewRequest}
-          />
-        )}
+        {this.state.loading && <ActivityIndicator style={{ margin: 16 }} />}
+        <FlatList data={this.state.requests} renderItem={this.renderRow} />
+        <NewRequestButton
+          onPress={() =>
+            this.setState({
+              rosterForm: {
+                show: true,
+                title: "New Request"
+              }
+            })
+          }
+          text="New Request"
+          icon="add"
+          type="primary"
+        />
+        {this.renderRosterForm()}
       </Container>
     );
   }
@@ -218,4 +265,6 @@ const NewRequestButton = styled(Button)`
 
 const FiltersContainer = styled(View)`
   flex-direction: row;
+  margin-top: 8px;
+  margin-bottom: -24px;
 `;

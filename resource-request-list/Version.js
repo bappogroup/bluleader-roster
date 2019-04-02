@@ -1,5 +1,6 @@
 import React from "react";
 import { styled, View, Text, TouchableView } from "bappo-components";
+import DatePreview from "./DatePreview";
 
 class Version extends React.Component {
   constructor(props) {
@@ -33,7 +34,7 @@ class Version extends React.Component {
             {startDate} to {endDate}
           </Text>
           <Text>Including:</Text>
-          <Text>{includedDates}</Text>
+          <DatePreview datesString={includedDates} />
           {skillsRequired && (
             <View>
               <Text>Skills required: {skillsRequired}</Text>
