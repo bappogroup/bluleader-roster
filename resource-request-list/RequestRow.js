@@ -92,7 +92,7 @@ const Container = styled(View)`
   border: 1px solid #eee;
   border-radius: 3px;
   padding: 10px 20px;
-  margin: 10px 20px;
+  margin: 10px 0px;
 `;
 
 const Header = styled(View)`

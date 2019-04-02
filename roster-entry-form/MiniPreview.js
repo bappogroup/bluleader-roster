@@ -76,13 +76,29 @@ function datesToArray(start, end) {
 class MiniPreview extends React.Component {
   constructor(props) {
     super(props);
-    const { formValues, dateToExistingEntryMap, projectOptions } = this.props;
+    const { formValues, consultant } = props;
+
+    this.state = {
+      autoSubmit: formValues.startDate === formValues.endDate,
+      weeklyEntries: [],
+      dateToNewEntryMap: new Map(),
+      loadinEntries: false,
+      consultantId: consultant ? consultant.id : formValues.consultant_id
+    };
+  }
+
+  data = {
+    dateToExistingEntryMap: new Map()
+  };
+
+  async componentDidMount() {
+    const { formValues, projectOptions, leaveProjectIds } = this.props;
+
+    await this.buildDateToExistingEntryMap();
+    const { dateToExistingEntryMap } = this.data;
 
     let start, end;
-    let autoSubmit = false;
     if (formValues.startDate === formValues.endDate) {
-      // Only 1 day is selected - don't show preview, auto submit
-      autoSubmit = true;
       start = formValues.startDate;
       end = formValues.endDate;
     } else {
@@ -111,38 +127,71 @@ class MiniPreview extends React.Component {
       po => bookedProjectIds[po.value]
     );
 
-    const clickedEntry = props.dateToExistingEntryMap.get(formValues.startDate);
+    const clickedEntry = dateToExistingEntryMap.get(formValues.startDate);
     const clickedIsLeave =
-      clickedEntry && props.leaveProjectIds.includes(clickedEntry.project_id);
+      clickedEntry && leaveProjectIds.includes(clickedEntry.project_id);
 
     // Calculate newly selected entries
-    this.state = {
+    this.setState({
       weeklyEntries,
       submitting: false,
-      consultantId: props.consultant
-        ? props.consultant.id
-        : formValues.consultant_id,
-      autoSubmit,
       selectedWeekdays: defaultWeekdays, // id-boolean map
       selectedProjects: {}, // id-boolean map
       dateToNewEntryMap: new Map(),
       showProjects: false,
       bookedProjectOptions,
-      overridesLeaves: autoSubmit || clickedIsLeave
-    };
-  }
+      overridesLeaves: this.state.autoSubmit || clickedIsLeave
+    });
 
-  async componentDidMount() {
     await this.buildDateToNewEntryMap(null, this.state.overridesLeaves);
     if (this.state.autoSubmit) this.submit();
   }
+
+  buildDateToExistingEntryMap = async () => {
+    const {
+      projectOptions,
+      dateToExistingEntryMap,
+      $models,
+      formValues
+    } = this.props;
+
+    if (dateToExistingEntryMap) {
+      this.data.dateToExistingEntryMap = dateToExistingEntryMap;
+    } else {
+      // Fetch and build dateToExistingEntryMap if not passed
+      this.setState({ loadinEntries: true });
+      const map = new Map();
+      const rosterEntries = await $models.RosterEntry.findAll({
+        where: {
+          consultant_id: this.state.consultantId,
+          date: {
+            $between: [formValues.startDate, formValues.endDate]
+          }
+        }
+      });
+
+      const projectLookup = {};
+      projectOptions.forEach(
+        pj => (projectLookup[pj.value] = { name: pj.label })
+      );
+
+      rosterEntries.forEach(entry =>
+        map.set(entry.date, {
+          ...entry,
+          project: projectLookup[entry.project_id]
+        })
+      );
+
+      this.data.dateToExistingEntryMap = map;
+      this.setState({ loadinEntries: false });
+    }
+  };
 
   // Calculate and update dateToNewEntryMap and selectedWeekdays in state
   // Re-calculate from scratch
   // Params are optional - can get from state instead
   buildDateToNewEntryMap = (_selectedWeekdays, overridesLeaves = false) => {
-    const { formValues, leaveProjectIds, dateToExistingEntryMap } = this.props;
-
+    const { formValues, leaveProjectIds } = this.props;
     const selectedWeekdays = _selectedWeekdays || this.state.selectedWeekdays;
 
     const newEntries = [];
@@ -155,7 +204,7 @@ class MiniPreview extends React.Component {
       if (selectedWeekdays[weekdayIndex]) {
         // Only pick chosen days
         const date = d.format(dateFormat);
-        const existingEntry = dateToExistingEntryMap.get(date);
+        const existingEntry = this.data.dateToExistingEntryMap.get(date);
         const isLeaveEntry =
           existingEntry &&
           existingEntry.project_id &&
@@ -205,7 +254,7 @@ class MiniPreview extends React.Component {
     ) {
       const date = d.format(dateFormat);
       const weekdayIndex = d.day();
-      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      const existingEntry = this.data.dateToExistingEntryMap.get(date);
       if (!existingEntry && weekdayIndex !== 0 && weekdayIndex !== 6) {
         newDateToNewEntryMap.set(date, {
           date,
@@ -239,7 +288,7 @@ class MiniPreview extends React.Component {
     ) {
       const date = d.format(dateFormat);
 
-      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      const existingEntry = this.data.dateToExistingEntryMap.get(date);
       const isLeaveEntry =
         existingEntry &&
         existingEntry.project_id &&
@@ -287,7 +336,7 @@ class MiniPreview extends React.Component {
       d.add(1, "day")
     ) {
       const date = d.format(dateFormat);
-      const existingEntry = this.props.dateToExistingEntryMap.get(date);
+      const existingEntry = this.data.dateToExistingEntryMap.get(date);
       if (existingEntry && existingEntry.project_id === projectId) {
         if (selected) {
           // Project selected
@@ -518,14 +567,18 @@ class MiniPreview extends React.Component {
               )
             )}
           </HeaderRow>
-          <ScrollView>
-            <StyledList
-              data={this.state.weeklyEntries}
-              extraData={this.state.dateToNewEntryMap}
-              renderItem={this.renderRow}
-              keyExtractor={this.rowKeyExtractor}
-            />
-          </ScrollView>
+          {this.state.loadinEntries ? (
+            <ActivityIndicator style={{ marin: 32 }} />
+          ) : (
+            <ScrollView>
+              <StyledList
+                data={this.state.weeklyEntries}
+                extraData={this.state.dateToNewEntryMap}
+                renderItem={this.renderRow}
+                keyExtractor={this.rowKeyExtractor}
+              />
+            </ScrollView>
+          )}
         </BodyContainer>
 
         <ButtonGroup style={{ marginTop: 16 }}>
