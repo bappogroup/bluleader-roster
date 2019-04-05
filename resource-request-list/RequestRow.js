@@ -6,66 +6,73 @@ import {
   Separator,
   TouchableView,
   Icon,
-  Modal,
-  Button
+  Dropdown
 } from "bappo-components";
 import Version from "./Version";
 
 class RequestRow extends React.Component {
-  constructor(props) {
-    super(props);
+  normalActions = [
+    {
+      label: "New Version",
+      onPress: () =>
+        this.props.showRosterForm({
+          title: "New Version",
+          preventDefaultSubmit: true
+        })
+    }
+  ];
 
-    const currentVersion = props.request.versions.find(v => v.isCurrentVersion);
+  ownActions = [
+    {
+      label: "Cancel",
+      onPress: () => this.props.handleSetRequestStatus("4")
+    }
+  ];
 
-    this.state = {
-      currentVersion,
-      showMenu: false
-    };
-  }
+  managerActions = [
+    {
+      label: "Approve and Update Roster",
+      onPress: () =>
+        this.props.showRosterForm({
+          title: "Review",
+          step: 2,
+          afterSubmit: () => this.props.handleSetRequestStatus("2")
+        })
+    },
+    {
+      label: "Approve",
+      onPress: () => this.props.handleSetRequestStatus("2")
+    },
+    {
+      label: "Reject",
+      onPress: () => this.props.handleSetRequestStatus("3")
+    }
+  ];
 
   startChat = () => {
     const { chat, request } = this.props;
     chat.open({ objectKey: "Request", recordId: request.id });
   };
 
-  toggleMenu = () => this.setState(({ showMenu }) => ({ showMenu: !showMenu }));
-
-  renderMenu = () => {
-    return (
-      <Modal
-        visible
-        onRequestClose={this.toggleMenu}
-        onOverlayPress={this.toggleMenu}
-      >
-        <MenuContainer>
-          <Button
-            onPress={() => {
-              this.toggleMenu();
-              this.props.showRosterForm({ title: "New Version" });
-            }}
-            type="secondary"
-            text="Create New Version"
-          />
-          <Button type="secondary" text="Approve" />
-          <Button type="secondary" text="Reject" />
-        </MenuContainer>
-      </Modal>
-    );
-  };
-
   render() {
     const { name, versions, _conversations } = this.props.request;
+    // Only show menu button on 'Open' requests
 
     const iconColor =
       _conversations && _conversations.length > 0 ? "dodgerblue" : "gray";
+
+    let actions = this.normalActions;
+    if (this.props.canManageResourceRequests)
+      actions = actions.concat(this.managerActions);
+    if (this.props.canCancel) actions = actions.concat(this.ownActions);
 
     return (
       <Container>
         <Header>
           <Text>{name}</Text>
-          <IconButton onPress={this.toggleMenu}>
-            <Icon name="menu" color="gray" />
-          </IconButton>
+          {this.props.showMenuButton && (
+            <Dropdown actions={actions} icon="more-horiz" />
+          )}
         </Header>
         <Separator />
         <Body>
@@ -78,7 +85,6 @@ class RequestRow extends React.Component {
             <Icon name="chat" color={iconColor} />
           </IconButton>
         </Body>
-        {this.state.showMenu && this.renderMenu()}
       </Container>
     );
   }
@@ -112,11 +118,4 @@ const VersionsContainer = styled(View)`
 
 const IconButton = styled(TouchableView)`
   flex-shrink: 0;
-`;
-
-const MenuContainer = styled(View)`
-  flex: 1;
-  flex-direction: row;
-  justify-content: space-evenly;
-  align-items: center;
 `;

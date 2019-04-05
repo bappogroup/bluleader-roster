@@ -9,8 +9,8 @@ import {
   FlatList,
   SelectField
 } from "bappo-components";
-// import RosterEntryForm from "roster-entry-form";
-import RosterEntryForm from "./RosterEntryForm";
+import moment from "moment";
+import RosterEntryForm from "roster-entry-form";
 import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
@@ -22,16 +22,18 @@ class Page extends React.Component {
   // Initial filters: all open requests
   state = {
     filters: {
-      status: "1"
+      status: "1",
+      sortBy: "startDate"
     },
-    requests: [],
+    requests: [], // requests that match current 'status' in filters
     loading: true,
     rosterForm: {
       show: false,
       title: "",
       request: null
     },
-    showAllRequests: false
+    showAllRequests: false,
+    canManageResourceRequests: false
   };
 
   data = {
@@ -47,14 +49,18 @@ class Page extends React.Component {
   };
 
   async componentDidMount() {
-    const { $models } = this.props;
+    const { $models, $global } = this.props;
     const [
+      manager,
       probabilityArr,
       consultantArr,
       projectArr,
       userArr,
       requestArr
     ] = await Promise.all([
+      $models.Manager.findOne({
+        where: { user_id: $global.currentUser.id }
+      }),
       $models.Probability.findAll({}),
       $models.Consultant.findAll({}),
       $models.Project.findAll({}),
@@ -66,6 +72,10 @@ class Page extends React.Component {
         include: [{ as: "_conversations" }]
       })
     ]);
+
+    this.setState({
+      canManageResourceRequests: manager.canManageResourceRequests
+    });
 
     // Build id-to-entity maps for relationships
     const probabilityMap = new Map();
@@ -105,13 +115,25 @@ class Page extends React.Component {
 
     // Fetch requests
     let rawRequests = requestArr;
-    if (!rawRequests)
-      rawRequests = await $models.Request.findAll({
+    if (!rawRequests) {
+      // Requests not provided - fetch from server
+      const requestQuery = {
         where: {
           status: this.state.filters.status
         },
         include: [{ as: "_conversations" }]
-      });
+      };
+      if (this.state.filters.status !== "1") {
+        // for non-open requests, only fetch 90 days old maximum
+        const threeMonthAgo = moment()
+          .subtract(90, "days")
+          .format("YYYY-MM-DD");
+        requestQuery.where._createdAt = {
+          $gte: threeMonthAgo
+        };
+      }
+      rawRequests = await $models.Request.findAll(requestQuery);
+    }
 
     // Fetch all versions for requests
     const rawVersions = await $models.RequestVersion.findAll({
@@ -171,8 +193,10 @@ class Page extends React.Component {
     let versionNumber;
 
     if (!request) {
-      // Create new request
-      request = await $models.Request.create({});
+      // Create a new open request
+      request = await $models.Request.create({
+        status: "1"
+      });
       versionNumber = "1";
     } else {
       // update previous 'current version'
@@ -185,7 +209,7 @@ class Page extends React.Component {
           }
         }
       );
-      versionNumber = currentVersion.versionNumber + 1;
+      versionNumber = +currentVersion.versionNumber + 1;
     }
 
     // Create new version
@@ -209,109 +233,27 @@ class Page extends React.Component {
     this.fetchRequests();
   };
 
-  setFilterValue = (key, value) =>
-    this.setState(({ filters }) => ({
-      filters: {
-        ...filters,
-        [key]: value
-      }
-    }));
-
-  renderFilters = () => {
-    const statusField = this.props.$models.Request.fields.find(
-      f => f.name === "status"
-    );
-    const statusOptions = statusField.properties.options.map(op => ({
-      label: op.label,
-      value: op.id
-    }));
-    const { filters } = this.state;
-    const { filterUserOptions, filterConsultantOptions } = this.data;
-
-    return (
-      <FiltersContainer>
-        <View style={{ width: 150, marginRight: 32 }}>
-          <SelectField
-            label="Status"
-            options={statusOptions}
-            onValueChange={async value => {
-              await this.setState({ requests: [] });
-              await this.setFilterValue("status", value);
-              this.fetchRequests();
-            }}
-            value={filters.status}
-          />
-        </View>
-        {filterUserOptions.length > 1 && (
-          <View style={{ width: 250, marginRight: 32 }}>
-            <SelectField
-              label="Requested By"
-              options={this.data.filterUserOptions}
-              onValueChange={value =>
-                this.setFilterValue("requestedBy_id", value)
-              }
-              value={filters.requestedBy_id}
-            />
-          </View>
-        )}
-        {filterConsultantOptions.length > 1 && (
-          <View style={{ width: 250 }}>
-            <SelectField
-              label="Requested For"
-              options={this.data.filterConsultantOptions}
-              onValueChange={value =>
-                this.setFilterValue("consultant_id", value)
-              }
-              value={filters.consultant_id}
-            />
-          </View>
-        )}
-      </FiltersContainer>
-    );
+  handleSetRequestStatus = async (status, id) => {
+    const request = this.state.requests.find(r => r.id === id);
+    if (request.status !== status) {
+      // Update status
+      this.props.$models.Request.update(
+        { status },
+        {
+          where: { id }
+        }
+      );
+      // Update requests in state by removing the modified request
+      this.setState(({ requests }) => ({
+        requests: requests.filter(r => r.id !== id)
+      }));
+    }
   };
 
-  renderRow = ({ item, index }) => (
-    <RequestRow
-      key={index}
-      request={item}
-      chat={this.props.$chat}
-      showRosterForm={({ title }) =>
-        this.setState({
-          rosterForm: {
-            show: true,
-            title,
-            request: item
-          }
-        })
-      }
-    />
-  );
-
-  renderRosterForm = () => {
-    const { show, title, request } = this.state.rosterForm;
-    if (!(show && this.data.consultantOptions.length)) return null;
-
-    const initialValues = request
-      ? request.versions[request.versions.length - 1]
-      : {};
-
-    return (
-      <RosterEntryForm
-        $models={this.props.$models}
-        currentUser={this.props.$global.currentUser}
-        title={title}
-        onClose={() => this.setState({ rosterForm: { show: false } })}
-        consultantOptions={this.data.consultantOptions}
-        projectOptions={this.data.projectOptions}
-        probabilityOptions={this.data.probabilityOptions}
-        leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-        onSubmit={this.handleSubmitRosterForm}
-        initialValues={initialValues}
-      />
-    );
-  };
-
-  render() {
+  /**
+   * Filter and sort requests based on user selection
+   */
+  getFilteredRequests = () => {
     const { requests, filters } = this.state;
     const { consultant_id, requestedBy_id } = filters;
 
@@ -333,6 +275,195 @@ class Page extends React.Component {
         return true;
       });
 
+    switch (filters.sortBy) {
+      case "startDate":
+        filteredRequests.sort((r1, r2) => {
+          const currentVersionR1 = r1.versions.find(v => v.isCurrentVersion);
+          const currentVersionR2 = r2.versions.find(v => v.isCurrentVersion);
+          return (
+            new Date(currentVersionR2.startDate) -
+            new Date(currentVersionR1.startDate)
+          );
+        });
+        break;
+      case "requestDate":
+        filteredRequests.sort((r1, r2) => {
+          const currentVersionR1 = r1.versions.find(v => v.isCurrentVersion);
+          const currentVersionR2 = r2.versions.find(v => v.isCurrentVersion);
+          return (
+            new Date(currentVersionR2.requestDate) -
+            new Date(currentVersionR1.requestDate)
+          );
+        });
+        break;
+      default:
+    }
+
+    return filteredRequests;
+  };
+
+  setFilterValue = (key, value) =>
+    this.setState(({ filters }) => ({
+      filters: {
+        ...filters,
+        [key]: value
+      }
+    }));
+
+  renderFilters = () => {
+    const statusField = this.props.$models.Request.fields.find(
+      f => f.name === "status"
+    );
+    const statusOptions = statusField.properties.options.map(op => ({
+      label: op.label,
+      value: op.id
+    }));
+    const { filters, requests } = this.state;
+    const { filterUserOptions, filterConsultantOptions } = this.data;
+
+    return (
+      <FiltersContainer>
+        <FilterContainer>
+          <SelectField
+            label="Status"
+            clearable={false}
+            options={statusOptions}
+            onValueChange={async value => {
+              await this.setState({ requests: [] });
+              await this.setFilterValue("status", value);
+              this.fetchRequests();
+            }}
+            value={filters.status}
+          />
+        </FilterContainer>
+        {filterUserOptions.length > 1 && requests.length > 1 && (
+          <FilterContainer>
+            <SelectField
+              label="Requested By"
+              options={this.data.filterUserOptions}
+              onValueChange={value =>
+                this.setFilterValue("requestedBy_id", value)
+              }
+              value={filters.requestedBy_id}
+            />
+          </FilterContainer>
+        )}
+        {filterConsultantOptions.length > 1 && requests.length > 1 && (
+          <FilterContainer>
+            <SelectField
+              label="Requested For"
+              options={this.data.filterConsultantOptions}
+              onValueChange={value =>
+                this.setFilterValue("consultant_id", value)
+              }
+              value={filters.consultant_id}
+            />
+          </FilterContainer>
+        )}
+        {requests.length > 1 && (
+          <FilterContainer>
+            <SelectField
+              label="Sort By"
+              clearable={false}
+              options={[
+                {
+                  label: "Start Date",
+                  value: "startDate"
+                },
+                {
+                  label: "Request Date",
+                  value: "requestDate"
+                }
+              ]}
+              onValueChange={value => this.setFilterValue("sortBy", value)}
+              value={filters.sortBy}
+            />
+          </FilterContainer>
+        )}
+      </FiltersContainer>
+    );
+  };
+
+  renderRow = ({ item, index }) => {
+    const currentVersion = item.versions.find(v => v.isCurrentVersion);
+    const canCancel =
+      currentVersion.requestedBy_id === this.props.$global.currentUser.id;
+
+    return (
+      <RequestRow
+        key={index}
+        request={item}
+        chat={this.props.$chat}
+        canCancel={canCancel}
+        canManageResourceRequests={this.state.canManageResourceRequests}
+        showMenuButton={this.state.filters.status === "1"}
+        handleSetRequestStatus={status =>
+          this.handleSetRequestStatus(status, item.id)
+        }
+        showRosterForm={({
+          title,
+          step = 1,
+          afterSubmit,
+          preventDefaultSubmit
+        }) =>
+          this.setState({
+            rosterForm: {
+              show: true,
+              request: item,
+              title,
+              step,
+              afterSubmit,
+              preventDefaultSubmit
+            }
+          })
+        }
+      />
+    );
+  };
+
+  renderRosterForm = () => {
+    const {
+      show,
+      title,
+      request,
+      step,
+      afterSubmit,
+      preventDefaultSubmit
+    } = this.state.rosterForm;
+    if (!(show && this.data.consultantOptions.length)) return null;
+
+    const initialValues = request
+      ? request.versions[request.versions.length - 1]
+      : {};
+
+    let consultant;
+    if (initialValues.consultant_id) {
+      consultant = this.data.consultantMap.get(initialValues.consultant_id);
+    }
+
+    return (
+      <RosterEntryForm
+        $models={this.props.$models}
+        currentUser={this.props.$global.currentUser}
+        title={title}
+        onClose={() => this.setState({ rosterForm: { show: false } })}
+        consultant={consultant}
+        consultantOptions={this.data.consultantOptions}
+        projectOptions={this.data.projectOptions}
+        probabilityOptions={this.data.probabilityOptions}
+        leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
+        onSubmit={this.handleSubmitRosterForm}
+        afterSubmit={afterSubmit}
+        initialValues={initialValues}
+        step={step}
+        preventDefaultSubmit={preventDefaultSubmit}
+      />
+    );
+  };
+
+  render() {
+    const filteredRequests = this.getFilteredRequests();
+
     return (
       <Container>
         <Heading>Requests</Heading>
@@ -345,7 +476,8 @@ class Page extends React.Component {
             this.setState({
               rosterForm: {
                 show: true,
-                title: "New Request"
+                title: "New Request",
+                preventDefaultSubmit: true
               }
             })
           }
@@ -374,6 +506,12 @@ const NewRequestButton = styled(Button)`
 
 const FiltersContainer = styled(View)`
   flex-direction: row;
+  flex-wrap: wrap;
   margin-top: 8px;
   margin-bottom: -24px;
+`;
+
+const FilterContainer = styled(View)`
+  width: 250px;
+  margin-right: 32px;
 `;

@@ -1,6 +1,6 @@
 import React from "react";
-import { styled, View, Text, TouchableView } from "bappo-components";
-import DatePreview from "./DatePreview";
+import { styled, View, Text, TouchableView, Separator } from "bappo-components";
+import DatePreview from "date-preview";
 
 class Version extends React.Component {
   constructor(props) {
@@ -22,6 +22,7 @@ class Version extends React.Component {
       startDate,
       endDate,
       includedDates,
+      isCurrentVersion,
       comments,
       skillsRequired
     } = this.props;
@@ -33,8 +34,11 @@ class Version extends React.Component {
             {consultant.name} on {project.name} ({probability.name}), from{" "}
             {startDate} to {endDate}
           </Text>
-          <Text>Including:</Text>
+          <View style={{ marginTop: 8 }}>
+            <Text>Including:</Text>
+          </View>
           <DatePreview datesString={includedDates} />
+          {!isCurrentVersion && <Separator />}
           {skillsRequired && (
             <View>
               <Text>Skills required: {skillsRequired}</Text>

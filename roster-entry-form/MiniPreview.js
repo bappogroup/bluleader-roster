@@ -135,7 +135,7 @@ class MiniPreview extends React.Component {
     this.setState({
       weeklyEntries,
       submitting: false,
-      selectedWeekdays: defaultWeekdays, // id-boolean map
+      selectedWeekdays: defaultWeekdays, // dayIndex-boolean map
       selectedProjects: {}, // id-boolean map
       dateToNewEntryMap: new Map(),
       showProjects: false,
@@ -143,7 +143,7 @@ class MiniPreview extends React.Component {
       overridesLeaves: this.state.autoSubmit || clickedIsLeave
     });
 
-    await this.buildDateToNewEntryMap(null, this.state.overridesLeaves);
+    await this.buildDateToNewEntryMap(null, this.state.overridesLeaves, true);
     if (this.state.autoSubmit) this.submit();
   }
 
@@ -190,33 +190,52 @@ class MiniPreview extends React.Component {
   // Calculate and update dateToNewEntryMap and selectedWeekdays in state
   // Re-calculate from scratch
   // Params are optional - can get from state instead
-  buildDateToNewEntryMap = (_selectedWeekdays, overridesLeaves = false) => {
-    const { formValues, leaveProjectIds } = this.props;
+  buildDateToNewEntryMap = (
+    _selectedWeekdays,
+    overridesLeaves = false,
+    useIncludedDates = false
+  ) => {
+    const { formValues, leaveProjectIds, includedDates } = this.props;
     const selectedWeekdays = _selectedWeekdays || this.state.selectedWeekdays;
 
     const newEntries = [];
-    for (
-      let d = moment(formValues.startDate).clone();
-      d.isSameOrBefore(moment(formValues.endDate));
-      d.add(1, "day")
-    ) {
-      let weekdayIndex = d.day();
-      if (selectedWeekdays[weekdayIndex]) {
-        // Only pick chosen days
-        const date = d.format(dateFormat);
-        const existingEntry = this.data.dateToExistingEntryMap.get(date);
-        const isLeaveEntry =
-          existingEntry &&
-          existingEntry.project_id &&
-          leaveProjectIds.includes(existingEntry.project_id);
 
-        if (!isLeaveEntry || overridesLeaves) {
-          newEntries.push({
-            date,
-            consultant_id: this.state.consultantId,
-            project_id: formValues.project_id,
-            probability_id: formValues.probability_id
-          });
+    if (includedDates && useIncludedDates) {
+      // If included dates is provided - use it
+      const dateArr = includedDates.split(", ");
+      dateArr.forEach(date => {
+        newEntries.push({
+          date,
+          consultant_id: this.state.consultantId,
+          project_id: formValues.project_id,
+          probability_id: formValues.probability_id
+        });
+      });
+    } else {
+      // If not - calculate dates using startDate, endDate and selectedWeekdays
+      for (
+        let d = moment(formValues.startDate).clone();
+        d.isSameOrBefore(moment(formValues.endDate));
+        d.add(1, "day")
+      ) {
+        let weekdayIndex = d.day();
+        if (selectedWeekdays[weekdayIndex]) {
+          // Only pick chosen days
+          const date = d.format(dateFormat);
+          const existingEntry = this.data.dateToExistingEntryMap.get(date);
+          const isLeaveEntry =
+            existingEntry &&
+            existingEntry.project_id &&
+            leaveProjectIds.includes(existingEntry.project_id);
+
+          if (!isLeaveEntry || overridesLeaves) {
+            newEntries.push({
+              date,
+              consultant_id: this.state.consultantId,
+              project_id: formValues.project_id,
+              probability_id: formValues.probability_id
+            });
+          }
         }
       }
     }
@@ -230,7 +249,7 @@ class MiniPreview extends React.Component {
   };
 
   handleSelectAllWeekdays = () =>
-    this.buildDateToNewEntryMap(defaultWeekdays, false);
+    this.buildDateToNewEntryMap(defaultWeekdays, false, false);
 
   handleClear = () =>
     this.setState({
@@ -374,7 +393,8 @@ class MiniPreview extends React.Component {
       onSubmit,
       afterSubmit,
       formValues,
-      onClose
+      onClose,
+      preventDefaultSubmit = false
     } = this.props;
 
     const pendingEntries = [];
@@ -401,7 +421,9 @@ class MiniPreview extends React.Component {
         // onSubmit has been specified - use it
         // used by resource requests
         await onSubmit(data);
-      } else {
+      }
+
+      if (!preventDefaultSubmit) {
         // onSubmit not specified - create roster change log and update entries
 
         // Create Roster Change Logs
@@ -518,7 +540,7 @@ class MiniPreview extends React.Component {
 
   render() {
     if (this.state.autoSubmit)
-      return <ActivityIndicator style={{ margin: 30 }} />;
+      return <ActivityIndicator style={{ margin: 32 }} />;
 
     return (
       <Container>
@@ -568,7 +590,9 @@ class MiniPreview extends React.Component {
             )}
           </HeaderRow>
           {this.state.loadinEntries ? (
-            <ActivityIndicator style={{ marin: 32 }} />
+            <SpinnerContainer>
+              <ActivityIndicator />
+            </SpinnerContainer>
           ) : (
             <ScrollView>
               <StyledList
@@ -676,4 +700,10 @@ const ButtonGroup = styled(View)`
   align-items: center;
   flex-direction: row;
   justify-content: flex-end;
+`;
+
+const SpinnerContainer = styled(View)`
+  height: 300px;
+  justify-content: center;
+  align-items: center;
 `;

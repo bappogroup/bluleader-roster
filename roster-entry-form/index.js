@@ -27,10 +27,10 @@ class RosterEntryForm extends React.Component {
     ).value;
 
     this.state = {
-      step: 1,
+      step: props.step || 1,
       isLeaveProject,
       NAProbabilityValue,
-      submitValues: {}
+      submitValues: props.initialValues
     };
   }
 
@@ -151,25 +151,25 @@ class RosterEntryForm extends React.Component {
     );
   };
 
-  renderPreview = () => {
-    const { submitValues } = this.state;
-
-    return (
-      <MiniPreview
-        $models={this.props.$models}
-        currentUser={this.props.currentUser}
-        projectOptions={this.props.projectOptions}
-        formValues={submitValues}
-        consultant={this.props.consultant}
-        leaveProjectIds={this.props.leaveProjectIds}
-        dateToExistingEntryMap={this.props.dateToExistingEntryMap}
-        goBack={() => this.setState({ step: 1 })}
-        onClose={this.props.onClose}
-        onSubmit={this.props.onSubmit}
-        afterSubmit={this.props.afterSubmit}
-      />
-    );
-  };
+  renderPreview = () => (
+    <MiniPreview
+      $models={this.props.$models}
+      currentUser={this.props.currentUser}
+      projectOptions={this.props.projectOptions}
+      formValues={this.state.submitValues}
+      consultant={this.props.consultant}
+      leaveProjectIds={this.props.leaveProjectIds}
+      dateToExistingEntryMap={this.props.dateToExistingEntryMap}
+      goBack={() => this.setState({ step: 1 })}
+      onClose={this.props.onClose}
+      onSubmit={this.props.onSubmit}
+      afterSubmit={this.props.afterSubmit}
+      preventDefaultSubmit={this.props.preventDefaultSubmit}
+      includedDates={
+        this.props.initialValues && this.props.initialValues.includedDates
+      }
+    />
+  );
 
   render() {
     let body;
@@ -195,7 +195,7 @@ class RosterEntryForm extends React.Component {
           const selectedProject = this.props.projectOptions.find(
             p => p.value === this.state.submitValues.project_id
           );
-          title = `${consultantName} will be booked for ${
+          title = `${consultantName} for ${
             selectedProject.label
           }, on these days:`;
         } else {

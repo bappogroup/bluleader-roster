@@ -5,10 +5,8 @@ import moment from "moment";
 const inputDateFormat = "YYYY-MM-DD";
 // 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
 
-const DatePreview = ({ datesString }) => {
+const YearlyDatePreview = ({ year, dateArr }) => {
   const months = [];
-
-  const dateArr = datesString.split(", ");
   dateArr.forEach(date => {
     const m = moment(date, inputDateFormat);
     const monthIndex = m.month();
@@ -37,26 +35,63 @@ const DatePreview = ({ datesString }) => {
       dayArr.push(i.format("DD"));
     }
 
+    const emptyCells = [];
+    for (let i = 1; i < monthStart.weekday(); i++) {
+      emptyCells.push(<DayContainer />);
+    }
+
     return (
       <MonthRow key={index}>
         <View style={{ width: 32 }}>
-          <Text style={{ fontWeight: "bold" }}>{monthStart.format("MMM")}</Text>
+          <Text>{monthStart.format("MMM")}</Text>
         </View>
+        {emptyCells}
         {dayArr.map(day => (
-          <Day key={day} selected={days.includes(day)}>
-            {day}
-          </Day>
+          <DayContainer>
+            <Day key={day} selected={days.includes(day)}>
+              {day}
+            </Day>
+          </DayContainer>
         ))}
       </MonthRow>
     );
   };
 
-  return <Container>{months.map(renderMonthRow)}</Container>;
+  return (
+    <YearContainer>
+      <View style={{ marginBottom: 8 }}>
+        <Text>{year}</Text>
+      </View>
+      {months.map(renderMonthRow)}
+    </YearContainer>
+  );
+};
+
+/**
+ * @param {string} props.datesString example: '2019-03-02, 2020-04-10'
+ */
+const DatePreview = ({ datesString }) => {
+  const dateArr = datesString.split(", ");
+  const yearToDates = {};
+  dateArr.forEach(date => {
+    const year = date.slice(0, 4);
+    if (!yearToDates[year]) yearToDates[year] = [];
+
+    yearToDates[year].push(date);
+  });
+
+  return (
+    <View>
+      {Object.entries(yearToDates).map(([year, dateArr]) => (
+        <YearlyDatePreview year={year} dateArr={dateArr} />
+      ))}
+    </View>
+  );
 };
 
 export default DatePreview;
 
-const Container = styled(View)`
+const YearContainer = styled(View)`
   margin-top: 8px;
   margin-bottom: 8px;
   overflow-x: auto;
@@ -66,8 +101,10 @@ const MonthRow = styled(View)`
   flex-direction: row;
 `;
 
+const DayContainer = styled(View)`
+  width: 24px;
+`;
+
 const Day = styled(Text)`
-  margin-left: 4px;
-  margin-right: 6px;
   color: ${props => (props.selected ? "black" : "lightgray")};
 `;

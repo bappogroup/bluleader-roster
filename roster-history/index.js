@@ -1,5 +1,6 @@
 import React from "react";
 import { Text, View, ScrollView, styled } from "bappo-components";
+import DatePreview from "date-preview";
 
 class Report extends React.Component {
   state = {
@@ -40,13 +41,12 @@ const renderRow = row => (
   <Row>
     <Cell>
       <Label>{row.consultant}</Label>
-      <Text style={{ flex: 1 }}>
+      <Text>
         booked from {row.startDate} to {row.endDate}
       </Text>
     </Cell>
-    <Cell>
-      <Text style={{ flex: 1 }}>including: {row.includedDates}</Text>
-    </Cell>
+    <Text>including:</Text>
+    <DatePreview datesString={row.includedDates} />
     <Cell>
       <Text>on {row.project && row.project.name}</Text>
       <SideNote>
