@@ -69,7 +69,6 @@ const Row = styled(View)`
 `;
 
 const SideNote = styled(Text)`
-  color: #ddd;
   padding-left: 10px;
 `;
 

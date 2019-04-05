@@ -74,7 +74,7 @@ class Page extends React.Component {
     ]);
 
     this.setState({
-      canManageResourceRequests: manager.canManageResourceRequests
+      canManageResourceRequests: manager && manager.canManageResourceRequests
     });
 
     // Build id-to-entity maps for relationships

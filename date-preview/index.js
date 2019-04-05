@@ -36,7 +36,9 @@ const YearlyDatePreview = ({ year, dateArr }) => {
     }
 
     const emptyCells = [];
-    for (let i = 1; i < monthStart.weekday(); i++) {
+    let weekdayIndex = monthStart.weekday();
+    if (weekdayIndex === 0) weekdayIndex = 7;
+    for (let i = 1; i < weekdayIndex; i++) {
       emptyCells.push(<DayContainer />);
     }
 
@@ -71,6 +73,8 @@ const YearlyDatePreview = ({ year, dateArr }) => {
  * @param {string} props.datesString example: '2019-03-02, 2020-04-10'
  */
 const DatePreview = ({ datesString }) => {
+  if (!datesString) return null;
+
   const dateArr = datesString.split(", ");
   const yearToDates = {};
   dateArr.forEach(date => {
@@ -103,6 +107,9 @@ const MonthRow = styled(View)`
 
 const DayContainer = styled(View)`
   width: 24px;
+  align-items: center;
+  background-color: #f2f2f2;
+  margin: 1px;
 `;
 
 const Day = styled(Text)`

@@ -69,7 +69,7 @@ class RequestRow extends React.Component {
     return (
       <Container>
         <Header>
-          <Text>{name}</Text>
+          <Text>Request {name}</Text>
           {this.props.showMenuButton && (
             <Dropdown actions={actions} icon="more-horiz" />
           )}
@@ -77,9 +77,11 @@ class RequestRow extends React.Component {
         <Separator />
         <Body>
           <VersionsContainer>
-            {versions.map(version => (
-              <Version key={version.id} {...version} />
-            ))}
+            {versions
+              .sort((v1, v2) => v1.versionNumber - v2.versionNumber)
+              .map(version => (
+                <Version key={version.id} {...version} />
+              ))}
           </VersionsContainer>
           <IconButton onPress={this.startChat}>
             <Icon name="chat" color={iconColor} />
@@ -104,6 +106,7 @@ const Container = styled(View)`
 const Header = styled(View)`
   flex-direction: row;
   justify-content: space-between;
+  margin-top: 8px;
 `;
 
 const Body = styled(View)`
