@@ -41,6 +41,13 @@ const consultantTypeOptions = [
   }
 ];
 
+// Workaround - decide which app by appId from pathname
+// Only show location to epi-use
+const isEpiUse = [
+  "5b831cd1a7de8a09c5138eea",
+  "5c9c44715e0de00010860040"
+].includes(window.location.pathname.split("/")[2]);
+
 const toOptions = arr => arr.map(i => ({ label: i.name, value: i.id }));
 
 class FiltersModal extends React.Component {
@@ -78,19 +85,21 @@ class FiltersModal extends React.Component {
             options: toOptions(this.state.costCenters)
           }}
         />
-        <Form.Field
-          name="state"
-          label="Location"
-          component={SelectField}
-          props={{
-            options: this.props.$models.Consultant.fields
-              .find(f => f.name === "state")
-              .properties.options.map(l => ({
-                value: l.id,
-                label: l.label
-              }))
-          }}
-        />
+        {isEpiUse && (
+          <Form.Field
+            name="state"
+            label="Location"
+            component={SelectField}
+            props={{
+              options: this.props.$models.Consultant.fields
+                .find(f => f.name === "state")
+                .properties.options.map(l => ({
+                  value: l.id,
+                  label: l.label
+                }))
+            }}
+          />
+        )}
         <Form.Field
           name="startDate"
           label="From"

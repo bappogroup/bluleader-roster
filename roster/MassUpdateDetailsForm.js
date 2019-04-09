@@ -11,6 +11,13 @@ import {
   Button
 } from "bappo-components";
 
+// Workaround - decide which app by appId from pathname
+// Only show location to epi-use
+const isEpiUse = [
+  "5b831cd1a7de8a09c5138eea",
+  "5c9c44715e0de00010860040"
+].includes(window.location.pathname.split("/")[2]);
+
 class MassUpdateDetailsForm extends React.Component {
   state = {
     NAProbabilityId: null,
@@ -42,10 +49,12 @@ class MassUpdateDetailsForm extends React.Component {
     this.setState({
       projectOptions: projects.map(pj => ({ label: pj.name, value: pj.id })),
       probabilityOptions,
-      locationOptions: stateField.properties.options.map(op => ({
-        value: op.id,
-        label: op.label
-      })),
+      locationOptions:
+        stateField &&
+        stateField.properties.options.map(op => ({
+          value: op.id,
+          label: op.label
+        })),
       NAProbabilityId
     });
   }
@@ -120,12 +129,14 @@ class MassUpdateDetailsForm extends React.Component {
                   component={DatePickerField}
                   validate={value => (value ? undefined : "Required")}
                 />
-                <Form.Field
-                  name="state"
-                  label="Location"
-                  component={SelectField}
-                  props={{ options: this.state.locationOptions }}
-                />
+                {isEpiUse && (
+                  <Form.Field
+                    name="state"
+                    label="Location"
+                    component={SelectField}
+                    props={{ options: this.state.locationOptions }}
+                  />
+                )}
               </FormFieldsContainer>
               <ButtonGroup>
                 <Button

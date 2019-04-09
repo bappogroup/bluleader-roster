@@ -140,7 +140,7 @@ class MassUpdateModal extends React.Component {
     if (!consultantsInThisState.length)
       return (
         <View style={{ flex: 1, padding: 32 }}>
-          <Text>No consultant in the selected location found.</Text>
+          <Text>No consultant found.</Text>
           <Button text="Cancel" type="tertiary" onPress={this.props.onClose} />
         </View>
       );

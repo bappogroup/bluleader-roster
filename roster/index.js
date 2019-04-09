@@ -22,12 +22,6 @@ import RosterEntryForm from "roster-entry-form";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
 
-/**
- * Epi-use's Roster
- * Exclusive features:
- * 1. locations
- */
-
 class Roster extends React.Component {
   // Dimensions
   CELL_DIMENSION = 45;
