@@ -62,6 +62,7 @@ class MassUpdateModal extends React.Component {
       project_id,
       probability_id
     } = this.state;
+    const { $models } = this.props;
 
     const selectedConsultantIds = [];
     const selectedDates = [];
@@ -78,21 +79,14 @@ class MassUpdateModal extends React.Component {
       d.isSameOrBefore(end);
       d.add(1, "day")
     ) {
-      const date = d.format(dateFormat);
-      selectedDates.push(date);
-
-      selectedConsultantIds.forEach(consultant_id =>
-        rosterEntries.push({
-          consultant_id,
-          date,
-          probability_id,
-          project_id
-        })
-      );
+      // Pick weekdays only
+      if ([1, 2, 3, 4, 5].includes(d.weekday())) {
+        const date = d.format(dateFormat);
+        selectedDates.push(date);
+      }
     }
 
-    if (rosterEntries.length > 0) {
-      const { $models } = this.props;
+    if (selectedConsultantIds.length > 0 && selectedDates.length > 0) {
       this.setState({ submitting: true });
 
       // 1. Remove existing entries
@@ -107,12 +101,37 @@ class MassUpdateModal extends React.Component {
         }
       });
 
-      // 2. Create new entries
-      await $models.RosterEntry.bulkCreate(rosterEntries);
+      if (project_id) {
+        // 2. Create new entries
+        // Generate new roster entries
+        selectedDates.forEach(date =>
+          selectedConsultantIds.forEach(consultant_id =>
+            rosterEntries.push({
+              consultant_id,
+              date,
+              probability_id,
+              project_id
+            })
+          )
+        );
+        await $models.RosterEntry.bulkCreate(rosterEntries);
+      }
+      // 3. Create Roster Change logs
+      $models.RosterChange.create({
+        changedBy: this.props.$global.currentUser.name,
+        changeDate: moment().format(dateFormat),
+        startDate,
+        endDate,
+        project_id,
+        probability_id,
+        includedDates: selectedDates.join(", "),
+        includedConsultantIds: selectedConsultantIds.join(", ")
+      });
 
       if (typeof this.props.afterSubmit) await this.props.afterSubmit();
-      this.props.onClose();
     }
+
+    this.props.onClose();
   };
 
   renderConsultants = () => {
@@ -165,8 +184,8 @@ class MassUpdateModal extends React.Component {
               <Icon
                 name={
                   this.state.consultantMap[consultant.id]
-                    ? "radio-button-checked"
-                    : "radio-button-unchecked"
+                    ? "check-box"
+                    : "check-box-outline-blank"
                 }
                 style={{ marginRight: 16 }}
               />
@@ -208,7 +227,11 @@ class MassUpdateModal extends React.Component {
           <View style={{ margin: "16px 0px" }}>
             <Text>{consultantNames}</Text>
           </View>
-          <Text>will be booked on {projectName}</Text>
+          {projectName ? (
+            <Text>will be booked on {projectName}</Text>
+          ) : (
+            <Text>will have no schedule</Text>
+          )}
           <Text>
             from {startDate} to {endDate}
           </Text>
@@ -242,6 +265,7 @@ class MassUpdateModal extends React.Component {
         body = (
           <MassUpdateDetailsForm
             $models={this.props.$models}
+            preloadedData={this.props.preloadedData}
             onSubmit={formValues => {
               // Filter consultants and select all
               const consultantsInThisState = formValues.state

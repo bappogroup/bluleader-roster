@@ -1,7 +1,6 @@
 import React from "react";
 import {
   styled,
-  ActivityIndicator,
   Form,
   Colors,
   Text,
@@ -14,12 +13,10 @@ import {
 
 class MassUpdateDetailsForm extends React.Component {
   state = {
-    publicHolidayId: null,
     NAProbabilityId: null,
     projectOptions: [],
     startDate: undefined,
     endDate: undefined,
-    loading: true,
     isLeaveProject: true
   };
 
@@ -28,17 +25,10 @@ class MassUpdateDetailsForm extends React.Component {
   };
 
   async componentDidMount() {
-    const { $models } = this.props;
+    const { $models, preloadedData } = this.props;
+    const { projects, probabilityOptions } = preloadedData;
 
     const stateField = $models.Consultant.fields.find(f => f.name === "state");
-    const [projects, probabilities] = await Promise.all([
-      $models.Project.findAll({
-        where: {
-          active: true
-        }
-      }),
-      $models.Probability.findAll({})
-    ]);
 
     const leaveProjects = projects.filter(p =>
       ["4", "5", "6"].includes(p.projectType)
@@ -46,37 +36,26 @@ class MassUpdateDetailsForm extends React.Component {
 
     this.data.leaveProjects = leaveProjects;
 
-    const publicHolidayId = projects.find(pj => pj.name === "Public Holiday")
-      .id;
-    const NAProbabilityId = probabilities.find(p => p.name === "NA").id;
-
-    this.props.setProjectName("Public Holiday");
+    const NAProbabilityId = probabilityOptions.find(p => p.label === "NA")
+      .value;
 
     this.setState({
       projectOptions: projects.map(pj => ({ label: pj.name, value: pj.id })),
-      probabilityOptions: probabilities.map(pr => ({
-        label: pr.name,
-        value: pr.id
-      })),
+      probabilityOptions,
       locationOptions: stateField.properties.options.map(op => ({
         value: op.id,
         label: op.label
       })),
-      publicHolidayId,
-      NAProbabilityId,
-      loading: false
+      NAProbabilityId
     });
   }
 
   render() {
-    if (this.state.loading) return <ActivityIndicator style={{ flex: 1 }} />;
-
     return (
       <Form
         style={{ flex: 1 }}
         onSubmit={this.props.onSubmit}
         initialValues={{
-          project_id: this.state.publicHolidayId,
           probability_id: this.state.NAProbabilityId
         }}
       >
@@ -96,9 +75,12 @@ class MassUpdateDetailsForm extends React.Component {
                       const project = this.state.projectOptions.find(
                         op => op.value === project_id
                       );
-                      this.props.setProjectName(project.label);
+                      this.props.setProjectName(project && project.label);
 
-                      if (
+                      if (!project_id) {
+                        // to remove entries
+                        changeValue("probability_id", null);
+                      } else if (
                         this.data.leaveProjects.find(p => p.id === project_id)
                       ) {
                         // leave projects
@@ -109,12 +91,12 @@ class MassUpdateDetailsForm extends React.Component {
                           this.state.NAProbabilityId
                         );
                       } else {
+                        // normal prjects
                         this.setState({ isLeaveProject: false });
                         changeValue("probability_id", null);
                       }
                     }
                   }}
-                  validate={value => (value ? undefined : "Required")}
                 />
                 {project_id && !this.state.isLeaveProject && (
                   <Form.Field

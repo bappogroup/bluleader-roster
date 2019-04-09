@@ -9,12 +9,24 @@ class Report extends React.Component {
   };
 
   loadData = async () => {
-    const changes = await this.props.$models.RosterChange.findAll({
-      where: {},
-      include: [{ as: "project" }, { as: "probability" }],
-      limit: 1000
-    });
+    const { $models } = this.props;
+
+    const [consultants, changes] = await Promise.all([
+      $models.Consultant.findAll({
+        where: { active: true }
+      }),
+      $models.RosterChange.findAll({
+        where: {},
+        include: [{ as: "project" }, { as: "probability" }],
+        limit: 300
+      })
+    ]);
+
+    const consultantMap = new Map();
+    consultants.forEach(c => consultantMap.set(c.id, c));
+
     this.setState({
+      consultantMap,
       loading: false,
       changes: changes.sort((a, b) => b.id - a.id)
     });
@@ -24,6 +36,63 @@ class Report extends React.Component {
     this.loadData();
   }
 
+  renderRow = change => {
+    let consultantNames = change.consultant;
+    if (!consultantNames && change.includedConsultantIds) {
+      const names = [];
+      change.includedConsultantIds
+        .split(", ")
+        .forEach(id => names.push(this.state.consultantMap.get(id).name));
+      consultantNames = names.join(", ");
+    }
+
+    if (!change.project)
+      return (
+        <Row>
+          <Cell>
+            <Text>
+              Schedules from {change.startDate} to {change.endDate} were deleted
+              for the following consultants:
+            </Text>
+            <View style={{ margin: "8px 0" }}>
+              <Text>{consultantNames}</Text>
+            </View>
+          </Cell>
+          <Text>including:</Text>
+          <DatePreview datesString={change.includedDates} />
+          <Cell>
+            <Text>
+              Changed by {change.changedBy} on {change.changeDate}
+            </Text>
+          </Cell>
+        </Row>
+      );
+
+    return (
+      <Row>
+        <Cell>
+          <Text>{consultantNames}</Text>
+          <Text>
+            were booked from {change.startDate} to {change.endDate}
+          </Text>
+        </Cell>
+        <Text>including:</Text>
+        <DatePreview datesString={change.includedDates} />
+        <Cell style={{ flexDirection: "row" }}>
+          <Text>on {change.project && change.project.name} </Text>
+          <Text>
+            (probability: {change.probability && change.probability.name})
+          </Text>
+        </Cell>
+        <Cell>
+          <Text>
+            Changed by {change.changedBy} on {change.changeDate}
+          </Text>
+        </Cell>
+      </Row>
+    );
+  };
+
   render() {
     if (this.state.loading)
       return (
@@ -31,35 +100,11 @@ class Report extends React.Component {
           <Text>Loading...</Text>
         </View>
       );
-    return <ScrollView>{this.state.changes.map(renderRow)}</ScrollView>;
+    return <ScrollView>{this.state.changes.map(this.renderRow)}</ScrollView>;
   }
 }
 
 export default Report;
-
-const renderRow = row => (
-  <Row>
-    <Cell>
-      <Label>{row.consultant}</Label>
-      <Text>
-        booked from {row.startDate} to {row.endDate}
-      </Text>
-    </Cell>
-    <Text>including:</Text>
-    <DatePreview datesString={row.includedDates} />
-    <Cell>
-      <Text>on {row.project && row.project.name}</Text>
-      <SideNote>
-        probability: {row.probability && row.probability.name}
-      </SideNote>
-    </Cell>
-    <Cell>
-      <Text>
-        Changed by {row.changedBy} on {row.changeDate}
-      </Text>
-    </Cell>
-  </Row>
-);
 
 const Row = styled(View)`
   border: 1px solid #eee;
@@ -68,16 +113,6 @@ const Row = styled(View)`
   margin: 10px 20px;
 `;
 
-const SideNote = styled(Text)`
-  padding-left: 10px;
-`;
-
 const Cell = styled(View)`
-  flex-direction: row;
   flex-wrap: wrap;
-`;
-
-const Label = styled(Text)`
-  font-weight: bold;
-  padding-right: 10px;
 `;

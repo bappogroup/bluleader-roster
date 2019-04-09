@@ -7,7 +7,8 @@ import {
   TouchableView,
   styled,
   Button,
-  Overlay
+  Overlay,
+  Dropdown
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
@@ -19,30 +20,14 @@ import {
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
 import MassUpdateModal from "./MassUpdateModal";
+import FiltersModal from "./FiltersModal";
 
 /**
- * Epi-use has locations
+ * Epi-use's Roster
+ * Exclusive features:
+ * 1. locations
  */
-const dateRangeOptions = [
-  {
-    id: "6",
-    label: "6 weeks"
-  },
-  {
-    id: "12",
-    label: "12 weeks"
-  },
-  {
-    id: "24",
-    label: "24 weeks"
-  },
-  {
-    id: "52",
-    label: "52 weeks"
-  }
-];
 
-// Rows are sorted based on consultant name
 class Roster extends React.Component {
   // Dimensions
   CELL_DIMENSION = 45;
@@ -61,26 +46,28 @@ class Roster extends React.Component {
   constructor(props) {
     super(props);
 
-    const stateField = (this.locations = props.$models.Consultant.fields.find(
-      f => f.name === "state"
-    ));
-    this.locations = stateField.properties.options.map(l => ({
-      id: l.id,
-      label: l.label
-    }));
-
     this.state = {
       singleConsultantPopup: {
         show: false
       },
+
       costCenter: null,
-      weeks: "12",
-      startDate: moment().startOf("week"),
-      endDate: moment()
-        .startOf("week")
-        .add(12, "weeks"),
-      initializing: true,
+
+      filters: {
+        costCenter_id: null,
+        state: null,
+        weeks: "12",
+        startDate: moment().startOf("week"),
+        endDate: moment()
+          .startOf("week")
+          .add(12, "weeks"),
+        includeCrossTeamConsultants: false,
+        consultantType: null
+      },
+
       mode: "small",
+      initializing: true,
+
       entryList: [],
 
       consultants: [],
@@ -91,43 +78,48 @@ class Roster extends React.Component {
         projectOptions: [],
         title: ""
       },
-      showMassUpdateModal: false
+
+      showMassUpdateModal: false,
+      showFiltersModal: false
     };
   }
 
   async componentDidMount() {
+    // Load user preferences
     const prefs = await getUserPreferences(
       this.props.$global.currentUser.id,
       this.props.$models
     );
-    let { costCenter_id, includeCrossTeamConsultants, location } = prefs;
+    let { costCenter_id, includeCrossTeamConsultants, state } = prefs;
     includeCrossTeamConsultants = includeCrossTeamConsultants === "true";
-    this.initialize(
-      costCenter_id,
-      this.state.startDate,
-      undefined,
-      includeCrossTeamConsultants,
-      location
-    );
+    await this.setState({
+      filters: {
+        ...this.state.filters,
+        costCenter_id,
+        includeCrossTeamConsultants,
+        state
+      }
+    });
+    this.initialize();
   }
 
-  reload = () =>
-    this.initialize(
-      this.state.costCenter && this.state.costCenter.id,
-      this.state.startDate
-    );
+  refresh = () => this.initialize();
 
-  // Initial data initializing and configuration
-  initialize = async (
-    costCenter_id,
-    startDate,
-    endDate = moment(startDate).add(12, "weeks"),
-    includeCrossTeamConsultants,
-    location
-  ) => {
+  // Initialize by fetching data
+  // Queries are generated from this.state.filters
+  initialize = async () => {
+    const { filters, initializing } = this.state;
+    const {
+      costCenter_id,
+      startDate,
+      endDate,
+      includeCrossTeamConsultants,
+      state,
+      consultantType
+    } = filters;
     const { $models } = this.props;
 
-    if (!this.state.initializing) await this.setState({ initializing: true });
+    if (!initializing) await this.setState({ initializing: true });
 
     // Get date array, to put at first of entryList
     const dateArray = datesToArray(startDate, endDate).map((date, index) => {
@@ -147,7 +139,8 @@ class Roster extends React.Component {
       active: true
     };
     if (costCenter_id) consultantQuery.costCenter_id = costCenter_id;
-    if (location) consultantQuery.state = location;
+    if (state) consultantQuery.state = state;
+    if (consultantType) consultantQuery.consultantType = consultantType;
 
     const promises = [
       $models.Consultant.findAll({
@@ -157,14 +150,19 @@ class Roster extends React.Component {
         where: {
           projectType: {
             $in: ["4", "5", "6", "7"]
-          }
+          },
+          active: true
         }
       }),
       $models.Probability.findAll({})
     ];
 
     if (costCenter_id)
-      promises.push($models.CostCenter.findById(costCenter_id));
+      promises.push(
+        $models.CostCenter.findById(costCenter_id, {
+          include: [{ as: "profitCentre" }]
+        })
+      );
 
     let [
       consultants,
@@ -211,11 +209,7 @@ class Roster extends React.Component {
         costCenter,
         consultants,
         consultantCount: consultants.length,
-        consultantOffset: 0,
-        startDate,
-        endDate,
-        includeCrossTeamConsultants,
-        location
+        consultantOffset: 0
       },
       () => this.loadData()
     );
@@ -229,13 +223,13 @@ class Roster extends React.Component {
 
   loadData = async () => {
     const {
-      startDate,
-      endDate,
+      filters,
       consultants,
       consultantOffset,
       projectAssignments,
       entryList
     } = this.state;
+    const { startDate, endDate } = filters;
     const { RosterEntry, ProjectAssignment } = this.props.$models;
 
     if (this.isLoading) return;
@@ -344,96 +338,6 @@ class Roster extends React.Component {
       hisProjectAssignments,
       this.data.commonProjects
     );
-  };
-
-  // Bring up a popup asking which cost centre and start time
-  setFilters = async () => {
-    const { $models, $popup } = this.props;
-
-    const costCenters = await $models.CostCenter.findAll({
-      limit: 1000
-    });
-    const costCenterOptions = costCenters.map(cc => ({
-      id: cc.id,
-      label: cc.name
-    }));
-
-    $popup.form({
-      fields: [
-        {
-          name: "costCenterId",
-          label: "Cost Center",
-          type: "FixedList",
-          properties: {
-            options: costCenterOptions
-          }
-        },
-        {
-          name: "location",
-          label: "State",
-          type: "FixedList",
-          properties: {
-            options: this.locations
-          }
-        },
-        {
-          name: "startDate",
-          label: "Start Date",
-          type: "Date",
-          properties: {}
-        },
-        {
-          name: "weeks",
-          label: "Date Range",
-          type: "FixedList",
-          properties: {
-            options: dateRangeOptions
-          }
-        },
-        {
-          name: "includeCrossTeamConsultants",
-          type: "Checkbox",
-          label: "Include cross-team consultants"
-        }
-      ],
-      initialValues: {
-        costCenterId: this.state.costCenter && this.state.costCenter.id,
-        startDate: this.state.startDate || moment().format(dateFormat),
-        weeks: this.state.weeks,
-        includeCrossTeamConsultants: this.state.includeCrossTeamConsultants,
-        location: this.state.location
-      },
-      onSubmit: async ({
-        costCenterId,
-        startDate,
-        weeks,
-        includeCrossTeamConsultants,
-        location
-      }) => {
-        const endDate = moment(startDate).add(weeks, "weeks");
-        this.setState({
-          weeks,
-          projectAssignments: [],
-          includeCrossTeamConsultants,
-          location
-        });
-        this.highestRowIndex = 0;
-        this.isLoading = false;
-        this.initialize(
-          costCenterId,
-          moment(startDate),
-          endDate,
-          includeCrossTeamConsultants,
-          location
-        );
-
-        setUserPreferences(this.props.$global.currentUser.id, $models, {
-          costCenter_id: costCenterId,
-          includeCrossTeamConsultants,
-          location
-        });
-      }
-    });
   };
 
   setDisplayMode = mode =>
@@ -566,7 +470,8 @@ class Roster extends React.Component {
   };
 
   reloadConsultantData = async consultant_id => {
-    const { startDate, endDate, consultants } = this.state;
+    const { filters, consultants } = this.state;
+    const { startDate, endDate } = filters;
 
     const rosterEntries = await this.props.$models.RosterEntry.findAll({
       where: {
@@ -641,8 +546,58 @@ class Roster extends React.Component {
   renderMassUpdateModal = () => (
     <MassUpdateModal
       $models={this.props.$models}
+      $global={this.props.$global}
       onClose={() => this.setState({ showMassUpdateModal: false })}
-      afterSubmit={this.reload}
+      afterSubmit={this.refresh}
+      preloadedData={{
+        projects: this.data.commonProjects,
+        probabilityOptions: this.data.probabilityOptions
+      }}
+    />
+  );
+
+  handleSetFilters = async ({
+    costCenter_id,
+    startDate,
+    weeks,
+    includeCrossTeamConsultants,
+    state,
+    consultantType
+  }) => {
+    const endDate = moment(startDate).add(weeks, "weeks");
+    await this.setState({
+      filters: {
+        costCenter_id,
+        startDate,
+        weeks,
+        endDate,
+        includeCrossTeamConsultants,
+        state,
+        consultantType
+      },
+      projectAssignments: [],
+      showFiltersModal: false
+    });
+
+    this.highestRowIndex = 0;
+    this.isLoading = false;
+
+    this.initialize();
+
+    setUserPreferences(this.props.$global.currentUser.id, this.props.$models, {
+      costCenter_id,
+      includeCrossTeamConsultants,
+      state
+    });
+  };
+
+  renderFiltersModal = () => (
+    <FiltersModal
+      $models={this.props.$models}
+      $global={this.props.$global}
+      onClose={() => this.setState({ showFiltersModal: false })}
+      onSubmit={this.handleSetFilters}
+      initialValues={this.state.filters}
     />
   );
 
@@ -685,35 +640,38 @@ class Roster extends React.Component {
             <Heading>
               Cost center: {(costCenter && costCenter.name) || "all"}
             </Heading>
-            <FunctionButton
+            <Button
+              icon="filter-list"
               text="Filters"
-              onPress={this.setFilters}
-              type="tertiary"
-            />
-            <FunctionButton
-              text="Reload"
-              onPress={this.reload}
-              type="tertiary"
-            />
-            <FunctionButton
-              text="Mass Update"
-              onPress={() => this.setState({ showMassUpdateModal: true })}
-              type="tertiary"
+              onPress={() => this.setState({ showFiltersModal: true })}
+              type="secondary"
             />
           </HeaderSubContainer>
-          <HeaderSubContainer>
-            <Heading>Cell size:</Heading>
-            <FunctionButton
-              text="large"
-              onPress={() => this.setDisplayMode("large")}
-              type="tertiary"
-            />
-            <FunctionButton
-              text="small"
-              onPress={() => this.setDisplayMode("small")}
-              type="tertiary"
-            />
-          </HeaderSubContainer>
+          <Dropdown
+            actions={[
+              {
+                icon: "refresh",
+                label: "Refresh",
+                onPress: this.refresh
+              },
+              {
+                icon: "filter-9-plus",
+                label: "Mass Update",
+                onPress: () => this.setState({ showMassUpdateModal: true })
+              },
+              {
+                icon: "zoom-in",
+                label: "Cell Size: Large",
+                onPress: () => this.setDisplayMode("large")
+              },
+              {
+                icon: "zoom-out",
+                label: "Cell Size: Small",
+                onPress: () => this.setDisplayMode("small")
+              }
+            ]}
+            icon="more-horiz"
+          />
         </HeaderContainer>
         <BodyContainer>
           <AutoSizer>
@@ -734,6 +692,7 @@ class Roster extends React.Component {
           </AutoSizer>
         </BodyContainer>
         {this.state.showMassUpdateModal && this.renderMassUpdateModal()}
+        {this.state.showFiltersModal && this.renderFiltersModal()}
       </Container>
     );
   }
@@ -768,8 +727,6 @@ const BodyContainer = styled.div`
   margin-right: 15px;
   margin-bottom: 15px;
 `;
-
-const FunctionButton = styled(Button)``;
 
 const baseStyle = `
   margin-left: 2px;
