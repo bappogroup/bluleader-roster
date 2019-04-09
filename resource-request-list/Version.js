@@ -66,8 +66,8 @@ class Version extends React.Component {
       <Container onPress={this.toggleExpand}>
         <Text>
           {isCurrentVersion ? "Current Version" : `Version ${versionNumber}`} (
-          {versionNumber === "1" ? "created on" : "updated on"} on {requestDate}{" "}
-          by {requestedBy.name})
+          {versionNumber === "1" ? "created" : "updated"} on {requestDate} by{" "}
+          {requestedBy.name})
         </Text>
         {this.renderDetails()}
       </Container>

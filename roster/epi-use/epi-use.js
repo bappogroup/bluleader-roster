@@ -18,6 +18,7 @@ import {
 } from "roster-utils";
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
+import MassUpdateModal from "./MassUpdateModal";
 
 /**
  * Epi-use has locations
@@ -89,7 +90,8 @@ class Roster extends React.Component {
         show: false,
         projectOptions: [],
         title: ""
-      }
+      },
+      showMassUpdateModal: false
     };
   }
 
@@ -636,6 +638,14 @@ class Roster extends React.Component {
     );
   };
 
+  renderMassUpdateModal = () => (
+    <MassUpdateModal
+      $models={this.props.$models}
+      onClose={() => this.setState({ showMassUpdateModal: false })}
+      afterSubmit={this.reload}
+    />
+  );
+
   render() {
     const {
       initializing,
@@ -676,13 +686,18 @@ class Roster extends React.Component {
               Cost center: {(costCenter && costCenter.name) || "all"}
             </Heading>
             <FunctionButton
-              text="filters"
+              text="Filters"
               onPress={this.setFilters}
               type="tertiary"
             />
             <FunctionButton
-              text="reload"
+              text="Reload"
               onPress={this.reload}
+              type="tertiary"
+            />
+            <FunctionButton
+              text="Mass Update"
+              onPress={() => this.setState({ showMassUpdateModal: true })}
               type="tertiary"
             />
           </HeaderSubContainer>
@@ -718,6 +733,7 @@ class Roster extends React.Component {
             )}
           </AutoSizer>
         </BodyContainer>
+        {this.state.showMassUpdateModal && this.renderMassUpdateModal()}
       </Container>
     );
   }

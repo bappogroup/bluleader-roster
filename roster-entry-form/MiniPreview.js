@@ -442,7 +442,7 @@ class MiniPreview extends React.Component {
           }
         });
 
-        // 2. Create/Update entries
+        // 2. Create new entries
         if (formValues.project_id) {
           await $models.RosterEntry.bulkCreate(pendingEntries);
         }

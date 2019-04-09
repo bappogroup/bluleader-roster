@@ -93,6 +93,7 @@ class RosterEntryForm extends React.Component {
                         );
                       } else {
                         this.setState({ isLeaveProject: false });
+                        changeValue("probability_id", null);
                       }
                     }
                   }}
@@ -228,13 +229,13 @@ const HeadingContainer = styled(View)`
   justify-content: center;
 `;
 
+const Heading = styled(Text)`
+  font-size: 18px;
+`;
+
 const FormFieldsContainer = styled(ScrollView)`
   flex: 1;
   padding: 0 32px;
-`;
-
-const Heading = styled(Text)`
-  font-size: 18px;
 `;
 
 const ButtonGroup = styled(View)`
