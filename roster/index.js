@@ -351,7 +351,7 @@ class Roster extends React.Component {
     const entry = entryList[rowIndex] && entryList[rowIndex][columnIndex];
 
     let backgroundColor = "#f8f8f8";
-    let label;
+    let label = "";
 
     if (rowIndex === 0) {
       // Render date label cell
@@ -397,13 +397,17 @@ class Roster extends React.Component {
     // Render roster entry cell
     if (entry) {
       backgroundColor =
-        entry.project.backgroundColour ||
+        (entry.project && entry.project.backgroundColour) ||
         (entry.probability && entry.probability.backgroundColor) ||
         "white";
-      label =
-        mode === "large"
-          ? entry.project.name
-          : entry.project.key || entry.project.name;
+
+      if (entry.project) {
+        label =
+          mode === "large"
+            ? entry.project.name
+            : entry.project.key || entry.project.name;
+      }
+      // If a project is deleted, entry.project is null
       if (mode === "small" && label.length > 0) label = label.slice(0, 6);
     }
 
