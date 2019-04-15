@@ -80,7 +80,10 @@ class RosterEntryForm extends React.Component {
                     onValueChange: id => {
                       if (!id) {
                         // to remove entries
-                        changeValue("probability_id", null);
+                        changeValue(
+                          "probability_id",
+                          this.state.NAProbabilityValue
+                        );
                       } else if (leaveProjectIds.includes(id)) {
                         this.setState({ isLeaveProject: true });
                         // Set probability to NA for leave projects

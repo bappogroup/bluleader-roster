@@ -262,7 +262,10 @@ class Roster extends React.Component {
       RosterEntry.findAll({
         where: {
           date: {
-            $between: [startDate.format(dateFormat), endDate.format(dateFormat)]
+            $between: [
+              moment(startDate).format(dateFormat),
+              moment(endDate).format(dateFormat)
+            ]
           },
           consultant_id: {
             $in: newConsultantIds
@@ -474,7 +477,10 @@ class Roster extends React.Component {
     const rosterEntries = await this.props.$models.RosterEntry.findAll({
       where: {
         date: {
-          $between: [startDate.format(dateFormat), endDate.format(dateFormat)]
+          $between: [
+            moment(startDate).format(dateFormat),
+            moment(endDate).format(dateFormat)
+          ]
         },
         consultant_id
       },
