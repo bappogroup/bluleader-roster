@@ -22,6 +22,8 @@ import RosterEntryForm from "roster-entry-form";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
 
+const CONSULTANT_QUANTITY_IN_EACH_LOAD = 20;
+
 class Roster extends React.Component {
   // Dimensions
   CELL_DIMENSION = 45;
@@ -58,6 +60,8 @@ class Roster extends React.Component {
         includeCrossTeamConsultants: false,
         consultantType: null
       },
+
+      sortMode: "name", // Sort consultants by name or consultantType
 
       mode: "small",
       initializing: true,
@@ -102,7 +106,7 @@ class Roster extends React.Component {
   // Initialize by fetching data
   // Queries are generated from this.state.filters
   initialize = async () => {
-    const { filters, initializing } = this.state;
+    const { filters, sortMode, initializing } = this.state;
     const {
       costCenter_id,
       startDate,
@@ -115,7 +119,7 @@ class Roster extends React.Component {
 
     if (!initializing) await this.setState({ initializing: true });
 
-    // Get date array, to put at first of entryList
+    // Get date array, to be put at first of entryList
     const dateArray = datesToArray(startDate, endDate).map((date, index) => {
       let labelFormat = "DD";
       if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
@@ -129,6 +133,7 @@ class Roster extends React.Component {
     });
     dateArray.unshift("");
 
+    // Fetch consultants, Projects and Probabilities (and Cost Center if specified)
     const consultantQuery = {
       active: true
     };
@@ -165,12 +170,14 @@ class Roster extends React.Component {
       costCenter
     ] = await Promise.all(promises);
 
+    // Get Probability options
     this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
       value: p.id,
       label: p.name,
       pos: index
     }));
 
+    // If cross team is selected - extend external consultants to the list
     if (includeCrossTeamConsultants && costCenter) {
       const projects = await $models.Project.findAll({
         where: { profitCentre_id: costCenter.profitCentre_id, active: true }
@@ -182,7 +189,9 @@ class Roster extends React.Component {
         },
         include: [{ as: "consultant" }]
       });
-      const otherConsultants = projectAssignments.map(pa => pa.consultant);
+      const otherConsultants = projectAssignments
+        .map(pa => pa.consultant)
+        .filter(consultant => consultant.consultantType === consultantType);
       const consultantMap = {};
       consultants.forEach(c => (consultantMap[c.id] = c));
       otherConsultants.forEach(c => {
@@ -191,11 +200,21 @@ class Roster extends React.Component {
       consultants = Object.values(consultantMap);
     }
 
-    consultants.sort((a, b) => {
-      if (a.name < b.name) return -1;
-      if (a.name > b.name) return 1;
-      return 0;
-    });
+    // Sort consultants after initial fetch
+    switch (sortMode) {
+      case "employeeType": {
+        consultants.sort((a, b) => a.consultantType - b.consultantType);
+        break;
+      }
+      case "name":
+      default: {
+        consultants.sort((a, b) => {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+      }
+    }
 
     this.setState(
       {
@@ -208,6 +227,7 @@ class Roster extends React.Component {
       () => this.loadData()
     );
 
+    // Save common & leave projects in this.data
     const leaveProjects = commonProjects.filter(p =>
       ["4", "5", "6"].includes(p.projectType)
     );
@@ -215,6 +235,8 @@ class Roster extends React.Component {
     this.data.leaveProjects = leaveProjects;
   };
 
+  // Fetch data for the next batch of consultants
+  // Recursive calling self but no concurrent loads
   loadData = async () => {
     const {
       filters,
@@ -229,17 +251,12 @@ class Roster extends React.Component {
     if (this.isLoading) return;
     this.isLoading = true;
 
-    const newConsultantOffset = consultantOffset + 10;
+    const newConsultantOffset =
+      consultantOffset + CONSULTANT_QUANTITY_IN_EACH_LOAD;
     const newConsultants = consultants.slice(
       consultantOffset,
       newConsultantOffset
     );
-
-    // Build map between id and consultant
-    const consultantMap = {};
-    newConsultants.forEach(c => {
-      consultantMap[c.id] = c;
-    });
     const newConsultantIds = newConsultants.map(c => c.id);
 
     const promises = [];
@@ -274,27 +291,21 @@ class Roster extends React.Component {
         include: [{ as: "project" }, { as: "probability" }],
         limit: 1000
       }).then(rosterEntries => {
+        // Group fetched roster entries by consultant id
         const tempMap = {};
         newConsultantIds.forEach(cid => {
           tempMap[cid] = [];
         });
-
         rosterEntries.forEach(entry => {
           const entryIndex = moment(entry.date).diff(startDate, "days");
           tempMap[entry.consultant_id][entryIndex] = entry;
         });
 
-        // Insert consultant name at first of roster entry array
-        const newEntryList = Object.entries(tempMap).map(([key, value]) => {
-          const consultant = consultantMap[key];
-          return [consultant].concat(value);
-        });
-
-        // Sorting based on consultant name
-        newEntryList.sort((a, b) => {
-          if (a[0].name < b[0].name) return -1;
-          if (a[0].name > b[0].name) return 1;
-          return 0;
+        // Generate new entry list based on this batch of consultants' sequence
+        const newEntryList = newConsultants.map(consultant => {
+          // First element is the consultant, others are roster entries
+          const rosterEntriesForThisConsultant = tempMap[consultant.id];
+          return [consultant].concat(rosterEntriesForThisConsultant);
         });
 
         return newEntryList;
@@ -315,7 +326,7 @@ class Roster extends React.Component {
         consultantOffset: newConsultantOffset
       },
       () => {
-        // Fetch data of next 10 consultants if needed
+        // Fetch data of next batch of consultants if needed
         this.isLoading = false;
 
         this.gridRef.recomputeGridSize();
