@@ -1,14 +1,16 @@
 import React from "react";
 import moment from "moment";
 import {
+  styled,
   ActivityIndicator,
   View,
   Text,
   TouchableView,
-  styled,
   Button,
   Overlay,
-  Dropdown
+  Dropdown,
+  SelectField,
+  Separator
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 import { setUserPreferences, getUserPreferences } from "user-preferences";
@@ -22,7 +24,18 @@ import RosterEntryForm from "roster-entry-form";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
 
-const CONSULTANT_QUANTITY_IN_EACH_LOAD = 20;
+const CONSULTANT_QUANTITY_IN_EACH_LOAD = 1;
+
+const sortModeOptions = [
+  {
+    label: "Name",
+    value: "name"
+  },
+  {
+    label: "Consultant Type",
+    value: "consultantType"
+  }
+];
 
 class Roster extends React.Component {
   // Dimensions
@@ -66,7 +79,8 @@ class Roster extends React.Component {
       mode: "small",
       initializing: true,
 
-      entryList: [],
+      dateRow: [],
+      consultantIdToEntriesMap: {},
 
       consultants: [],
       projectAssignments: [],
@@ -106,7 +120,7 @@ class Roster extends React.Component {
   // Initialize by fetching data
   // Queries are generated from this.state.filters
   initialize = async () => {
-    const { filters, sortMode, initializing } = this.state;
+    const { filters, initializing } = this.state;
     const {
       costCenter_id,
       startDate,
@@ -119,8 +133,8 @@ class Roster extends React.Component {
 
     if (!initializing) await this.setState({ initializing: true });
 
-    // Get date array, to be put at first of entryList
-    const dateArray = datesToArray(startDate, endDate).map((date, index) => {
+    // Get date row as the first row of the table
+    const dateRow = datesToArray(startDate, endDate).map((date, index) => {
       let labelFormat = "DD";
       if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
 
@@ -131,11 +145,15 @@ class Roster extends React.Component {
         date
       };
     });
-    dateArray.unshift("");
+    dateRow.unshift("");
 
     // Fetch consultants, Projects and Probabilities (and Cost Center if specified)
     const consultantQuery = {
-      active: true
+      active: true,
+      endDate: {
+        // endDate should be null or later than roster start date
+        $or: [{ $eq: null }, { $gte: moment(startDate).format(dateFormat) }]
+      }
     };
     if (costCenter_id) consultantQuery.costCenter_id = costCenter_id;
     if (state) consultantQuery.state = state;
@@ -200,28 +218,15 @@ class Roster extends React.Component {
       consultants = Object.values(consultantMap);
     }
 
-    // Sort consultants after initial fetch
-    switch (sortMode) {
-      case "employeeType": {
-        consultants.sort((a, b) => a.consultantType - b.consultantType);
-        break;
-      }
-      case "name":
-      default: {
-        consultants.sort((a, b) => {
-          if (a.name < b.name) return -1;
-          if (a.name > b.name) return 1;
-          return 0;
-        });
-      }
-    }
+    // Sort consultants (defaults to by name) after initial fetch
+    const sortedConsultants = this.getSortedConsultants(consultants);
 
     this.setState(
       {
-        entryList: [dateArray],
+        dateRow,
         costCenter,
-        consultants,
-        consultantCount: consultants.length,
+        consultants: sortedConsultants,
+        consultantIdToEntriesMap: {},
         consultantOffset: 0
       },
       () => this.loadData()
@@ -243,20 +248,21 @@ class Roster extends React.Component {
       consultants,
       consultantOffset,
       projectAssignments,
-      entryList
+      consultantIdToEntriesMap
     } = this.state;
     const { startDate, endDate } = filters;
     const { RosterEntry, ProjectAssignment } = this.props.$models;
+    const updatedEntryMap = { ...consultantIdToEntriesMap };
 
     if (this.isLoading) return;
     this.isLoading = true;
 
     const newConsultantOffset =
       consultantOffset + CONSULTANT_QUANTITY_IN_EACH_LOAD;
-    const newConsultants = consultants.slice(
-      consultantOffset,
-      newConsultantOffset
-    );
+    // Get new consultants and filter already fetched consultants
+    const newConsultants = consultants
+      .slice(consultantOffset, newConsultantOffset)
+      .filter(consultant => !consultantIdToEntriesMap[consultant.id]);
     const newConsultantIds = newConsultants.map(c => c.id);
 
     const promises = [];
@@ -269,8 +275,7 @@ class Roster extends React.Component {
             $in: newConsultantIds
           }
         },
-        include: [{ as: "project" }],
-        limit: 1000
+        include: [{ as: "project" }]
       })
     );
 
@@ -288,31 +293,18 @@ class Roster extends React.Component {
             $in: newConsultantIds
           }
         },
-        include: [{ as: "project" }, { as: "probability" }],
-        limit: 1000
-      }).then(rosterEntries => {
-        // Group fetched roster entries by consultant id
-        const tempMap = {};
-        newConsultantIds.forEach(cid => {
-          tempMap[cid] = [];
-        });
-        rosterEntries.forEach(entry => {
-          const entryIndex = moment(entry.date).diff(startDate, "days");
-          tempMap[entry.consultant_id][entryIndex] = entry;
-        });
-
-        // Generate new entry list based on this batch of consultants' sequence
-        const newEntryList = newConsultants.map(consultant => {
-          // First element is the consultant, others are roster entries
-          const rosterEntriesForThisConsultant = tempMap[consultant.id];
-          return [consultant].concat(rosterEntriesForThisConsultant);
-        });
-
-        return newEntryList;
+        include: [{ as: "project" }, { as: "probability" }]
       })
     );
 
-    const [allProjectAssignments, newEntryList] = await Promise.all(promises);
+    const [allProjectAssignments, rosterEntries] = await Promise.all(promises);
+
+    // Put fetched roster entries into updatedEntryMap
+    newConsultants.forEach(consultant => (updatedEntryMap[consultant.id] = []));
+    rosterEntries.forEach(entry => {
+      const entryIndex = moment(entry.date).diff(startDate, "days");
+      updatedEntryMap[entry.consultant_id][entryIndex] = entry;
+    });
 
     const newProjectAssignments = allProjectAssignments.filter(
       pa => pa.project && pa.project._deletedAt === null
@@ -321,7 +313,7 @@ class Roster extends React.Component {
     this.setState(
       {
         initializing: false,
-        entryList: entryList.concat(newEntryList),
+        consultantIdToEntriesMap: updatedEntryMap,
         projectAssignments: projectAssignments.concat(newProjectAssignments),
         consultantOffset: newConsultantOffset
       },
@@ -335,6 +327,37 @@ class Roster extends React.Component {
         }
       }
     );
+  };
+
+  /**
+   * Sort consultants based on this.state.sortMode
+   */
+  getSortedConsultants = consultants => {
+    const sortedConsultants = consultants.slice();
+
+    switch (this.state.sortMode) {
+      case "consultantType": {
+        sortedConsultants.sort((a, b) => a.consultantType - b.consultantType);
+        break;
+      }
+      case "name":
+      default: {
+        sortedConsultants.sort((a, b) => {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+      }
+    }
+
+    return sortedConsultants;
+  };
+
+  handleSortModeChange = async sortMode => {
+    await this.setState({ sortMode });
+    const consultants = this.getSortedConsultants(this.state.consultants);
+    this.setState({ consultants });
+    this.gridRef.recomputeGridSize();
   };
 
   getConsultantAssignments = consultantId => {
@@ -352,63 +375,57 @@ class Roster extends React.Component {
     this.setState({ mode }, () => this.gridRef.recomputeGridSize());
 
   cellRenderer = ({ columnIndex, key, rowIndex, style }) => {
-    const { entryList, mode } = this.state;
+    const { dateRow, consultants, consultantIdToEntriesMap, mode } = this.state;
 
     if (rowIndex > this.highestRowIndex) {
       this.highestRowIndex = rowIndex;
     }
 
-    if (!entryList[rowIndex]) {
-      this.loadData();
-    }
-
-    const entry = entryList[rowIndex] && entryList[rowIndex][columnIndex];
-
-    let backgroundColor = "#f8f8f8";
+    const consultant = consultants[rowIndex - 1];
+    const date = dateRow[columnIndex];
+    let backgroundColor = "#f8f8f8"; // Defaults to gray for weekdays
     let label = "";
 
     if (rowIndex === 0) {
       // Render date label cell
+
       let color = "black";
-      if (entry.isWeekend) color = "lightgrey";
+      if (date.isWeekend) color = "lightgrey";
       return (
-        <Label
-          key={key}
-          style={style}
-          backgroundColor={backgroundColor}
-          color={color}
-        >
-          <div>{entry.weekday}</div>
-          <div>{entry.formattedDate}</div>
+        <Label key={key} style={style} color={color}>
+          <div>{date.weekday}</div>
+          <div>{date.formattedDate}</div>
         </Label>
       );
     } else if (columnIndex === 0) {
-      // Render consultant label cell
-      const consultantName =
-        (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
-
-      // Change background color if external consultant
-      backgroundColor = "white";
+      // Change background color to white if external consultant
+      backgroundColor = "#fafafa";
       if (
         this.state.costCenter &&
-        entry &&
-        entry.costCenter_id !== this.state.costCenter.id
+        consultant.costCenter_id !== this.state.costCenter.id
       )
-        backgroundColor = "#f8f8f8";
+        backgroundColor = "white";
 
       return (
         <ClickLabel
           key={key}
           style={style}
           backgroundColor={backgroundColor}
-          onClick={() => this.handleClickConsultant(entry)}
+          onClick={() => this.handleClickConsultant(consultant)}
         >
-          {consultantName}
+          {consultant.name}
         </ClickLabel>
       );
     }
 
     // Render roster entry cell
+    const entries = consultantIdToEntriesMap[consultant.id];
+    if (!entries) {
+      this.loadData();
+    }
+
+    const entry = entries && entries[columnIndex - 1];
+
     if (entry) {
       backgroundColor =
         (entry.project && entry.project.backgroundColour) ||
@@ -426,14 +443,13 @@ class Roster extends React.Component {
     }
 
     // Apply weekend cell style
-    const { isWeekend } = this.state.entryList[0][columnIndex];
+    if (date.isWeekend) backgroundColor = "white";
 
     return (
       <Cell
         key={key}
         style={style}
         backgroundColor={backgroundColor}
-        isWeekend={isWeekend}
         onPress={() => this.openEntryForm(rowIndex, columnIndex, entry)}
       >
         {label}
@@ -451,13 +467,13 @@ class Roster extends React.Component {
   };
 
   openEntryForm = async (rowIndex, columnIndex, entry) => {
-    const { consultants, entryList } = this.state;
+    const { consultants, consultantIdToEntriesMap, dateRow } = this.state;
     const consultant = consultants[rowIndex - 1];
-    const date = entryList[0][columnIndex].date.format(dateFormat);
+    const date = dateRow[columnIndex].date.format(dateFormat);
     const projectOptions = this.getConsultantAssignments(consultant.id);
 
     // All roster entries of this consultant
-    const rosterEntries = entryList[rowIndex];
+    const rosterEntries = consultantIdToEntriesMap[consultant.id];
     const dateToExistingEntryMap = new Map();
     rosterEntries.forEach(entry => {
       if (entry && entry.date) {
@@ -482,7 +498,7 @@ class Roster extends React.Component {
   };
 
   reloadConsultantData = async consultant_id => {
-    const { filters, consultants } = this.state;
+    const { filters, consultants, consultantIdToEntriesMap } = this.state;
     const { startDate, endDate } = filters;
 
     const rosterEntries = await this.props.$models.RosterEntry.findAll({
@@ -495,26 +511,22 @@ class Roster extends React.Component {
         },
         consultant_id
       },
-      include: [{ as: "project" }, { as: "probability" }],
-      limit: 1000
+      include: [{ as: "project" }, { as: "probability" }]
     });
 
-    const rowIndex = consultants.findIndex(c => c.id === consultant_id);
-    const consultant = consultants[rowIndex];
-
-    const newEntriesArr = [];
+    // Put roster entries in updatedEntryMap
+    const updatedEntryMap = { ...consultantIdToEntriesMap };
+    updatedEntryMap[consultant_id] = [];
     rosterEntries.forEach(entry => {
       const entryIndex = moment(entry.date).diff(startDate, "days");
-      newEntriesArr[entryIndex] = entry;
+      updatedEntryMap[consultant_id][entryIndex] = entry;
     });
-    newEntriesArr.unshift(consultant);
+
+    // Reload the row in the table
+    const rowIndex = consultants.findIndex(c => c.id === consultant_id) + 1;
 
     this.setState(
-      ({ entryList }) => {
-        const newEntryList = entryList.slice();
-        newEntryList[rowIndex + 1] = newEntriesArr;
-        return { entryList: newEntryList, initializing: false };
-      },
+      { consultantIdToEntriesMap: updatedEntryMap, initializing: false },
       () => this.gridRef.recomputeGridSize({ rowIndex })
     );
   };
@@ -619,10 +631,11 @@ class Roster extends React.Component {
   render() {
     const {
       initializing,
-      consultantCount,
+      dateRow,
+      consultants,
       costCenter,
-      entryList,
-      entryForm
+      entryForm,
+      sortMode
     } = this.state;
 
     if (initializing) {
@@ -631,37 +644,30 @@ class Roster extends React.Component {
 
     return (
       <Container>
-        {this.renderSingleRoster()}
-        {entryForm.show && (
-          <RosterEntryForm
-            $models={this.props.$models}
-            currentUser={this.props.$global.currentUser}
-            title={entryForm.title}
-            onClose={this.closeEntryForm}
-            consultant={entryForm.consultant}
-            projectOptions={entryForm.projectOptions}
-            probabilityOptions={this.data.probabilityOptions}
-            dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
-            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
-            afterSubmit={async () => {
-              await this.reloadConsultantData(entryForm.consultant.id);
-              this.closeEntryForm();
-            }}
-            initialValues={entryForm.initialValues}
+        <HeadingContainer>
+          <Heading>
+            Roster for Cost center: {(costCenter && costCenter.name) || "all"}
+          </Heading>
+        </HeadingContainer>
+        <StyledSeparator />
+        <MenuContainer>
+          <Button
+            icon="filter-list"
+            text="Filters"
+            onPress={() => this.setState({ showFiltersModal: true })}
+            type="secondary"
+            style={{ height: 40 }}
           />
-        )}
-        <HeaderContainer>
-          <HeaderSubContainer>
-            <Heading>
-              Cost center: {(costCenter && costCenter.name) || "all"}
-            </Heading>
-            <Button
-              icon="filter-list"
-              text="Filters"
-              onPress={() => this.setState({ showFiltersModal: true })}
-              type="secondary"
+          <SelectFieldContainer>
+            <SelectField
+              label="Sort By"
+              clearable={false}
+              options={sortModeOptions}
+              value={sortMode}
+              onValueChange={this.handleSortModeChange}
+              reserveErrorSpace={false}
             />
-          </HeaderSubContainer>
+          </SelectFieldContainer>
           <Dropdown
             actions={[
               {
@@ -685,9 +691,9 @@ class Roster extends React.Component {
                 onPress: () => this.setDisplayMode("small")
               }
             ]}
-            icon="more-horiz"
+            icon="menu"
           />
-        </HeaderContainer>
+        </MenuContainer>
         <BodyContainer>
           <AutoSizer>
             {({ height, width }) => (
@@ -697,15 +703,34 @@ class Roster extends React.Component {
                 fixedColumnCount={1}
                 fixedRowCount={1}
                 cellRenderer={this.cellRenderer}
-                columnCount={entryList[0].length}
+                columnCount={dateRow.length}
                 columnWidth={this.columnWidthGetter}
-                rowCount={consultantCount + 1}
+                rowCount={consultants.length + 1}
                 rowHeight={this.CELL_DIMENSION}
                 ref={ref => (this.gridRef = ref)}
               />
             )}
           </AutoSizer>
         </BodyContainer>
+        {this.renderSingleRoster()}
+        {entryForm.show && (
+          <RosterEntryForm
+            $models={this.props.$models}
+            currentUser={this.props.$global.currentUser}
+            title={entryForm.title}
+            onClose={this.closeEntryForm}
+            consultant={entryForm.consultant}
+            projectOptions={entryForm.projectOptions}
+            probabilityOptions={this.data.probabilityOptions}
+            dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
+            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
+            afterSubmit={async () => {
+              await this.reloadConsultantData(entryForm.consultant.id);
+              this.closeEntryForm();
+            }}
+            initialValues={entryForm.initialValues}
+          />
+        )}
         {this.state.showMassUpdateModal && this.renderMassUpdateModal()}
         {this.state.showFiltersModal && this.renderFiltersModal()}
       </Container>
@@ -717,24 +742,37 @@ export default Roster;
 
 const Container = styled(View)`
   flex: 1;
+  background-color: #fafafa;
   flex-direction: column;
 `;
 
-const HeaderContainer = styled(View)`
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px;
+const HeadingContainer = styled(View)`
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding-left: 32px;
+  padding-right: 32px;
 `;
 
-const HeaderSubContainer = styled(View)`
-  flex-direction: row;
-  align-items: center;
+const StyledSeparator = styled(Separator)`
+  margin: 0 32px;
 `;
 
 const Heading = styled(Text)`
   font-size: 18px;
-  margin-right: 10px;
+`;
+
+const MenuContainer = styled(View)`
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  margin-left: 32px;
+`;
+
+const SelectFieldContainer = styled(View)`
+  width: 200px;
+  margin-left: 16px;
+  margin-bottom: 20px;
+  margin-right: 8px;
 `;
 
 const BodyContainer = styled.div`
@@ -768,8 +806,8 @@ const ClickLabel = styled(Label)`
 `;
 
 const Cell = styled(TouchableView)`
-  ${baseStyle} background-color: ${props =>
-  props.isWeekend ? "white" : props.backgroundColor};
+  ${baseStyle}
+  background-color: ${props => props.backgroundColor};
 
   border: 1px solid #eee;
 
