@@ -280,15 +280,19 @@ class Roster extends React.Component {
         },
         include: [{ as: "consultant" }]
       });
-      const otherConsultants = projectAssignments
-        .map(pa => pa.consultant)
-        .filter(consultant => consultant.consultantType === consultantType);
+      const otherConsultants = projectAssignments.map(pa => pa.consultant);
+
       const consultantMap = {};
       consultants.forEach(c => (consultantMap[c.id] = c));
       otherConsultants.forEach(c => {
         if (!consultantMap[c.id]) consultantMap[c.id] = c;
       });
       consultants = Object.values(consultantMap);
+
+      if (consultantType)
+        consultants = consultants.filter(
+          consultant => consultant.consultantType === consultantType
+        );
     }
 
     // Sort consultants (defaults to by name) after initial fetch
