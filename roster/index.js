@@ -114,19 +114,19 @@ class Roster extends React.Component {
       state
     } = prefs;
     includeCrossTeamConsultants =
-      filterBy === "costCetner" &&
+      filterBy === "costCenter" &&
       costCenter_id &&
       includeCrossTeamConsultants === "true";
-    await this.setState({
-      filters: {
-        ...this.state.filters,
-        filterBy: filterBy || "none",
-        costCenter_id: filterBy === "costCetner" && costCenter_id,
-        includeCrossTeamConsultants,
-        state,
-        project_id: filterBy === "project" && project_id
-      }
-    });
+
+    const filters = {
+      ...this.state.filters,
+      filterBy: filterBy || "none",
+      costCenter_id: filterBy === "costCenter" && costCenter_id,
+      includeCrossTeamConsultants,
+      state,
+      project_id: filterBy === "project" && project_id
+    };
+    await this.setState({ filters });
     this.initialize();
   }
 
