@@ -24,8 +24,6 @@ import RosterEntryForm from "roster-entry-form";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
 
-const CONSULTANT_QUANTITY_IN_EACH_LOAD = 15;
-
 const sortModeOptions = [
   {
     label: "Name",
@@ -129,6 +127,19 @@ class Roster extends React.Component {
     await this.setState({ filters });
     this.initialize();
   }
+
+  // how many consultants's roster entries should be fetched in each call?
+  getConsultantQuantityPerFetch = () => {
+    switch (this.state.filters.weeks) {
+      case "52":
+        return 25;
+      case "6":
+      case "12":
+      case "24":
+      default:
+        return 50;
+    }
+  };
 
   refresh = () => this.initialize();
 
@@ -334,8 +345,8 @@ class Roster extends React.Component {
     if (this.isLoadingRows) return;
     this.isLoadingRows = true;
 
-    const newConsultantOffset =
-      consultantOffset + CONSULTANT_QUANTITY_IN_EACH_LOAD;
+    const consultantQuantity = this.getConsultantQuantityPerFetch();
+    const newConsultantOffset = consultantOffset + consultantQuantity;
     // Get new consultants and filter already fetched consultants
     const newConsultants = consultants
       .slice(consultantOffset, newConsultantOffset)
@@ -922,8 +933,7 @@ const ClickLabel = styled(Label)`
 `;
 
 const Cell = styled(TouchableView)`
-  ${baseStyle}
-  background-color: ${props => props.backgroundColor};
+  ${baseStyle} background-color: ${props => props.backgroundColor};
 
   border: 1px solid #eee;
 
