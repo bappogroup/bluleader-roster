@@ -64,8 +64,10 @@ class Roster extends React.Component {
       filters: {
         filterBy: "none",
         costCenter_id: null,
+        costCenter_ids: [], // an array of ids if filterBy === 'multipleCostCenters'
         includeCrossTeamConsultants: false,
         project_id: null,
+        project_ids: [], // an array of ids if filterBy === 'multipleProjects'
         state: null,
         weeks: "12",
         startDate: moment().startOf("week"),
@@ -107,8 +109,10 @@ class Roster extends React.Component {
     let {
       filterBy,
       costCenter_id,
+      costCenter_ids,
       includeCrossTeamConsultants,
       project_id,
+      project_ids,
       state
     } = prefs;
     includeCrossTeamConsultants =
@@ -119,10 +123,18 @@ class Roster extends React.Component {
     const filters = {
       ...this.state.filters,
       filterBy: filterBy || "none",
-      costCenter_id: filterBy === "costCenter" && costCenter_id,
+      costCenter_id: filterBy === "costCenter" ? costCenter_id : null,
+      costCenter_ids:
+        filterBy === "multipleCostCenters" && costCenter_ids
+          ? costCenter_ids.split(" ")
+          : [],
       includeCrossTeamConsultants,
       state,
-      project_id: filterBy === "project" && project_id
+      project_id: filterBy === "project" ? project_id : null,
+      project_ids:
+        filterBy === "multipleProjects" && project_ids
+          ? project_ids.split(" ")
+          : []
     };
     await this.setState({ filters });
     this.initialize();
@@ -152,8 +164,10 @@ class Roster extends React.Component {
     const {
       filterBy,
       costCenter_id,
+      costCenter_ids,
       includeCrossTeamConsultants,
       project_id,
+      project_ids,
       startDate,
       endDate,
       state,
@@ -191,17 +205,34 @@ class Roster extends React.Component {
     ];
 
     // Fetch data based on filterBy type
+    const consultantQuery = {
+      active: true,
+      endDate: {
+        // endDate should be null or later than roster start date
+        $or: [{ $eq: null }, { $gte: moment(startDate).format(dateFormat) }]
+      }
+    };
+    if (state) consultantQuery.state = state;
+    if (consultantType) consultantQuery.consultantType = consultantType;
+
     switch (filterBy) {
       // Filter by project
-      case "project": {
+      case "project":
+      case "multipleProjects": {
         $models.Project.findById(filters.project_id).then(filterProject =>
           this.setState({ filterProject })
         );
 
         const fetchConsultantsInProject = async project_id => {
+          const projectIdQuery =
+            filterBy === "project"
+              ? project_id
+              : {
+                  $in: project_ids
+                };
           const assignments = await $models.ProjectAssignment.findAll({
             where: {
-              project_id
+              project_id: projectIdQuery
             },
             include: [{ as: "consultant" }]
           });
@@ -230,16 +261,19 @@ class Roster extends React.Component {
       // Filter by cost center
       // Or none - show all consultants. Equivalent to all cost centers
       case "none":
+      case "multipleCostCenters": {
+        if (costCenter_ids)
+          consultantQuery.costCenter_id = {
+            $in: costCenter_ids
+          };
+        promises.push(
+          $models.Consultant.findAll({
+            where: consultantQuery
+          })
+        );
+        break;
+      }
       case "costCenter": {
-        const consultantQuery = {
-          active: true,
-          endDate: {
-            // endDate should be null or later than roster start date
-            $or: [{ $eq: null }, { $gte: moment(startDate).format(dateFormat) }]
-          }
-        };
-        if (state) consultantQuery.state = state;
-        if (consultantType) consultantQuery.consultantType = consultantType;
         if (costCenter_id) consultantQuery.costCenter_id = costCenter_id;
 
         promises.push(
@@ -679,20 +713,26 @@ class Roster extends React.Component {
   handleSetFilters = async ({
     filterBy,
     costCenter_id,
+    costCenter_ids,
     includeCrossTeamConsultants,
     project_id,
+    project_ids,
     startDate,
     weeks,
     state,
     consultantType
   }) => {
     const endDate = moment(startDate).add(weeks, "weeks");
+    const costCenterIdStr = costCenter_ids && costCenter_ids.join(" ");
+    const projectIdStr = project_ids && project_ids.join(" ");
     await this.setState({
       filters: {
         filterBy,
         costCenter_id,
+        costCenter_ids,
         includeCrossTeamConsultants,
         project_id,
+        project_ids,
         startDate,
         weeks,
         endDate,
@@ -711,8 +751,10 @@ class Roster extends React.Component {
     setUserPreferences(this.props.$global.currentUser.id, this.props.$models, {
       filterBy,
       costCenter_id,
+      costCenter_ids: costCenterIdStr,
       includeCrossTeamConsultants,
       project_id,
+      project_ids: projectIdStr,
       state
     });
   };
@@ -744,6 +786,12 @@ class Roster extends React.Component {
       case "none":
         title = "Roster for All Consultants";
         break;
+      case "multipleCostCenters":
+        title = "Roster for multiple Cost Centers";
+        break;
+      case "multipleProjects":
+        title = "Roster for multiple projects";
+        break;
       default:
         title = "Roster";
     }
@@ -770,6 +818,8 @@ class Roster extends React.Component {
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
+
+    console.log(this.state.filters);
 
     return (
       <Container>

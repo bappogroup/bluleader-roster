@@ -19,8 +19,16 @@ const filterByOptions = [
     label: "Cost Center"
   },
   {
+    value: "multipleCostCenters",
+    label: "Multiple Cost Centers"
+  },
+  {
     value: "project",
     label: "Project"
+  },
+  {
+    value: "multipleProjects",
+    label: "Multiple Projects"
   }
 ];
 
@@ -84,7 +92,11 @@ class FiltersModal extends React.Component {
       loadingCostCenters: false
     });
 
-    if (initialValues.filterBy === "project") await this.fetchProjects();
+    if (
+      initialValues.filterBy === "project" ||
+      initialValues.filterBy === "multipleProjects"
+    )
+      await this.fetchProjects();
   }
 
   fetchProjects = async () => {
@@ -109,6 +121,7 @@ class FiltersModal extends React.Component {
         {({ getFieldValue, actions: { changeValue } }) => {
           const filterBy = getFieldValue("filterBy");
           const costCenter_id = getFieldValue("costCenter_id");
+          const costCenter_ids = getFieldValue("costCenter_ids");
 
           return (
             <React.Fragment>
@@ -121,7 +134,8 @@ class FiltersModal extends React.Component {
                   options: filterByOptions,
                   onValueChange: async filterBy => {
                     switch (filterBy) {
-                      case "project": {
+                      case "project":
+                      case "multipleProjects": {
                         changeValue("costCenter_id", null);
                         if (this.state.projects.length === 0)
                           this.fetchProjects();
@@ -142,25 +156,38 @@ class FiltersModal extends React.Component {
                 }}
               />
               {filterBy === "costCenter" && (
-                <React.Fragment>
-                  <Form.Field
-                    name="costCenter_id"
-                    label="Cost Center"
-                    component={SelectField}
-                    props={{
-                      isLoading: this.state.loadingCostCenters,
-                      options: toOptions(this.state.costCenters)
-                    }}
-                  />
-                  {costCenter_id && !isEpiUse && (
-                    <Form.Field
-                      name="includeCrossTeamConsultants"
-                      label="Include cross-team consultants"
-                      component={SwitchField}
-                    />
-                  )}
-                </React.Fragment>
+                <Form.Field
+                  name="costCenter_id"
+                  label="Cost Center"
+                  component={SelectField}
+                  props={{
+                    isLoading: this.state.loadingCostCenters,
+                    options: toOptions(this.state.costCenters)
+                  }}
+                />
               )}
+              {filterBy === "multipleCostCenters" && (
+                <Form.Field
+                  name="costCenter_ids"
+                  label="Cost Centers"
+                  component={SelectField}
+                  props={{
+                    isLoading: this.state.loadingCostCenters,
+                    options: toOptions(this.state.costCenters),
+                    multi: true
+                  }}
+                />
+              )}
+              {(filterBy === "multipleCostCenters" ||
+                filterBy === "costCenter") &&
+                (costCenter_id || costCenter_ids) &&
+                !isEpiUse && (
+                  <Form.Field
+                    name="includeCrossTeamConsultants"
+                    label="Include cross-team consultants"
+                    component={SwitchField}
+                  />
+                )}
               {filterBy === "project" && (
                 <Form.Field
                   name="project_id"
@@ -169,6 +196,18 @@ class FiltersModal extends React.Component {
                   props={{
                     isLoading: this.state.loadingProjects,
                     options: toOptions(this.state.projects)
+                  }}
+                />
+              )}
+              {filterBy === "multipleProjects" && (
+                <Form.Field
+                  name="project_ids"
+                  label="Multiple Projects"
+                  component={SelectField}
+                  props={{
+                    isLoading: this.state.loadingProjects,
+                    options: toOptions(this.state.projects),
+                    multi: true
                   }}
                 />
               )}

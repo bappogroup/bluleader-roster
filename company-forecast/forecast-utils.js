@@ -58,7 +58,8 @@ export function sortPeriods(rawPeriods) {
 const rosterEntryIncursContractorWages = rosterEntry => {
   if (
     rosterEntry.consultant.consultantType === "2" &&
-    (rosterEntry.project.projectType === "2" ||
+    (rosterEntry.project.projectType === "1" ||
+      rosterEntry.project.projectType === "2" ||
       rosterEntry.project.projectType === "3")
   ) {
     return true;
@@ -145,7 +146,14 @@ export const getForecastBaseData = async ({
   const consultantIds = consultants.map(c => c.id);
 
   // Find all projects
-  const projects = await $models.Project.findAll(profitCentreQuery);
+  const projects = await $models.Project.findAll({
+    where: {
+      profitCentre_id: {
+        $in: profitCentreIds
+      }
+    },
+    limit: 1000
+  });
 
   const projectIds = projects.map(p => p.id);
 
@@ -215,7 +223,14 @@ export const getForecastBaseData = async ({
           $in: periodIds
         }
       },
-      include: [{ as: "period" }]
+      include: [
+        { as: "period" },
+        {
+          model: $models.Project,
+          as: "project",
+          include: [{ as: "probability" }]
+        }
+      ]
     })
   );
 
@@ -223,15 +238,29 @@ export const getForecastBaseData = async ({
     forecastElements,
     rosterEntries,
     forecastEntries,
-    projectForecastEntries
+    _projectForecastEntries
   ] = await Promise.all(promises);
 
   const validProbabilityKeys = include50
     ? extendedBillableProbabilityKeys
     : billableProbabilityKeys;
-  const validRosterEntries = rosterEntries.filter(e =>
-    validProbabilityKeys.includes(e.probability.key)
+
+  const validRosterEntries = rosterEntries.filter(
+    e => e.probability && validProbabilityKeys.includes(e.probability.key)
   );
+
+  const projectForecastEntries = _projectForecastEntries.filter(
+    e =>
+      e.project &&
+      e.project.probability &&
+      e.project.projectType === "3" &&
+      validProbabilityKeys.includes(e.project.probability.key)
+  );
+
+  const cdata = projectForecastEntries.map(
+    p => `${p.project.name}, ${p.amount}`
+  );
+  // console.log("fixed", projectForecastEntries, cdata);
 
   return {
     allConsultants,
@@ -294,6 +323,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
         const lvProvKey = `LPROV-${month.label}`;
         const lvprov = +(
           (+consultant.annualSalary / yearlyWorkingDays) *
+          ratio *
           2
         ).toFixed(2);
         cells[lvProvKey][consultant.id] = lvprov;
@@ -319,6 +349,7 @@ const calculatePermConsultants = ({ consultants, months, cells }) => {
  * Condition for payroll tax:
  * 1. if contractor, he/she should have the flag 'incursPayrollTax' true
  */
+
 const calculateContractConsultants = ({
   consultants,
   cells,
@@ -341,6 +372,21 @@ const calculateContractConsultants = ({
         cells[wageCellKey][entry.consultant_id] = 0;
 
       const dailyRate = +entry.consultant.dailyRate || 0;
+
+      // const dailyRate =
+      //   assignment.internalRateRule === "2"
+      //     ? +assignment.internalRate
+      //     : +entry.consultant.dailyRate || 0;
+
+      // const assignment =
+      //   projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+
+      // if (!assignment) return;
+
+      // const dailyRate =
+      //   assignment.internalRateRule === "2"
+      //     ? +assignment.internalRate
+      //     : +entry.consultant.dailyRate || 0;
 
       if (dailyRate > 0) {
         cells[wageCellKey][entry.consultant_id] += dailyRate;
@@ -392,6 +438,7 @@ const calculateRosterEntries = ({
     } else {
       const assignment =
         projectAssignmentLookup[`${entry.consultant_id}.${entry.project_id}`];
+      if (!assignment) return;
       const { dayRate, projectExpense } = assignment;
 
       if (entry.project.projectType === "2") {
@@ -559,6 +606,10 @@ export const calculateMainReport = ({
       totals[`Revenue-${label}`] - totals[`Cost-${label}`];
     totals[`NetProfit-${label}`] =
       totals[`GrossProfit-${label}`] - totals[`Overheads-${label}`];
+    totals[`NetProfitPercentage-${label}`] =
+      totals[`NetProfit-${label}`] > 0 && totals[`Revenue-${label}`] > 0
+        ? (totals[`NetProfit-${label}`] / totals[`Revenue-${label}`]) * 100
+        : 0;
   });
 
   // Generate bappo-table data from cells
@@ -589,7 +640,7 @@ export const calculateMainReport = ({
     totalRevenueRow.data.push(totals[`Revenue-${month.label}`])
   );
   dataForTable.push(totalRevenueRow);
-  dataForTable.push([]);
+  dataForTable.push({ rowStyle: "blank", data: [] });
 
   // Cost elements
   costElements.forEach(ele => {
@@ -655,6 +706,18 @@ export const calculateMainReport = ({
     netProfitRow.data.push(totals[`NetProfit-${month.label}`])
   );
   dataForTable.push(netProfitRow);
+
+  // Net Profit
+  const netProfitPercentageRow = {
+    rowStyle: "total",
+    data: ["Net Profit %"]
+  };
+  months.forEach(month =>
+    netProfitPercentageRow.data.push(
+      totals[`NetProfitPercentage-${month.label}`]
+    )
+  );
+  dataForTable.push(netProfitPercentageRow);
 
   return {
     cells,
