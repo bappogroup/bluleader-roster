@@ -11,6 +11,7 @@ import {
 } from "bappo-components";
 import moment from "moment";
 import RosterEntryForm from "roster-entry-form";
+import GridView from "./GridView";
 import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
@@ -470,7 +471,9 @@ class Page extends React.Component {
         {this.renderFilters()}
         <Separator />
         {this.state.loading && <ActivityIndicator style={{ margin: 16 }} />}
-        <FlatList data={filteredRequests} renderItem={this.renderRow} />
+        {/* <FlatList data={filteredRequests} renderItem={this.renderRow} /> */}
+
+        <GridView requests={filteredRequests} duration={this.state.duration} />
         <NewRequestButton
           onPress={() =>
             this.setState({

@@ -663,7 +663,7 @@ class Roster extends React.Component {
       this.state.mode === "small"
         ? this.CELL_DIMENSION
         : this.CELL_DIMENSION_LARGE;
-    return index === 0 ? 160 : columnWidth;
+    return index === 0 ? this.CONSULTANT_CELL_WIDTH : columnWidth;
   };
 
   closeEntryForm = () =>
@@ -818,8 +818,6 @@ class Roster extends React.Component {
     if (initializing) {
       return <ActivityIndicator style={{ flex: 1 }} />;
     }
-
-    console.log(this.state.filters);
 
     return (
       <Container>
