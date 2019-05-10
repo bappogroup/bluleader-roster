@@ -9,7 +9,8 @@ import {
   TextInput,
   TouchableView,
   Card,
-  Switch
+  Switch,
+  Icon
 } from "bappo-components";
 import Roster from "./Roster";
 
@@ -125,14 +126,18 @@ class RosterByProject extends React.Component {
     }
 
     return (
-      <ScrollView style={{ flex: 1 }}>
-        <TextInput
-          autoFocus
-          value={this.state.searchText}
-          onValueChange={this.handleSearch}
-          placeholder="Search projects"
-          style={{ marginTop: 10, marginBottom: 10 }}
-        />
+      <ScrollView style={{ flex: 1, padding: 16 }}>
+        <SearchRow>
+          <Icon name="search" style={{ marginRight: 8 }} />
+          <TextInput
+            autoFocus
+            value={this.state.searchText}
+            onValueChange={this.handleSearch}
+            placeholder="Search projects"
+            style={{ marginTop: 10, marginBottom: 10 }}
+          />
+        </SearchRow>
+
         <ToggleContainer>
           <Switch
             value={this.state.isMultiple}
@@ -169,6 +174,11 @@ export default RosterByProject;
 
 const Container = styled(View)`
   flex: 1;
+`;
+
+const SearchRow = styled(View)`
+  flex-direction: row;
+  align-items: center;
 `;
 
 const StyledButton = styled(Button)`

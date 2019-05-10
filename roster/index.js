@@ -262,7 +262,7 @@ class Roster extends React.Component {
       // Or none - show all consultants. Equivalent to all cost centers
       case "none":
       case "multipleCostCenters": {
-        if (costCenter_ids)
+        if (costCenter_ids && costCenter_ids.length > 0)
           consultantQuery.costCenter_id = {
             $in: costCenter_ids
           };
@@ -414,12 +414,25 @@ class Roster extends React.Component {
           consultant_id: {
             $in: newConsultantIds
           }
-        },
-        include: [{ as: "project" }]
+        }
       })
     );
 
-    const [allProjectAssignments, rosterEntries] = await Promise.all(promises);
+    const [allProjectAssignments, _rosterEntries] = await Promise.all(promises);
+
+    // create lookup object for projects
+    const projects = {};
+    for (const pa of allProjectAssignments) {
+      if (pa.project && !projects[pa.project_id]) {
+        projects[pa.project_id] = pa.project;
+      }
+    }
+
+    // attach projects to roster entries
+    const rosterEntries = _rosterEntries.map(re => {
+      re.project = projects[re.project_id];
+      return re;
+    });
 
     // Put fetched roster entries into updatedEntryMap
     newConsultants.forEach(consultant => (updatedEntryMap[consultant.id] = []));

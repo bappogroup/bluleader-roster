@@ -154,6 +154,7 @@ class RosterEntryForm extends React.Component {
 
   renderPreview = () => (
     <MiniPreview
+      readOnly={this.props.readOnly}
       $models={this.props.$models}
       currentUser={this.props.currentUser}
       projectOptions={this.props.projectOptions}

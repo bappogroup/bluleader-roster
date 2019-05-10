@@ -481,6 +481,7 @@ class MiniPreview extends React.Component {
 
     return (
       <ButtonCell
+        disabled={!!this.props.readOnly}
         key={date}
         onPress={() =>
           this.setState(({ dateToNewEntryMap }) => {
@@ -542,40 +543,45 @@ class MiniPreview extends React.Component {
     if (this.state.autoSubmit)
       return <ActivityIndicator style={{ margin: 32 }} />;
 
+    const { readOnly } = this.props;
     return (
       <Container>
         <BodyContainer>
-          <TopButtonContainer>
-            <TopButton
-              text="Select all"
-              type="secondary"
-              onPress={this.handleSelectAllWeekdays}
-            />
-            <TopButton
-              text="Clear"
-              type="secondary"
-              onPress={this.handleClear}
-            />
-            <TopButton
-              text="Select free days"
-              type="secondary"
-              onPress={this.handleSelectEmpty}
-            />
-            <TopButton
-              text="By Project"
-              type="secondary"
-              onPress={() =>
-                this.setState(({ showProjects }) => ({
-                  showProjects: !showProjects
-                }))
-              }
-            />
-          </TopButtonContainer>
+          {!readOnly && (
+            <TopButtonContainer>
+              <TopButton
+                text="Select all"
+                type="secondary"
+                onPress={this.handleSelectAllWeekdays}
+              />
+              <TopButton
+                text="Clear"
+                type="secondary"
+                onPress={this.handleClear}
+              />
+              <TopButton
+                text="Select free days"
+                type="secondary"
+                onPress={this.handleSelectEmpty}
+              />
+              <TopButton
+                text="By Project"
+                type="secondary"
+                onPress={() =>
+                  this.setState(({ showProjects }) => ({
+                    showProjects: !showProjects
+                  }))
+                }
+              />
+            </TopButtonContainer>
+          )}
+
           {this.state.showProjects && this.renderProjectButtons()}
           <HeaderRow>
             {weekdays.map((date, index) =>
               date ? (
                 <TouchableView
+                  disabled={readOnly}
                   key={date}
                   style={{ flex: 1 }}
                   onPress={() =>
@@ -613,13 +619,15 @@ class MiniPreview extends React.Component {
             text="Cancel"
             onPress={this.props.onClose}
           />
-          <Button
-            style={{ marginLeft: 16 }}
-            type="primary"
-            text="Submit"
-            onPress={this.submit}
-            loading={this.state.submitting}
-          />
+          {!readOnly && (
+            <Button
+              style={{ marginLeft: 16 }}
+              type="primary"
+              text="Submit"
+              onPress={this.submit}
+              loading={this.state.submitting}
+            />
+          )}
         </ButtonGroup>
       </Container>
     );

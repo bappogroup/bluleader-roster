@@ -6,7 +6,6 @@ import {
   View,
   Heading,
   Button,
-  FlatList,
   SelectField
 } from "bappo-components";
 import moment from "moment";
@@ -16,8 +15,6 @@ import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
   arr.map(element => ({ label: element.name, value: element.id }));
-
-// TODO - infinite scroll?
 
 class Page extends React.Component {
   // Initial filters: all open requests
@@ -231,12 +228,12 @@ class Page extends React.Component {
     });
 
     // Refetch updated requests
-    this.fetchRequests();
+    await this.fetchRequests();
   };
 
   handleSetRequestStatus = async (status, id) => {
     const request = this.state.requests.find(r => r.id === id);
-    if (request.status !== status) {
+    if (request && request.status !== status) {
       // Update status
       this.props.$models.Request.update(
         { status },
@@ -429,7 +426,8 @@ class Page extends React.Component {
       request,
       step,
       afterSubmit,
-      preventDefaultSubmit
+      preventDefaultSubmit,
+      readOnly
     } = this.state.rosterForm;
     if (!(show && this.data.consultantOptions.length)) return null;
 
@@ -445,6 +443,7 @@ class Page extends React.Component {
     return (
       <RosterEntryForm
         $models={this.props.$models}
+        readOnly={readOnly}
         currentUser={this.props.$global.currentUser}
         title={title}
         onClose={() => this.setState({ rosterForm: { show: false } })}
@@ -467,13 +466,44 @@ class Page extends React.Component {
 
     return (
       <Container>
-        <Heading>Requests</Heading>
+        <Heading>Resource Requests</Heading>
         {this.renderFilters()}
         <Separator />
         {this.state.loading && <ActivityIndicator style={{ margin: 16 }} />}
         {/* <FlatList data={filteredRequests} renderItem={this.renderRow} /> */}
 
-        <GridView requests={filteredRequests} duration={this.state.duration} />
+        <GridView
+          currentUser={this.props.$global.currentUser}
+          canManageResourceRequests={this.state.canManageResourceRequests}
+          showMenuButton={this.state.filters.status === "1"}
+          handleSetRequestStatus={this.handleSetRequestStatus}
+          requests={filteredRequests}
+          duration={this.state.duration}
+          probabilityMap={this.data.probabilityMap}
+          openChat={requestId =>
+            this.prop.$chat.open({ objectKey: "Request", recordId: requestId })
+          }
+          showRosterForm={({
+            title,
+            step = 1,
+            afterSubmit,
+            preventDefaultSubmit,
+            request,
+            readOnly
+          }) =>
+            this.setState({
+              rosterForm: {
+                show: true,
+                request,
+                title,
+                step,
+                afterSubmit,
+                preventDefaultSubmit,
+                readOnly
+              }
+            })
+          }
+        />
         <NewRequestButton
           onPress={() =>
             this.setState({
