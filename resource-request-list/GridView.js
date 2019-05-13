@@ -92,7 +92,7 @@ function GridView({
 
   // Dimensions
   const CELL_DIMENSION = 45;
-  const FIRST_COLUMN_WIDTH = 180;
+  const FIRST_COLUMN_WIDTH = 200;
 
   let gridRef;
   const dateRow = getDateRow(moment(), moment().add(durationInWeeks, "weeks"));
@@ -212,7 +212,7 @@ function GridView({
                 });
               }}
             >
-              <Text>{cellText}</Text>
+              <FittedText>{cellText}</FittedText>
             </TouchableView>
             <FunctionButtonsContainer>
               {showMenuButton && (
@@ -229,7 +229,7 @@ function GridView({
       // Previous Version
       return (
         <PreviousVersionCell {...versionProps}>
-          <Text style={{ fontSize: 12 }}>{cellText}</Text>
+          <FittedText style={{ fontSize: 12 }}>{cellText}</FittedText>
           <SmallText>(Version {version.versionNumber})</SmallText>
         </PreviousVersionCell>
       );
@@ -323,4 +323,8 @@ const EntryCell = styled(View)`
   border: 1px solid #eee;
 
   ${props => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")};
+`;
+
+const FittedText = styled(Text)`
+  font-size: 100%;
 `;
