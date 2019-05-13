@@ -63,11 +63,6 @@ function datesToArray(start, end) {
   return list;
 }
 
-// Gets diff between two arrays
-// function arrayDiff(a, b) {
-//   return [...a.filter(x => !b.includes(x)), ...b.filter(x => !a.includes(x))];
-// }
-
 /**
  * Mini Single Roster used to confirm selected dates
  * Only shows pre-selected date range
@@ -76,14 +71,13 @@ function datesToArray(start, end) {
 class MiniPreview extends React.Component {
   constructor(props) {
     super(props);
-    const { formValues, consultant } = props;
+    const { formValues, readOnly } = props;
 
     this.state = {
-      autoSubmit: formValues.startDate === formValues.endDate,
+      autoSubmit: !readOnly && formValues.startDate === formValues.endDate,
       weeklyEntries: [],
       dateToNewEntryMap: new Map(),
-      loadinEntries: false,
-      consultantId: consultant ? consultant.id : formValues.consultant_id
+      loadinEntries: false
     };
   }
 
@@ -97,14 +91,8 @@ class MiniPreview extends React.Component {
     await this.buildDateToExistingEntryMap();
     const { dateToExistingEntryMap } = this.data;
 
-    let start, end;
-    if (formValues.startDate === formValues.endDate) {
-      start = formValues.startDate;
-      end = formValues.endDate;
-    } else {
-      start = getMonday(formValues.startDate);
-      end = getSunday(formValues.endDate);
-    }
+    const start = getMonday(formValues.startDate);
+    const end = getSunday(formValues.endDate);
 
     // Calculate previous roster entries - weeklyEntries
     const weeklyEntries = [];
@@ -143,7 +131,7 @@ class MiniPreview extends React.Component {
       overridesLeaves: this.state.autoSubmit || clickedIsLeave
     });
 
-    await this.buildDateToNewEntryMap(null, this.state.overridesLeaves, true);
+    await this.buildDateToNewEntryMap(null, this.state.overridesLeaves, false);
     if (this.state.autoSubmit) this.submit();
   }
 
@@ -163,7 +151,7 @@ class MiniPreview extends React.Component {
       const map = new Map();
       const rosterEntries = await $models.RosterEntry.findAll({
         where: {
-          consultant_id: this.state.consultantId,
+          consultant_id: formValues.consultant_id,
           date: {
             $between: [formValues.startDate, formValues.endDate]
           }
@@ -206,7 +194,7 @@ class MiniPreview extends React.Component {
       dateArr.forEach(date => {
         newEntries.push({
           date,
-          consultant_id: this.state.consultantId,
+          consultant_id: formValues.consultant_id,
           project_id: formValues.project_id,
           probability_id: formValues.probability_id
         });
@@ -231,7 +219,7 @@ class MiniPreview extends React.Component {
           if (!isLeaveEntry || overridesLeaves) {
             newEntries.push({
               date,
-              consultant_id: this.state.consultantId,
+              consultant_id: formValues.consultant_id,
               project_id: formValues.project_id,
               probability_id: formValues.probability_id
             });
@@ -263,6 +251,7 @@ class MiniPreview extends React.Component {
    */
   handleSelectEmpty = () => {
     const { dateToNewEntryMap } = this.state;
+    const { formValues } = this.props;
 
     const newDateToNewEntryMap = new Map(dateToNewEntryMap);
 
@@ -277,9 +266,9 @@ class MiniPreview extends React.Component {
       if (!existingEntry && weekdayIndex !== 0 && weekdayIndex !== 6) {
         newDateToNewEntryMap.set(date, {
           date,
-          consultant_id: this.state.consultantId,
-          project_id: this.props.formValues.project_id,
-          probability_id: this.props.formValues.probability_id
+          consultant_id: formValues.consultant_id,
+          project_id: formValues.project_id,
+          probability_id: formValues.probability_id
         });
       }
     }
@@ -292,6 +281,8 @@ class MiniPreview extends React.Component {
    */
   handleSelectHeader = index => {
     const { selectedWeekdays, dateToNewEntryMap } = this.state;
+    const { formValues } = this.props;
+
     const selected = !selectedWeekdays[index];
 
     const newSelectedWeekdays = {
@@ -319,9 +310,9 @@ class MiniPreview extends React.Component {
           // Weekday selected
           newDateToNewEntryMap.set(date, {
             date,
-            consultant_id: this.state.consultantId,
-            project_id: this.props.formValues.project_id,
-            probability_id: this.props.formValues.probability_id
+            consultant_id: formValues.consultant_id,
+            project_id: formValues.project_id,
+            probability_id: formValues.probability_id
           });
         } else {
           // Weekday deselected
@@ -361,7 +352,7 @@ class MiniPreview extends React.Component {
           // Project selected
           newDateToNewEntryMap.set(date, {
             date,
-            consultant_id: this.state.consultantId,
+            consultant_id: this.props.formValues.consultant_id,
             project_id: this.props.formValues.project_id,
             probability_id: this.props.formValues.probability_id
           });
@@ -389,7 +380,6 @@ class MiniPreview extends React.Component {
     const { dateToNewEntryMap } = this.state;
     const {
       $models,
-      consultant,
       onSubmit,
       afterSubmit,
       formValues,
@@ -429,13 +419,13 @@ class MiniPreview extends React.Component {
         // Create Roster Change Logs
         $models.RosterChange.create({
           ...data,
-          consultant: consultant.name
+          consultant: formValues.consultant_id // TODO - find consultant name instead
         });
 
         // 1. Remove existing entries on chosen dates
         await $models.RosterEntry.destroy({
           where: {
-            consultant_id: consultant.id,
+            consultant_id: formValues.consultant_id,
             date: {
               $in: pendingDates
             }
@@ -490,9 +480,9 @@ class MiniPreview extends React.Component {
             else {
               newMap.set(date, {
                 date,
-                consultant_id: this.state.consultantId,
-                project_id: this.props.formValues.project_id,
-                probability_id: this.props.formValues.probability_id
+                consultant_id: formValues.consultant_id,
+                project_id: formValues.project_id,
+                probability_id: formValues.probability_id
               });
             }
 

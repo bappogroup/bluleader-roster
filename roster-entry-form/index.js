@@ -19,9 +19,11 @@ import MiniPreview from "./MiniPreview";
 class RosterEntryForm extends React.Component {
   constructor(props) {
     super(props);
-    const isLeaveProject = props.leaveProjectIds.includes(
-      props.initialValues && props.initialValues.project_id
-    );
+    const isLeaveProject =
+      props.leaveProjectIds &&
+      props.leaveProjectIds.includes(
+        props.initialValues && props.initialValues.project_id
+      );
     const NAProbabilityValue = props.probabilityOptions.find(
       p => p.label === "NA"
     ).value;
@@ -57,7 +59,9 @@ class RosterEntryForm extends React.Component {
       >
         {({ getFieldValue, actions: { changeValue } }) => {
           const startDate = getFieldValue("startDate");
+          const endDate = getFieldValue("endDate");
           const project_id = getFieldValue("project_id");
+          const nextButtonText = startDate === endDate ? "Submit" : "Preview";
 
           return (
             <React.Fragment>
@@ -142,7 +146,7 @@ class RosterEntryForm extends React.Component {
                   onPress={this.props.onClose}
                 />
                 <SubmitButton>
-                  <Text style={{ color: Colors.BLUE }}>Preview</Text>
+                  <Text style={{ color: Colors.BLUE }}>{nextButtonText}</Text>
                 </SubmitButton>
               </ButtonGroup>
             </React.Fragment>
@@ -152,26 +156,32 @@ class RosterEntryForm extends React.Component {
     );
   };
 
-  renderPreview = () => (
-    <MiniPreview
-      readOnly={this.props.readOnly}
-      $models={this.props.$models}
-      currentUser={this.props.currentUser}
-      projectOptions={this.props.projectOptions}
-      formValues={this.state.submitValues}
-      consultant={this.props.consultant}
-      leaveProjectIds={this.props.leaveProjectIds}
-      dateToExistingEntryMap={this.props.dateToExistingEntryMap}
-      goBack={() => this.setState({ step: 1 })}
-      onClose={this.props.onClose}
-      onSubmit={this.props.onSubmit}
-      afterSubmit={this.props.afterSubmit}
-      preventDefaultSubmit={this.props.preventDefaultSubmit}
-      includedDates={
-        this.props.initialValues && this.props.initialValues.includedDates
-      }
-    />
-  );
+  renderPreview = () => {
+    const formValues = {
+      consultant_id: this.props.consultant && this.props.consultant.id,
+      ...this.state.submitValues
+    };
+    console.log(formValues);
+    return (
+      <MiniPreview
+        readOnly={this.props.readOnly}
+        $models={this.props.$models}
+        currentUser={this.props.currentUser}
+        projectOptions={this.props.projectOptions}
+        formValues={formValues}
+        leaveProjectIds={this.props.leaveProjectIds}
+        dateToExistingEntryMap={this.props.dateToExistingEntryMap}
+        goBack={() => this.setState({ step: 1 })}
+        onClose={this.props.onClose}
+        onSubmit={this.props.onSubmit}
+        afterSubmit={this.props.afterSubmit}
+        preventDefaultSubmit={this.props.preventDefaultSubmit}
+        includedDates={
+          this.props.initialValues && this.props.initialValues.includedDates
+        }
+      />
+    );
+  };
 
   render() {
     let body;
@@ -183,13 +193,18 @@ class RosterEntryForm extends React.Component {
         title = this.props.title || "Manage Roster";
         break;
       case 2:
-        let consultantName =
-          this.props.consultant && this.props.consultant.name;
-        if (!consultantName) {
-          consultantName = this.props.consultantOptions.find(
+        let consultantName;
+
+        if (this.props.consultantOptions) {
+          const selectedConsultant = this.props.consultantOptions.find(
             c => c.value === this.state.submitValues.consultant_id
-          ).label;
+          );
+          consultantName = selectedConsultant.label;
+        } else {
+          consultantName = this.props.consultant.name;
         }
+        if (!consultantName) consultantName = "This consultant";
+
         body = this.renderPreview();
         const { project_id, startDate, endDate } = this.state.submitValues;
         if (project_id) {

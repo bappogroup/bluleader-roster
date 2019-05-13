@@ -1,7 +1,14 @@
 import React, { useState, useMemo } from "react";
 import moment from "moment";
 import { AutoSizer, MultiGrid } from "react-virtualized";
-import { styled, View, TouchableView, Text, Dropdown } from "bappo-components";
+import {
+  styled,
+  View,
+  TouchableView,
+  Text,
+  Dropdown,
+  Icon
+} from "bappo-components";
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
@@ -128,11 +135,6 @@ function GridView({
         // Actions on dropdown button
         const normalActions = [
           {
-            label: "Chat",
-            onPress: () => openChat(request.id),
-            icon: "chat"
-          },
-          {
             label: "New Version",
             onPress: () =>
               showRosterForm({
@@ -216,6 +218,9 @@ function GridView({
               {showMenuButton && (
                 <Dropdown actions={actions} icon="more-horiz" />
               )}
+              <TouchableView onPress={() => openChat(request.id)}>
+                <Icon name="chat" color={iconColor} />
+              </TouchableView>
             </FunctionButtonsContainer>
           </CurrentVersionCell>
         );

@@ -198,7 +198,7 @@ class Page extends React.Component {
       versionNumber = "1";
     } else {
       // update previous 'current version'
-      const currentVersion = request.versions[request.versions.length - 1];
+      const currentVersion = request.versions.find(v => v.isCurrentVersion);
       await $models.RequestVersion.update(
         { isCurrentVersion: false },
         {
@@ -432,7 +432,7 @@ class Page extends React.Component {
     if (!(show && this.data.consultantOptions.length)) return null;
 
     const initialValues = request
-      ? request.versions[request.versions.length - 1]
+      ? request.versions.find(v => v.isCurrentVersion)
       : {};
 
     let consultant;
