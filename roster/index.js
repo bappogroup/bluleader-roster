@@ -427,6 +427,7 @@ class Roster extends React.Component {
         projects[pa.project_id] = pa.project;
       }
     }
+    this.data.commonProjects.forEach(pj => (projects[pj.id] = pj));
 
     // attach projects to roster entries
     const rosterEntries = _rosterEntries.map(re => {
