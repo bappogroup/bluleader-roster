@@ -64,7 +64,9 @@ function GridView({
         const dateArr = version.includedDates.split(", ");
         dateArr.forEach(date => {
           const key = `${version.id}.${date}`; // Key example: 123123.2019-03-03
-          _dict[key] = version.project.name.slice(0, 3);
+          _dict[key] = version.project
+            ? version.project.name.slice(0, 3)
+            : "Deleted Project";
         });
       });
     });
@@ -247,7 +249,7 @@ function GridView({
 
     return (
       <EntryCell key={key} style={style} backgroundColor={backgroundColor}>
-        <Text>{entryLabel}</Text>
+        <FittedText>{entryLabel}</FittedText>
       </EntryCell>
     );
   };

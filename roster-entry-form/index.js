@@ -212,9 +212,10 @@ class RosterEntryForm extends React.Component {
           const selectedProject = this.props.projectOptions.find(
             p => p.value === this.state.submitValues.project_id
           );
-          title = `${consultantName} for ${
-            selectedProject.label
-          }, on these days:`;
+          const projectLabel = selectedProject
+            ? selectedProject.label
+            : "Deleted Project";
+          title = `${consultantName} for ${projectLabel}, on these days:`;
         } else {
           // remove entries
           title = `Removing schedules for ${consultantName}, on these days:`;
