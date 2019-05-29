@@ -37,14 +37,19 @@ class Report extends React.Component {
   }
 
   renderRow = change => {
-    let consultantNames = change.consultant;
-    if (!consultantNames && change.includedConsultantIds) {
+    let consultantNames;
+    if (change.consultant) {
+      const consultant = this.state.consultantMap.get(change.consultant);
+      consultantNames = consultant && consultant.name;
+    } else if (change.includedConsultantIds) {
       const names = [];
       change.includedConsultantIds
         .split(", ")
         .forEach(id => names.push(this.state.consultantMap.get(id).name));
       consultantNames = names.join(", ");
     }
+
+    if (!consultantNames) consultantNames = change.consultant; // legacy records
 
     if (!change.project)
       return (

@@ -161,7 +161,7 @@ class RosterEntryForm extends React.Component {
       consultant_id: this.props.consultant && this.props.consultant.id,
       ...this.state.submitValues
     };
-    console.log(formValues);
+
     return (
       <MiniPreview
         readOnly={this.props.readOnly}
