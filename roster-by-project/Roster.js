@@ -5,22 +5,26 @@ import {
   View,
   Text,
   styled,
-  Button
+  Button,
+  Dropdown,
+  SelectField
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
+import JsonToHtml from "json-to-html";
+import FiltersModal from "./FiltersModal";
 
-// Format a date into ISO string e.g. 2018-01-01
-// Take out all timezone info
-function formatDate(d) {
-  const date = new Date(d);
-  return (
-    date.getFullYear() +
-    "-" +
-    ("0" + (date.getMonth() + 1)).slice(-2) +
-    "-" +
-    ("0" + date.getDate()).slice(-2)
-  );
-}
+const dateFormat = "YYYY-MM-DD";
+
+const sortModeOptions = [
+  {
+    label: "Name",
+    value: "name"
+  },
+  {
+    label: "Consultant Type",
+    value: "consultantType"
+  }
+];
 
 const datesToArray = (from, to, toStringDate) => {
   const list = [];
@@ -42,6 +46,7 @@ class RosterByProject extends React.Component {
 
   entryList = [];
   projectMap = {};
+  probabilityMap = {};
 
   constructor(props) {
     super(props);
@@ -49,40 +54,101 @@ class RosterByProject extends React.Component {
     this.state = {
       loading: true,
       consultants: [],
+      leaveProjects: [],
       error: null,
-      mode: this.props.projects.length > 1 ? "large" : "small"
+
+      displayMode: "small",
+      sortMode: "name",
+      showBackgroundColor: true,
+
+      // Filters
+      filters: {
+        startDate: moment().startOf("week"),
+        endDate: moment()
+          .startOf("week")
+          .add(12, "weeks")
+      },
+
+      showFiltersModal: false,
+      showShareModal: false
     };
   }
 
   async componentDidMount() {
+    const { $models } = this.props;
+
+    await Promise.all([
+      $models.Probability.findAll().then(probabilities => {
+        probabilities.forEach(pr => (this.probabilityMap[pr.id] = pr));
+      }),
+
+      $models.Project.findAll({
+        where: {
+          projectType: {
+            $in: ["4", "5", "6", "7"]
+          },
+          active: true
+        }
+      }).then(leaveProjects => this.setState({ leaveProjects }))
+    ]);
+
+    this.initialize();
+  }
+
+  initialize = async () => {
+    this.setState({ loading: true });
+
     const { $models, projects } = this.props;
-    const rosterEntries = await $models.RosterEntry.findAll({
+    let { startDate, endDate } = this.state.filters;
+
+    const rosterEntryQuery = {
       where: {
         project_id: {
           $in: projects.map(p => p.id)
         }
       },
       include: [{ as: "consultant" }]
-    });
+    };
+
+    if (startDate && endDate) {
+      rosterEntryQuery.where.date = {
+        $between: [
+          moment(startDate).format(dateFormat),
+          moment(endDate).format(dateFormat)
+        ]
+      };
+    }
+
+    const rosterEntries = await $models.RosterEntry.findAll(rosterEntryQuery);
 
     if (!rosterEntries.length)
       return this.setState({
-        error: "No roster record found for project(s)",
+        error: "No roster record found.",
         loading: false
       });
 
-    let startDate = new Date("2100-01-01");
-    let endDate = new Date("2000-01-01");
+    if (!(startDate && endDate)) {
+      // Date range is not specified - get start & end date from all roster entries
+      startDate = new Date("2100-01-01");
+      endDate = new Date("2000-01-01");
+      rosterEntries.forEach(entry => {
+        const date = new Date(entry.date);
+        if (date < startDate) startDate = date;
+        if (date > endDate) endDate = date;
+      });
+    }
+
     const consultants = [];
-
     rosterEntries.forEach(entry => {
-      // Get start & end date from roster entries
-      const date = new Date(entry.date);
-      if (date < startDate) startDate = date;
-      if (date > endDate) endDate = date;
-
+      // Hide consultants who don't have bookings
+      const isLeaveProject = this.state.leaveProjects.find(
+        p => p.id === entry.project_id
+      );
       // Get all related consultants
-      if (!consultants.find(c => c.id === entry.consultant_id))
+      if (
+        !isLeaveProject &&
+        !consultants.find(c => c.id === entry.consultant_id)
+      )
         consultants.push(entry.consultant);
     });
 
@@ -93,10 +159,7 @@ class RosterByProject extends React.Component {
     });
 
     // Get date array, to put at first of entryList
-    const dateArray = datesToArray(
-      formatDate(startDate),
-      formatDate(endDate)
-    ).map((date, index) => {
+    const dateArray = datesToArray(startDate, endDate).map((date, index) => {
       let labelFormat = "DD";
       if (date.day() === 1 || index === 0) labelFormat = "MMM DD";
 
@@ -122,9 +185,12 @@ class RosterByProject extends React.Component {
       tempMap[cid] = [];
     });
     rosterEntries.forEach(entry => {
-      const entryIndex = moment(entry.date).diff(formatDate(startDate), "days");
-      tempMap[entry.consultant_id][entryIndex] = entry;
+      const entryIndex = moment(entry.date).diff(startDate, "days");
+      if (tempMap[entry.consultant_id]) {
+        tempMap[entry.consultant_id][entryIndex] = entry;
+      }
     });
+
     // Insert consultant name at first of roster entry array
     const newEntryList = Object.entries(tempMap).map(([key, value]) => {
       const consultant = consultantMap[key];
@@ -146,11 +212,13 @@ class RosterByProject extends React.Component {
     this.projectMap = projectMap;
 
     this.setState({ loading: false, consultants });
-  }
+  };
+
+  refresh = () => this.initialize();
 
   columnWidthGetter = ({ index }) => {
     const columnWidth =
-      this.state.mode === "small"
+      this.state.displayMode === "small"
         ? this.CELL_DIMENSION
         : this.CELL_DIMENSION_LARGE;
     return index === 0 ? 160 : columnWidth;
@@ -168,14 +236,9 @@ class RosterByProject extends React.Component {
       let color = "black";
       if (entry.isWeekend) color = "lightgrey";
       return (
-        <Label
-          key={key}
-          style={style}
-          backgroundColor={backgroundColor}
-          color={color}
-        >
-          <Text>{entry.weekday}</Text>
-          <Text>{entry.formattedDate}</Text>
+        <Label key={key} style={style} backgroundColor={backgroundColor}>
+          <DateLabel style={{ color }}>{entry.weekday}</DateLabel>
+          <DateLabel style={{ color }}>{entry.formattedDate}</DateLabel>
         </Label>
       );
     } else if (columnIndex === 0) {
@@ -183,20 +246,22 @@ class RosterByProject extends React.Component {
       const consultantName =
         (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
 
-      // Change background color if external consultant
-      backgroundColor = "white";
-
       return (
-        <Label key={key} style={style} backgroundColor={backgroundColor}>
-          <Text>{consultantName}</Text>
+        <Label key={key} style={style}>
+          <CenteredText>{consultantName}</CenteredText>
         </Label>
       );
     }
 
     // Render roster entry cell
     if (entry) {
-      label = this.projectMap[entry.project_id];
-      if (this.props.projects.length === 1) label = label.slice(0, 3);
+      label = this.getProjectLabelById(entry.project_id);
+
+      // Get background color
+      if (this.state.showBackgroundColor) {
+        const probability = this.probabilityMap[entry.probability_id];
+        if (probability) backgroundColor = probability.backgroundColor;
+      }
     }
 
     // Apply weekend cell style
@@ -209,13 +274,78 @@ class RosterByProject extends React.Component {
         backgroundColor={backgroundColor}
         isWeekend={isWeekend}
       >
-        <Text>{label}</Text>
+        <CenteredText>{label}</CenteredText>
       </Cell>
     );
   };
 
-  setDisplayMode = mode =>
-    this.setState({ mode }, () => this.gridRef.recomputeGridSize());
+  getProjectLabelById = id => this.projectMap[id].slice(0, 4);
+
+  /**
+   * Sort consultants based on this.state.sortMode
+   */
+  getSortedConsultants = consultants => {
+    const sortedConsultants = consultants.slice();
+
+    switch (this.state.sortMode) {
+      case "consultantType": {
+        sortedConsultants.sort((a, b) => a.consultantType - b.consultantType);
+        break;
+      }
+      case "name":
+      default: {
+        sortedConsultants.sort((a, b) => {
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
+      }
+    }
+
+    return sortedConsultants;
+  };
+
+  handleSortModeChange = async sortMode => {
+    await this.setState({ sortMode });
+    const consultants = this.getSortedConsultants(this.state.consultants);
+    this.setState({ consultants });
+    this.gridRef.recomputeGridSize();
+  };
+
+  handleSetFilters = async ({ startDate, endDate }) => {
+    await this.setState({
+      filters: {
+        startDate,
+        endDate
+      },
+      showFiltersModal: false
+    });
+
+    this.initialize();
+  };
+
+  setDisplayMode = displayMode =>
+    this.setState({ displayMode }, () => this.gridRef.recomputeGridSize());
+
+  renderShareModal = () => {
+    return (
+      <JsonToHtml
+        onRequestClose={() => this.setState({ showShareModal: false })}
+        entryList={this.entryList}
+        getProjectLabelById={this.getProjectLabelById}
+      />
+    );
+  };
+
+  renderFiltersModal = () => (
+    <FiltersModal
+      $models={this.props.$models}
+      $global={this.props.$global}
+      onClose={() => this.setState({ showFiltersModal: false })}
+      onSubmit={this.handleSetFilters}
+      initialValues={this.state.filters}
+    />
+  );
 
   render() {
     const { error, loading } = this.state;
@@ -231,19 +361,62 @@ class RosterByProject extends React.Component {
 
     return (
       <Container>
-        <Header>
-          <Text>Cell size:</Text>
+        <MenuContainer>
           <Button
-            text="large"
-            onPress={() => this.setDisplayMode("large")}
-            type="tertiary"
+            icon="filter-list"
+            text="Filters"
+            onPress={() => this.setState({ showFiltersModal: true })}
+            type="secondary"
+            style={{ height: 40 }}
           />
-          <Button
-            text="small"
-            onPress={() => this.setDisplayMode("small")}
-            type="tertiary"
+          <SelectFieldContainer>
+            <SelectField
+              label="Sort By"
+              clearable={false}
+              options={sortModeOptions}
+              value={this.state.sortMode}
+              onValueChange={this.handleSortModeChange}
+              reserveErrorSpace={false}
+            />
+          </SelectFieldContainer>
+          <Dropdown
+            actions={[
+              {
+                icon: "refresh",
+                label: "Refresh",
+                onPress: this.refresh
+              },
+              {
+                icon: "share",
+                label: "Share as html",
+                onPress: () => this.setState({ showShareModal: true })
+              },
+              {
+                icon: "zoom-in",
+                label: "Cell Size: Large",
+                onPress: () => this.setDisplayMode("large")
+              },
+              {
+                icon: "zoom-out",
+                label: "Cell Size: Small",
+                onPress: () => this.setDisplayMode("small")
+              },
+              {
+                icon: "format-color-reset",
+                label: "Show/hide Cell Color",
+                onPress: () => {
+                  this.setState(
+                    ({ showBackgroundColor }) => ({
+                      showBackgroundColor: !showBackgroundColor
+                    }),
+                    () => this.gridRef.recomputeGridSize()
+                  );
+                }
+              }
+            ]}
+            icon="menu"
           />
-        </Header>
+        </MenuContainer>
         <AutoSizer>
           {({ height, width }) => (
             <MultiGrid
@@ -260,6 +433,8 @@ class RosterByProject extends React.Component {
             />
           )}
         </AutoSizer>
+        {this.state.showFiltersModal && this.renderFiltersModal()}
+        {this.state.showShareModal && this.renderShareModal()}
       </Container>
     );
   }
@@ -268,34 +443,55 @@ class RosterByProject extends React.Component {
 export default RosterByProject;
 
 const Container = styled(View)`
-  flex: 1;
-  margin-bottom: 35px;
+  flex: 1
+  margin-bottom: 35px
 `;
 
 const baseStyle = `
-  margin-left: 2px;
-  margin-right: 2px;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-  font-size: 12px;
+  margin-left: 2px
+  margin-right: 2px
+  justify-content: center
+  align-items: center
+  box-sizing: border-box
+  font-size: 12px
 `;
 
 const Label = styled(View)`
-  ${baseStyle};
-  color: ${props => props.color || "black"};
+  ${baseStyle}
 `;
 
 const Cell = styled(View)`
   ${baseStyle} background-color: ${props =>
-  props.isWeekend ? "white" : props.backgroundColor};
+  props.isWeekend ? "white" : props.backgroundColor}
 
-  border: 1px solid #eee;
+  border: 1px solid #eee
 
-  ${props => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")};
+  ${props => (props.blur ? "filter: blur(3px) opacity: 0.5" : "")}
 `;
 
-const Header = styled(View)`
-  flex-direction: row;
-  align-items: center;
+const CenteredText = styled(Text)`
+  text-align: center;
 `;
+
+const DateLabel = styled(Text)`
+  font-size: 12px;
+`;
+
+/**
+ * Top Menu
+ */
+const MenuContainer = styled(View)`
+  flex-direction: row
+  justify-content: flex-start
+  align-items: center
+`;
+
+const SelectFieldContainer = styled(View)`
+  width: 200px
+  margin-left: 16px
+  margin-bottom: 20px
+  margin-right: 8px
+`;
+/**
+ * Top Menu Ends
+ */

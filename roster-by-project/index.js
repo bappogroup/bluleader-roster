@@ -8,8 +8,7 @@ import {
   Text,
   TextInput,
   TouchableView,
-  Card,
-  Switch,
+  Separator,
   Icon
 } from "bappo-components";
 import Roster from "./Roster";
@@ -22,36 +21,46 @@ class RosterByProject extends React.Component {
   state = {
     loading: true,
     filteredProjects: [],
-    selectedProject: null,
     searchText: null,
-    isMultiple: false,
     selectedProjects: [],
-    showMultiple: false
+    showRoster: false
   };
 
   async componentDidMount() {
-    const projects = await this.props.$models.Project.findAll({
+    let projects = await this.props.$models.Project.findAll({
       where: {
         active: true
-      }
+      },
+      include: [{ as: "customer" }, { as: "profitCentre" }]
     });
+    projects = projects.map(p => {
+      p.searchString = `
+        ${p.profitCentre && p.profitCentre.name} 
+        ${p.customer && p.customer.name} 
+        ${p.name} 
+      `;
+      return p;
+    });
+
     this.setState({
       filteredProjects: projects.sort(function(a, b) {
         // Sort alphabetically
-        const nameA = a.name.toLowerCase(),
-          nameB = b.name.toLowerCase();
+        const nameA = a.searchString.toLowerCase(),
+          nameB = b.searchString.toLowerCase();
         if (nameA < nameB) return -1;
         if (nameA > nameB) return 1;
         return 0;
       }),
       loading: false
+      // selectedProjects: projects, // REMOVE - ONLY FOR DEBUG
+      // showRoster: true // REMOVE - ONLY FOR DEBUG
     });
     this.data.projects = projects;
   }
 
   handleSearch = searchText => {
     const filteredProjects = this.data.projects.filter(p =>
-      p.name.toLowerCase().includes(searchText.toLowerCase())
+      p.searchString.toLowerCase().includes(searchText.toLowerCase())
     );
     this.setState({ searchText, filteredProjects });
   };
@@ -61,28 +70,38 @@ class RosterByProject extends React.Component {
       p => p.id === project.id
     );
 
-    const backgroundColor = pIndex === -1 ? null : "lightgray";
+    const backgroundColor = pIndex === -1 ? "white" : "#ddd";
 
     return (
       <TouchableView
-        onPress={() => {
-          if (this.state.isMultiple)
-            this.setState(state => {
-              const newSelectedProjects = state.selectedProjects.slice();
-              if (pIndex === -1) newSelectedProjects.push(project);
-              else newSelectedProjects.splice(pIndex, 1);
+        onPress={() =>
+          this.setState(state => {
+            const newSelectedProjects = state.selectedProjects.slice();
+            if (pIndex === -1) newSelectedProjects.push(project);
+            else newSelectedProjects.splice(pIndex, 1);
 
-              return {
-                ...state,
-                selectedProjects: newSelectedProjects
-              };
-            });
-          else this.setState({ selectedProject: project });
-        }}
+            return {
+              ...state,
+              selectedProjects: newSelectedProjects
+            };
+          })
+        }
       >
-        <Card style={{ marginBottom: 3, backgroundColor }}>
-          <Text>{project.name}</Text>
-        </Card>
+        <Row style={{ marginBottom: 3, backgroundColor }}>
+          <View style={{ width: 200 }}>
+            <Text numberOfLines={1}>
+              {project && project.profitCentre && project.profitCentre.name}
+            </Text>
+          </View>
+          <View style={{ width: 200 }}>
+            <Text numberOfLines={1}>
+              {project && project.customer && project.customer.name}
+            </Text>
+          </View>
+          <View style={{ width: 300 }}>
+            <Text numberOfLines={1}>{project && project.name}</Text>
+          </View>
+        </Row>
       </TouchableView>
     );
   };
@@ -91,42 +110,40 @@ class RosterByProject extends React.Component {
     const {
       loading,
       filteredProjects,
-      selectedProject,
       selectedProjects,
-      showMultiple
+      showRoster
     } = this.state;
 
     if (loading) return <ActivityIndicator style={{ flex: 1 }} />;
 
-    let rosterProjects = [];
+    if (showRoster) {
+      const projectNames = selectedProjects.map(p => p.name).join(", ");
 
-    if (showMultiple) {
-      rosterProjects = selectedProjects;
-    } else if (selectedProject) {
-      rosterProjects = [selectedProject];
-    }
-
-    if (rosterProjects.length > 0) {
       return (
         <Container>
-          <StyledButton
-            text="Go back"
-            type="secondary"
-            onPress={() =>
-              this.setState({
-                selectedProject: null,
-                selectedProjects: [],
-                showMultiple: false
-              })
-            }
-          />
-          <Roster {...this.props} projects={rosterProjects} />
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <StyledButton
+              text="Go back"
+              type="tertiary"
+              onPress={() =>
+                this.setState({
+                  selectedProject: null,
+                  selectedProjects: [],
+                  showRoster: false
+                })
+              }
+            />
+            <Heading>Roster for Projects: {projectNames}</Heading>
+          </View>
+
+          <Separator />
+          <Roster {...this.props} projects={selectedProjects} />
         </Container>
       );
     }
 
     return (
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ListContainer>
         <SearchRow>
           <Icon name="search" style={{ marginRight: 8 }} />
           <TextInput
@@ -137,57 +154,71 @@ class RosterByProject extends React.Component {
             style={{ marginTop: 10, marginBottom: 10 }}
           />
         </SearchRow>
-
-        <ToggleContainer>
-          <Switch
-            value={this.state.isMultiple}
-            onValueChange={() =>
-              this.setState(state => ({
-                ...state,
-                isMultiple: !state.isMultiple,
-                selectedProjects: []
-              }))
-            }
-          />
-          <Text style={{ marginLeft: 8, marginRight: 32 }}>
-            Select multiple projects
-          </Text>
+        <ProjectList style={{ flex: 1, padding: 16 }}>
+          {filteredProjects.length ? (
+            filteredProjects.map(this.renderProjectCard)
+          ) : (
+            <Text>No projects found</Text>
+          )}
+        </ProjectList>
+        <ButtonRow>
           {selectedProjects.length > 0 && (
             <Button
-              type="secondary"
-              text="Go"
-              onPress={() => this.setState({ showMultiple: true })}
+              text="Run"
+              onPress={() => this.setState({ showRoster: true })}
             />
           )}
-        </ToggleContainer>
-        {filteredProjects.length ? (
-          filteredProjects.map(this.renderProjectCard)
-        ) : (
-          <Text>No projects found</Text>
-        )}
-      </ScrollView>
+        </ButtonRow>
+      </ListContainer>
     );
   }
 }
 
 export default RosterByProject;
 
-const Container = styled(View)`
+const ListContainer = styled(View)`
+  background-color: #f8f8f8;
   flex: 1;
+  padding-top: 10px;
+`;
+
+const ProjectList = styled(ScrollView)``;
+
+const Container = styled(View)`
+  background-color: #f8f8f8;
+  flex: 1;
+  padding: 16px 8px 0 16px;
 `;
 
 const SearchRow = styled(View)`
   flex-direction: row;
   align-items: center;
+  background-color: white;
+  margin: 5px 16px;
+  border: 1px solid #eee;
 `;
 
 const StyledButton = styled(Button)`
-  margin-bottom: 10px;
-  align-self: flex-start;
+  margin-right: 8px;
 `;
 
-const ToggleContainer = styled(View)`
+const Row = styled(View)`
+  height: 40px;
   flex-direction: row;
+  padding-left: 16px;
   align-items: center;
-  margin: 8px 0;
+  border-radius: 2px;
+  box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
+  margin: 5px 0;
+  &:hover {
+    box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const ButtonRow = styled(View)`
+  margin: 10px 16px;
+`;
+
+const Heading = styled(Text)`
+  font-size: 18px;
 `;
