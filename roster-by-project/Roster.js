@@ -167,7 +167,7 @@ class RosterByProject extends React.Component {
       consultantMap[c.id] = c;
     });
     const consultantIds = consultants.map(c => c.id);
-    const tempMap = {};
+    const tempMap = {}; // consultantID-to-rosterEntryArray
     consultantIds.forEach(cid => {
       tempMap[cid] = [];
     });
@@ -179,10 +179,12 @@ class RosterByProject extends React.Component {
     });
 
     // Insert consultant name at first of roster entry array
-    const newEntryList = Object.entries(tempMap).map(([key, value]) => {
-      const consultant = consultantMap[key];
-      return [consultant].concat(value);
-    });
+    const newEntryList = Object.entries(tempMap).map(
+      ([consultantId, entryArr]) => {
+        const consultant = consultantMap[consultantId];
+        return [consultant].concat(entryArr);
+      }
+    );
 
     // Sorting based on consultant name
     newEntryList.sort((a, b) => {
@@ -242,7 +244,7 @@ class RosterByProject extends React.Component {
 
     // Render roster entry cell
     if (entry) {
-      label = this.getProjectLabelById(entry.project_id);
+      label = this.getProjectLabelByEntry(entry);
 
       // Get background color
       if (this.state.showBackgroundColor) {
@@ -266,7 +268,8 @@ class RosterByProject extends React.Component {
     );
   };
 
-  getProjectLabelById = id => this.projectMap[id].slice(0, 4);
+  getProjectLabelByEntry = entry =>
+    this.projectMap[entry.project_id].slice(0, 4);
 
   handleSetFilters = async ({ startDate, endDate }) => {
     await this.setState({
@@ -283,14 +286,67 @@ class RosterByProject extends React.Component {
   setDisplayMode = displayMode =>
     this.setState({ displayMode }, () => this.gridRef.recomputeGridSize());
 
+  /**
+   * Prepare data to share as HTML
+   */
+  prepareDataToShare = () => {
+    const header = [
+      {
+        text: ""
+      }
+    ];
+
+    this.entryList[0].forEach(({ date, isWeekend }) => {
+      if (!date) return;
+
+      const formattedDate = date.format("MMM D");
+      header.push({
+        text: formattedDate,
+        color: isWeekend ? "lightgrey" : "black"
+      });
+    });
+
+    const rows = this.entryList.slice(1).map(row => {
+      const result = {
+        "": {
+          text: row[0].name
+        }
+      };
+      row.slice(1).forEach(entry => {
+        const date = moment(entry.date);
+        const formattedDate = date.format("MMM D");
+
+        result[formattedDate] = {
+          text: this.getProjectLabelByEntry(entry)
+        };
+
+        if (this.state.showBackgroundColor) {
+          // Get cell background color based on probability
+          const probability = this.probabilityMap[entry.probability_id];
+          const backgroundColor = probability
+            ? probability.backgroundColor
+            : "#f8f8f8";
+          result[formattedDate].backgroundColor = backgroundColor;
+        }
+      });
+
+      return result;
+    });
+
+    return {
+      header,
+      rows
+    };
+  };
+
   renderShareModal = () => {
+    const { header, rows } = this.prepareDataToShare();
+
     return (
       <JsonToHtml
         onRequestClose={() => this.setState({ showShareModal: false })}
-        entryList={this.entryList}
-        getProjectLabelById={this.getProjectLabelById}
-        probabilityMap={this.probabilityMap}
-        showBackgroundColor={this.state.showBackgroundColor}
+        header={header}
+        rows={rows}
       />
     );
   };

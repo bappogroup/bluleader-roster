@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import fileDownload from "js-file-download";
-import { styled, View, Modal, Button, Text, Separator } from "bappo-components";
-import moment from "moment";
+import {
+  styled,
+  View,
+  Modal,
+  Button,
+  Text,
+  Separator,
+  ActivityIndicator
+} from "bappo-components";
 
 const _table_ = document.createElement("table"),
   _tr_ = document.createElement("tr"),
@@ -24,17 +31,18 @@ function buildHtmlTable(header, data) {
       td.style.fontSize = "14px";
 
       if (j === 0) {
-        // Consultant name cells
+        // Cells in the first column
         td.style.minWidth = "160px";
       } else {
-        // Roster entry cells - add border
+        // Actual entry cells - add border
         td.style.border = "1px solid #eee";
         td.style.minWidth = "40px";
       }
 
       if (entry) {
         td.style.backgroundColor = entry.backgroundColor;
-      } else if (date.isWeekend) {
+      } else if (date.color === "lightgrey") {
+        // For Roster: make weekend cells white background
         td.style.backgroundColor = "white";
       }
 
@@ -59,7 +67,7 @@ function addAllColumnHeaders(header, table) {
   const monthAppeared = {};
 
   for (let i = 0, l = header.length; i < l; i++) {
-    const { text, isWeekend } = header[i];
+    const { text, color } = header[i];
 
     columnSet.push(text);
 
@@ -77,7 +85,7 @@ function addAllColumnHeaders(header, table) {
     th.style.padding = "8px";
     th.style.fontSize = "14px";
     th.style.fontWeight = "normal";
-    th.style.color = isWeekend ? "lightgrey" : "black";
+    th.style.color = color;
     th.appendChild(document.createTextNode(headerText));
     tr.appendChild(th);
   }
@@ -85,66 +93,24 @@ function addAllColumnHeaders(header, table) {
   return columnSet;
 }
 
-function JsonToHtml({
-  entryList,
-  onRequestClose,
-  getProjectLabelById,
-  probabilityMap,
-  showBackgroundColor = true
-}) {
-  if (!entryList) return "EntryList is required.";
+function JsonToHtml({ header, rows, onRequestClose, isLoading }) {
+  if (isLoading)
+    return (
+      <Modal visible onRequestClose={onRequestClose}>
+        <ActivityIndicator style={{ margin: 32 }} />
+      </Modal>
+    );
+
+  if (!(header && rows)) return "Headers and rows are required.";
 
   const [copyStatus, setCopyStatus] = useState(false);
 
-  const header = [
-    {
-      text: ""
-    }
-  ];
-
-  entryList[0].forEach(({ date, isWeekend }) => {
-    if (!date) return;
-
-    const formattedDate = date.format("MMM D");
-    header.push({
-      text: formattedDate,
-      isWeekend
-    });
-  });
-
-  const data = entryList.slice(1).map(row => {
-    const result = {
-      "": {
-        text: row[0].name
-      }
-    };
-    row.slice(1).forEach(entry => {
-      const date = moment(entry.date);
-      const formattedDate = date.format("MMM D");
-
-      result[formattedDate] = {
-        text: getProjectLabelById(entry.project_id)
-      };
-
-      if (showBackgroundColor) {
-        // Get cell background color based on probability
-        const probability = probabilityMap[entry.probability_id];
-        const backgroundColor = probability
-          ? probability.backgroundColor
-          : "#f8f8f8";
-        result[formattedDate].backgroundColor = backgroundColor;
-      }
-    });
-
-    return result;
-  });
-
-  const __html = buildHtmlTable(header, data).outerHTML;
+  const __html = buildHtmlTable(header, rows).outerHTML;
 
   return (
     <Modal visible onRequestClose={onRequestClose}>
       <Container>
-        <Title>Share Roster Data as HTML</Title>
+        <Title>Share as HTML</Title>
         <Separator style={{ marginBottom: 0 }} />
         <div
           dangerouslySetInnerHTML={{ __html }}
@@ -188,6 +154,7 @@ function JsonToHtml({
 export default JsonToHtml;
 
 const Container = styled(View)`
+  flex: 1;
   justify-content: center;
 `;
 

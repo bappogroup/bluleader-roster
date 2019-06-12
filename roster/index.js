@@ -21,6 +21,7 @@ import {
 } from "roster-utils";
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
+import JsonToHtml from "json-to-html";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
 
@@ -41,9 +42,6 @@ class Roster extends React.Component {
   CELL_DIMENSION_LARGE = 120;
   CONSULTANT_CELL_WIDTH = 160;
 
-  isLoadingRows = false;
-  highestRowIndex = 0;
-
   data = {
     commonProjects: [], // Superset of leave projects
     leaveProjects: [],
@@ -55,6 +53,9 @@ class Roster extends React.Component {
     super(props);
 
     this.state = {
+      isLoadingRows: false,
+      allRowsLoaded: false,
+
       singleConsultantPopup: {
         show: false
       },
@@ -80,7 +81,7 @@ class Roster extends React.Component {
 
       sortMode: "name", // Sort consultants by name or consultantType
 
-      mode: "small",
+      displayMode: "small",
       initializing: true,
 
       dateRow: [],
@@ -96,7 +97,8 @@ class Roster extends React.Component {
       },
 
       showMassUpdateModal: false,
-      showFiltersModal: false
+      showFiltersModal: false,
+      showShareModal: false
     };
   }
 
@@ -154,8 +156,6 @@ class Roster extends React.Component {
   };
 
   refresh = () => this.initialize();
-
-  fetchFilterProject;
 
   // Initialize by fetching data
   // Queries are generated from this.state.filters
@@ -366,6 +366,7 @@ class Roster extends React.Component {
   // Recursive calling self but no concurrent loads
   loadData = async () => {
     const {
+      isLoadingRows,
       filters,
       consultants,
       consultantOffset,
@@ -376,8 +377,9 @@ class Roster extends React.Component {
     const { RosterEntry, ProjectAssignment } = this.props.$models;
     const updatedEntryMap = { ...consultantIdToEntriesMap };
 
-    if (this.isLoadingRows) return;
-    this.isLoadingRows = true;
+    if (isLoadingRows) return;
+
+    await this.setState({ isLoadingRows: true });
 
     const consultantQuantity = this.getConsultantQuantityPerFetch();
     const newConsultantOffset = consultantOffset + consultantQuantity;
@@ -452,9 +454,9 @@ class Roster extends React.Component {
       pa => pa.project && pa.project._deletedAt === null
     );
 
-    this.isLoadingRows = false;
     this.setState(
       {
+        isLoadingRows: false,
         initializing: false,
         consultantIdToEntriesMap: updatedEntryMap,
         projectAssignments: projectAssignments.concat(newProjectAssignments),
@@ -463,9 +465,11 @@ class Roster extends React.Component {
       () => {
         // Fetch data of next batch of consultants if needed
         this.gridRef.recomputeGridSize();
-        if (newConsultantOffset < this.highestRowIndex) {
-          this.loadData();
-        }
+
+        // Keep fetching all data
+        const { consultantOffset, consultants } = this.state;
+        if (consultantOffset < consultants.length) this.loadData();
+        else this.setState({ allRowsLoaded: true });
       }
     );
   };
@@ -512,15 +516,11 @@ class Roster extends React.Component {
     );
   };
 
-  setDisplayMode = mode =>
-    this.setState({ mode }, () => this.gridRef.recomputeGridSize());
+  setDisplayMode = displayMode =>
+    this.setState({ displayMode }, () => this.gridRef.recomputeGridSize());
 
   cellRenderer = ({ columnIndex, key, rowIndex, style }) => {
-    const { dateRow, consultants, consultantIdToEntriesMap, mode } = this.state;
-
-    if (rowIndex > this.highestRowIndex) {
-      this.highestRowIndex = rowIndex;
-    }
+    const { dateRow, consultants, consultantIdToEntriesMap } = this.state;
 
     const consultant = consultants[rowIndex - 1];
     const date = dateRow[columnIndex];
@@ -550,7 +550,11 @@ class Roster extends React.Component {
       return (
         <ClickLabel
           key={key}
-          style={style}
+          style={{
+            ...style,
+            alignItems: "flex-start",
+            marginLeft: 16
+          }}
           backgroundColor={backgroundColor}
           onClick={() => this.handleClickConsultant(consultant)}
         >
@@ -561,26 +565,12 @@ class Roster extends React.Component {
 
     // Render roster entry cell
     const entries = consultantIdToEntriesMap[consultant.id];
-    if (!entries) {
-      this.loadData();
-    }
-
     const entry = entries && entries[columnIndex - 1];
 
     if (entry) {
-      backgroundColor =
-        (entry.project && entry.project.backgroundColour) ||
-        (entry.probability && entry.probability.backgroundColor) ||
-        "white";
+      backgroundColor = this.getBackgroundColorByEntry(entry);
 
-      if (entry.project) {
-        label =
-          mode === "large"
-            ? entry.project.name
-            : entry.project.key || entry.project.name;
-      }
-      // If a project is deleted, entry.project is null
-      if (mode === "small" && label.length > 0) label = label.slice(0, 6);
+      label = this.getProjectLabelByEntry(entry);
     }
 
     // Apply weekend cell style
@@ -593,9 +583,30 @@ class Roster extends React.Component {
         backgroundColor={backgroundColor}
         onPress={() => this.openEntryForm(rowIndex, columnIndex, entry)}
       >
-        {label}
+        <CenteredText>{label}</CenteredText>
       </Cell>
     );
+  };
+
+  getProjectLabelByEntry = entry => {
+    let label = "";
+    if (entry.project) {
+      label =
+        this.state.displayMode === "large"
+          ? entry.project.name
+          : entry.project.key || entry.project.name;
+    }
+    // If a project is deleted, entry.project is null
+    if (this.state.displayMode === "small" && label.length > 0)
+      label = label.slice(0, 4);
+    return label;
+  };
+
+  getBackgroundColorByEntry = entry => {
+    const backgroundColor =
+      (entry.project && entry.project.backgroundColour) ||
+      (entry.probability && entry.probability.backgroundColor);
+    return backgroundColor;
   };
 
   handleClickConsultant = consultant => {
@@ -674,7 +685,7 @@ class Roster extends React.Component {
 
   columnWidthGetter = ({ index }) => {
     const columnWidth =
-      this.state.mode === "small"
+      this.state.displayMode === "small"
         ? this.CELL_DIMENSION
         : this.CELL_DIMENSION_LARGE;
     return index === 0 ? this.CONSULTANT_CELL_WIDTH : columnWidth;
@@ -724,6 +735,95 @@ class Roster extends React.Component {
     />
   );
 
+  /**
+   * Prepare data to share as HTML
+   */
+  prepareDataToShare = () => {
+    const {
+      dateRow,
+      consultantIdToEntriesMap,
+      consultants,
+      sortMode
+    } = this.state;
+
+    const header = [
+      {
+        text: ""
+      }
+    ];
+    dateRow.forEach(({ date, isWeekend }) => {
+      if (!date) return;
+
+      const formattedDate = date.format("MMM D");
+      header.push({
+        text: formattedDate,
+        color: isWeekend ? "lightgrey" : "black"
+      });
+    });
+
+    const rows = [];
+
+    Object.entries(consultantIdToEntriesMap).forEach(
+      ([consultantId, entryArr]) => {
+        // entryArr is roster entries row for one consultant
+        const consultant = consultants.find(c => c.id === consultantId);
+        const row = {
+          consultant: consultant, // temp property for sorting
+          "": {
+            text: consultant.name
+          }
+        };
+        entryArr.forEach(rosterEntry => {
+          const formattedDate = moment(rosterEntry.date).format("MMM D");
+          const projectLabel = this.getProjectLabelByEntry(rosterEntry);
+          const backgroundColor = this.getBackgroundColorByEntry(rosterEntry);
+          row[formattedDate] = {
+            text: projectLabel,
+            backgroundColor
+          };
+        });
+        rows.push(row);
+      }
+    );
+
+    // Sort rows according to current sortMode
+    switch (sortMode) {
+      case "consultantType": {
+        rows.sort(
+          (a, b) => a.consultant.consultantType - b.consultant.consultantType
+        );
+        break;
+      }
+      case "name":
+      default: {
+        rows.sort((a, b) => {
+          if (a.consultant.name < b.consultant.name) return -1;
+          if (a.consultant.name > b.consultant.name) return 1;
+          return 0;
+        });
+      }
+    }
+
+    rows.forEach(row => delete row.consultant);
+
+    return {
+      header,
+      rows
+    };
+  };
+
+  renderShareModal = () => {
+    const { header, rows } = this.prepareDataToShare();
+    return (
+      <JsonToHtml
+        onRequestClose={() => this.setState({ showShareModal: false })}
+        header={header}
+        rows={rows}
+        isLoading={!this.state.allRowsLoaded}
+      />
+    );
+  };
+
   handleSetFilters = async ({
     filterBy,
     costCenter_id,
@@ -754,11 +854,9 @@ class Roster extends React.Component {
         consultantType
       },
       projectAssignments: [],
-      showFiltersModal: false
+      showFiltersModal: false,
+      isLoadingRows: false
     });
-
-    this.isLoadingRows = false;
-    this.highestRowIndex = 0;
 
     this.initialize();
 
@@ -784,7 +882,7 @@ class Roster extends React.Component {
   );
 
   renderHeading = () => {
-    const { filters, costCenter, filterProject } = this.state;
+    const { filters, costCenter, filterProject, isLoadingRows } = this.state;
     let title = "";
 
     switch (filters.filterBy) {
@@ -813,9 +911,7 @@ class Roster extends React.Component {
     return (
       <HeadingContainer>
         <Heading>{title}</Heading>
-        {this.state.consultantOffset < this.highestRowIndex && (
-          <ActivityIndicator style={{ marginLeft: 16 }} />
-        )}
+        {isLoadingRows && <ActivityIndicator style={{ marginLeft: 16 }} />}
       </HeadingContainer>
     );
   };
@@ -861,6 +957,11 @@ class Roster extends React.Component {
                 icon: "refresh",
                 label: "Refresh",
                 onPress: this.refresh
+              },
+              {
+                icon: "share",
+                label: "Share as HTML",
+                onPress: () => this.setState({ showShareModal: true })
               },
               {
                 icon: "filter-9-plus",
@@ -920,6 +1021,7 @@ class Roster extends React.Component {
         )}
         {this.state.showMassUpdateModal && this.renderMassUpdateModal()}
         {this.state.showFiltersModal && this.renderFiltersModal()}
+        {this.state.showShareModal && this.renderShareModal()}
       </Container>
     );
   }
@@ -1000,4 +1102,8 @@ const Cell = styled(TouchableView)`
   border: 1px solid #eee;
 
   ${props => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")};
+`;
+
+const CenteredText = styled(Text)`
+  text-align: center;
 `;
