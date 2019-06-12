@@ -871,6 +871,27 @@ class Roster extends React.Component {
     });
   };
 
+  handleCreateAssignment = async assignment => {
+    const { $models } = this.props;
+    const existingAssignment = await $models.ProjectAssignment.findOne({
+      where: {
+        consultant_id: assignment.consultant_id,
+        project_id: assignment.project_id
+      }
+    });
+
+    // Avoid duplication and create new assignment
+    if (!existingAssignment) {
+      const newAssignment = await $models.ProjectAssignment.create(assignment);
+      const project = await $models.Project.findById(assignment.project_id);
+      newAssignment.project = project;
+      // Append to state
+      this.setState(({ projectAssignments }) => ({
+        projectAssignments: [...projectAssignments, newAssignment]
+      }));
+    }
+  };
+
   renderFiltersModal = () => (
     <FiltersModal
       $models={this.props.$models}
@@ -962,6 +983,16 @@ class Roster extends React.Component {
                 icon: "share",
                 label: "Share as HTML",
                 onPress: () => this.setState({ showShareModal: true })
+              },
+              {
+                icon: "assignment-ind",
+                label: "Assign a Project to a Consultant",
+                onPress: () =>
+                  this.props.$popup.form({
+                    title: "New Assignment",
+                    formKey: "ProjectAssignmentForm",
+                    onSubmit: this.handleCreateAssignment
+                  })
               },
               {
                 icon: "filter-9-plus",
