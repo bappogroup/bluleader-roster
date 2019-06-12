@@ -11,7 +11,6 @@ import {
 import moment from "moment";
 import RosterEntryForm from "roster-entry-form";
 import GridView from "./GridView";
-import RequestRow from "./RequestRow";
 
 const arrToOptions = arr =>
   arr.map(element => ({ label: element.name, value: element.id }));
@@ -382,43 +381,6 @@ class Page extends React.Component {
     );
   };
 
-  renderRow = ({ item, index }) => {
-    const currentVersion = item.versions.find(v => v.isCurrentVersion);
-    const canCancel =
-      currentVersion.requestedBy_id === this.props.$global.currentUser.id;
-
-    return (
-      <RequestRow
-        key={index}
-        request={item}
-        chat={this.props.$chat}
-        canCancel={canCancel}
-        canManageResourceRequests={this.state.canManageResourceRequests}
-        showMenuButton={this.state.filters.status === "1"}
-        handleSetRequestStatus={status =>
-          this.handleSetRequestStatus(status, item.id)
-        }
-        showRosterForm={({
-          title,
-          step = 1,
-          afterSubmit,
-          preventDefaultSubmit
-        }) =>
-          this.setState({
-            rosterForm: {
-              show: true,
-              request: item,
-              title,
-              step,
-              afterSubmit,
-              preventDefaultSubmit
-            }
-          })
-        }
-      />
-    );
-  };
-
   renderRosterForm = () => {
     const {
       show,
@@ -470,9 +432,9 @@ class Page extends React.Component {
         {this.renderFilters()}
         <Separator />
         {this.state.loading && <ActivityIndicator style={{ margin: 16 }} />}
-        {/* <FlatList data={filteredRequests} renderItem={this.renderRow} /> */}
 
         <GridView
+          {...this.props}
           currentUser={this.props.$global.currentUser}
           canManageResourceRequests={this.state.canManageResourceRequests}
           showMenuButton={this.state.filters.status === "1"}

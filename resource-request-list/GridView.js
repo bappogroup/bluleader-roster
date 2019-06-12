@@ -44,10 +44,12 @@ function getDateRow(startDate, endDate) {
 }
 
 function GridView({
+  $global,
+  $popup,
+  $models,
   requests,
   durationInWeeks = 52,
   openChat,
-  currentUser,
   canManageResourceRequests,
   showMenuButton,
   handleSetRequestStatus,
@@ -55,6 +57,47 @@ function GridView({
   probabilityMap
 }) {
   const [expandedRequestIds, setExpandedRequestIds] = useState([]);
+  const currentUser = $global.currentUser;
+
+  /**
+   * Handle when the admin clicks on "Approve and Update Roster"
+   */
+  const handleApproveAndUpdateRoster = async (request, version) => {
+    const existingAssignment = await $models.ProjectAssignment.findOne({
+      where: {
+        project_id: version.project_id,
+        consultant_id: version.consultant_id
+      }
+    });
+
+    // Show preview and allow submission
+    const showPreview = () =>
+      showRosterForm({
+        title: "Review",
+        step: 2,
+        afterSubmit: () => handleSetRequestStatus("2", request.id),
+        request
+      });
+
+    if (!existingAssignment) {
+      // If the Project Assignment doesn't exist, prompt for creation first
+      $popup.form({
+        title: "New Assignment",
+        formKey: "ProjectAssignmentForm",
+        initialValues: {
+          project_id: version.project_id,
+          consultant_id: version.consultant_id
+        },
+        onSubmit: async assignment => {
+          await $models.ProjectAssignment.create(assignment);
+          showPreview();
+        }
+      });
+    } else {
+      // Assignment exists - go to preview screen
+      showPreview();
+    }
+  };
 
   // Process passed requests when mounted
   const dict = useMemo(() => {
@@ -123,9 +166,16 @@ function GridView({
         key,
         style
       };
+
+      let projectLabel = "";
+      if (version.project) {
+        const { name } = version.project;
+        projectLabel = name.length > 10 ? `${name.slice(0, 10)}...` : name;
+      }
+
       const cellText = `${version.requestedBy.name} requested ${
         version.consultant.name
-      }`;
+      } on ${projectLabel}`;
 
       // Current Version
       if (version.isCurrentVersion) {
@@ -174,13 +224,7 @@ function GridView({
         const managerActions = [
           {
             label: "Approve and Update Roster",
-            onPress: () =>
-              showRosterForm({
-                title: "Review",
-                step: 2,
-                afterSubmit: () => handleSetRequestStatus("2", request.id),
-                request
-              })
+            onPress: () => handleApproveAndUpdateRoster(request, version)
           },
           {
             label: "Approve",
