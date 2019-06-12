@@ -82,7 +82,7 @@ function GridView({
     if (!existingAssignment) {
       // If the Project Assignment doesn't exist, prompt for creation first
       $popup.form({
-        title: "New Assignment",
+        title: "Create Project Assignment First",
         formKey: "ProjectAssignmentForm",
         initialValues: {
           project_id: version.project_id,
