@@ -6,25 +6,13 @@ import {
   Text,
   styled,
   Button,
-  Dropdown,
-  SelectField
+  Dropdown
 } from "bappo-components";
 import { AutoSizer, MultiGrid } from "react-virtualized";
 import JsonToHtml from "json-to-html";
 import FiltersModal from "./FiltersModal";
 
 const dateFormat = "YYYY-MM-DD";
-
-const sortModeOptions = [
-  {
-    label: "Name",
-    value: "name"
-  },
-  {
-    label: "Consultant Type",
-    value: "consultantType"
-  }
-];
 
 const datesToArray = (from, to, toStringDate) => {
   const list = [];
@@ -58,7 +46,6 @@ class RosterByProject extends React.Component {
       error: null,
 
       displayMode: "small",
-      sortMode: "name",
       showBackgroundColor: true,
 
       // Filters
@@ -247,9 +234,9 @@ class RosterByProject extends React.Component {
         (entry && entry.name) || this.state.consultants[rowIndex - 1].name;
 
       return (
-        <Label key={key} style={style}>
-          <CenteredText>{consultantName}</CenteredText>
-        </Label>
+        <ConsultantLabel key={key} style={style}>
+          <Text>{consultantName}</Text>
+        </ConsultantLabel>
       );
     }
 
@@ -281,37 +268,6 @@ class RosterByProject extends React.Component {
 
   getProjectLabelById = id => this.projectMap[id].slice(0, 4);
 
-  /**
-   * Sort consultants based on this.state.sortMode
-   */
-  getSortedConsultants = consultants => {
-    const sortedConsultants = consultants.slice();
-
-    switch (this.state.sortMode) {
-      case "consultantType": {
-        sortedConsultants.sort((a, b) => a.consultantType - b.consultantType);
-        break;
-      }
-      case "name":
-      default: {
-        sortedConsultants.sort((a, b) => {
-          if (a.name < b.name) return -1;
-          if (a.name > b.name) return 1;
-          return 0;
-        });
-      }
-    }
-
-    return sortedConsultants;
-  };
-
-  handleSortModeChange = async sortMode => {
-    await this.setState({ sortMode });
-    const consultants = this.getSortedConsultants(this.state.consultants);
-    this.setState({ consultants });
-    this.gridRef.recomputeGridSize();
-  };
-
   handleSetFilters = async ({ startDate, endDate }) => {
     await this.setState({
       filters: {
@@ -333,6 +289,8 @@ class RosterByProject extends React.Component {
         onRequestClose={() => this.setState({ showShareModal: false })}
         entryList={this.entryList}
         getProjectLabelById={this.getProjectLabelById}
+        probabilityMap={this.probabilityMap}
+        showBackgroundColor={this.state.showBackgroundColor}
       />
     );
   };
@@ -367,18 +325,8 @@ class RosterByProject extends React.Component {
             text="Filters"
             onPress={() => this.setState({ showFiltersModal: true })}
             type="secondary"
-            style={{ height: 40 }}
+            style={{ height: 40, marginRight: 16 }}
           />
-          <SelectFieldContainer>
-            <SelectField
-              label="Sort By"
-              clearable={false}
-              options={sortModeOptions}
-              value={this.state.sortMode}
-              onValueChange={this.handleSortModeChange}
-              reserveErrorSpace={false}
-            />
-          </SelectFieldContainer>
           <Dropdown
             actions={[
               {
@@ -388,7 +336,7 @@ class RosterByProject extends React.Component {
               },
               {
                 icon: "share",
-                label: "Share as html",
+                label: "Share as HTML",
                 onPress: () => this.setState({ showShareModal: true })
               },
               {
@@ -460,6 +408,11 @@ const Label = styled(View)`
   ${baseStyle}
 `;
 
+const ConsultantLabel = styled(View)`
+  ${baseStyle}
+  align-items: flex-start;
+`;
+
 const Cell = styled(View)`
   ${baseStyle} background-color: ${props =>
   props.isWeekend ? "white" : props.backgroundColor}
@@ -486,12 +439,6 @@ const MenuContainer = styled(View)`
   align-items: center
 `;
 
-const SelectFieldContainer = styled(View)`
-  width: 200px
-  margin-left: 16px
-  margin-bottom: 20px
-  margin-right: 8px
-`;
 /**
  * Top Menu Ends
  */
