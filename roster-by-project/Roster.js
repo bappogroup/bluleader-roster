@@ -28,7 +28,7 @@ const datesToArray = (from, to, toStringDate) => {
 
 class RosterByProject extends React.Component {
   // Dimensions
-  CELL_DIMENSION = 45;
+  CELL_DIMENSION = 60;
   CELL_DIMENSION_LARGE = 120;
   CONSULTANT_CELL_WIDTH = 160;
 
@@ -87,6 +87,7 @@ class RosterByProject extends React.Component {
 
     const { $models, projects } = this.props;
     let { startDate, endDate } = this.state.filters;
+    const consultants = [];
 
     const rosterEntryQuery = {
       where: {
@@ -108,6 +109,18 @@ class RosterByProject extends React.Component {
 
     const rosterEntries = await $models.RosterEntry.findAll(rosterEntryQuery);
 
+    if (this.state.showEmptyRows) {
+      const projectAssignments = await $models.ProjectAssignment.findAll({
+        where: {
+          project_id: {
+            $in: projects.map(p => p.id)
+          }
+        },
+        include: [{ as: "consultant" }]
+      });
+      projectAssignments.forEach(pa => consultants.push(pa.consultant));
+    }
+
     if (!rosterEntries.length)
       return this.setState({
         error: "No roster record found.",
@@ -125,7 +138,6 @@ class RosterByProject extends React.Component {
       });
     }
 
-    const consultants = [];
     rosterEntries.forEach(entry => {
       // Hide consultants who don't have bookings
       const isLeaveProject = this.state.leaveProjects.find(
@@ -285,7 +297,7 @@ class RosterByProject extends React.Component {
     }
     // If a project is deleted, entry.project is null
     if (this.state.displayMode === "small" && label.length > 0)
-      label = label.slice(0, 4);
+      label = label.slice(0, 7);
     return label;
   };
 
@@ -450,13 +462,29 @@ class RosterByProject extends React.Component {
               },
               {
                 icon: "format-color-reset",
-                label: "Show/hide Cell Color",
+                label: this.state.showBackgroundColor
+                  ? "Hide Cell Color"
+                  : "Show Cell Color",
                 onPress: () => {
                   this.setState(
                     ({ showBackgroundColor }) => ({
                       showBackgroundColor: !showBackgroundColor
                     }),
                     () => this.gridRef.recomputeGridSize()
+                  );
+                }
+              },
+              {
+                icon: "remove-red-eye",
+                label: this.state.showEmptyRows
+                  ? "Hide Empty Rows"
+                  : "Show Empty Rows",
+                onPress: () => {
+                  this.setState(
+                    ({ showEmptyRows }) => ({
+                      showEmptyRows: !showEmptyRows
+                    }),
+                    () => this.refresh()
                   );
                 }
               }
