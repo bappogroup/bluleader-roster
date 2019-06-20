@@ -12,6 +12,7 @@ import {
   Icon
 } from "bappo-components";
 import Roster from "./Roster";
+import Table from "short-table";
 
 class RosterByProject extends React.Component {
   data = {
@@ -23,7 +24,17 @@ class RosterByProject extends React.Component {
     filteredProjects: [],
     searchText: null,
     selectedProjects: [],
-    showRoster: false
+    showRoster: false,
+    columns: [
+      {
+        label: "Profit Center",
+        key: "profitCentreName",
+        type: "text",
+        width: 200
+      },
+      { label: "Customer", key: "customerName", type: "text", width: 200 },
+      { label: "Project", key: "projectName", type: "text", width: 200 }
+    ]
   };
 
   async componentDidMount() {
@@ -39,6 +50,9 @@ class RosterByProject extends React.Component {
         ${p.customer && p.customer.name} 
         ${p.name} 
       `;
+      p.profitCentreName = p.profitCentre && p.profitCentre.name;
+      p.projectName = p.name;
+      p.customerName = p.customer && p.customer.name;
       return p;
     });
 
@@ -141,6 +155,43 @@ class RosterByProject extends React.Component {
         </Container>
       );
     }
+
+    return (
+      <ListContainer>
+        <SearchRow>
+          <Icon name="search" style={{ marginRight: 8 }} />
+          <TextInput
+            autoFocus
+            value={this.state.searchText}
+            onValueChange={this.handleSearch}
+            placeholder="Search projects"
+            style={{ marginTop: 10, marginBottom: 10 }}
+          />
+        </SearchRow>
+
+        <Table
+          selectable="multi"
+          columns={this.state.columns}
+          data={this.state.filteredProjects}
+          onChange={({ data, columns }) => {
+            const selectedProjects = data.filter(p => p.selected === true);
+            this.setState({
+              filteredProjects: data,
+              selectedProjects,
+              columns
+            });
+          }}
+        />
+        <ButtonRow>
+          {selectedProjects.length > 0 && (
+            <Button
+              text="Run"
+              onPress={() => this.setState({ showRoster: true })}
+            />
+          )}
+        </ButtonRow>
+      </ListContainer>
+    );
 
     return (
       <ListContainer>

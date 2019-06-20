@@ -195,9 +195,14 @@ class RosterByProject extends React.Component {
 
     this.entryList = entryList.concat(newEntryList);
 
-    // Build projectId - projectName lookup
+    // Build projectId - project key or name lookup
     const projectMap = {};
-    projects.forEach(p => (projectMap[p.id] = p.name));
+    projects.forEach(p => {
+      projectMap[p.id] = {
+        name: p.name,
+        key: p.key
+      };
+    });
     this.projectMap = projectMap;
 
     this.setState({ loading: false, consultants });
@@ -268,8 +273,21 @@ class RosterByProject extends React.Component {
     );
   };
 
-  getProjectLabelByEntry = entry =>
-    this.projectMap[entry.project_id].slice(0, 4);
+  getProjectLabelByEntry = entry => {
+    const project = this.projectMap[entry.project_id];
+
+    let label = "";
+    if (project) {
+      label =
+        this.state.displayMode === "large"
+          ? project.name
+          : project.key || project.name;
+    }
+    // If a project is deleted, entry.project is null
+    if (this.state.displayMode === "small" && label.length > 0)
+      label = label.slice(0, 4);
+    return label;
+  };
 
   handleSetFilters = async ({ startDate, endDate }) => {
     await this.setState({
