@@ -47,6 +47,7 @@ class RosterByProject extends React.Component {
 
       displayMode: "small",
       showBackgroundColor: true,
+      showEmptyRows: false,
 
       // Filters
       filters: {
