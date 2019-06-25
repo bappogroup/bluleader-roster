@@ -419,6 +419,7 @@ class Page extends React.Component {
         initialValues={initialValues}
         step={step}
         preventDefaultSubmit={preventDefaultSubmit}
+        requireProject={true}
       />
     );
   };

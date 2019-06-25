@@ -38,7 +38,7 @@ const sortModeOptions = [
 
 class Roster extends React.Component {
   // Dimensions
-  CELL_DIMENSION = 60;
+  CELL_DIMENSION = 45;
   CELL_DIMENSION_LARGE = 120;
   CONSULTANT_CELL_WIDTH = 160;
 
@@ -598,7 +598,7 @@ class Roster extends React.Component {
     }
     // If a project is deleted, entry.project is null
     if (this.state.displayMode === "small" && label.length > 0)
-      label = label.slice(0, 7);
+      label = label.slice(0, 5);
     return label;
   };
 

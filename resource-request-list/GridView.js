@@ -175,7 +175,7 @@ function GridView({
 
       const cellText = `${version.requestedBy.name} requested ${
         version.consultant.name
-      } on ${projectLabel}`;
+      } on ${projectLabel || "Deleted Project"}`;
 
       // Current Version
       if (version.isCurrentVersion) {
@@ -257,6 +257,7 @@ function GridView({
                   readOnly: true
                 });
               }}
+              disabled={!projectLabel}
             >
               <FittedText>{cellText}</FittedText>
             </TouchableView>
@@ -285,7 +286,7 @@ function GridView({
     const dictKey = `${version.id}.${date.dbDate}`;
     const entryLabel = dict[dictKey];
     const probability = probabilityMap.get(version.probability_id);
-    if (entryLabel && probability.backgroundColor) {
+    if (entryLabel && probability && probability.backgroundColor) {
       backgroundColor = probability.backgroundColor;
     } else if (date.isWeekend) {
       backgroundColor = "white";

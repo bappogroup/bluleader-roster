@@ -42,7 +42,8 @@ class RosterEntryForm extends React.Component {
       projectOptions = [],
       probabilityOptions,
       initialValues,
-      leaveProjectIds
+      leaveProjectIds,
+      requireProject = false
     } = this.props;
 
     const _initialValues = Object.assign(
@@ -100,6 +101,10 @@ class RosterEntryForm extends React.Component {
                         changeValue("probability_id", null);
                       }
                     }
+                  }}
+                  validate={value => {
+                    if (requireProject && !value) return "Required";
+                    return undefined;
                   }}
                 />
                 <Form.Field
@@ -215,7 +220,7 @@ class RosterEntryForm extends React.Component {
           const projectLabel = selectedProject
             ? selectedProject.label
             : "Deleted Project";
-          title = `${consultantName} for ${projectLabel}, on these days:`;
+          title = `${consultantName} to work on ${projectLabel}, on these days:`;
         } else {
           // remove entries
           title = `Removing schedules for ${consultantName}, on these days:`;
