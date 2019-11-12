@@ -1,5 +1,5 @@
 import React from "react";
-import { styled, View, Text } from "bappo-components";
+import { styled, View, Text, ScrollView } from "bappo-components";
 import moment from "moment";
 
 const inputDateFormat = "YYYY-MM-DD";
@@ -43,7 +43,7 @@ const YearlyDatePreview = ({ year, dateArr }) => {
     }
 
     return (
-      <MonthRow key={index}>
+      <MonthRow key={index} horizontal>
         <View style={{ width: 32 }}>
           <Text>{monthStart.format("MMM")}</Text>
         </View>
@@ -60,12 +60,15 @@ const YearlyDatePreview = ({ year, dateArr }) => {
   };
 
   return (
-    <YearContainer>
+    <Container>
       <View style={{ marginBottom: 8 }}>
         <Text>{year}</Text>
       </View>
-      {months.map(renderMonthRow)}
-    </YearContainer>
+
+      <ScrollView horizontal>
+        <View>{months.map(renderMonthRow)}</View>
+      </ScrollView>
+    </Container>
   );
 };
 
@@ -95,10 +98,9 @@ const DatePreview = ({ datesString }) => {
 
 export default DatePreview;
 
-const YearContainer = styled(View)`
+const Container = styled(View)`
   margin-top: 8px;
   margin-bottom: 8px;
-  overflow-x: auto;
 `;
 
 const MonthRow = styled(View)`

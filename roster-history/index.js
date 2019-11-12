@@ -1,11 +1,11 @@
-import React from 'react';
-import { Text, View, ScrollView, styled } from 'bappo-components';
-import DatePreview from 'date-preview';
+import React from "react";
+import { Text, View, ScrollView, styled } from "bappo-components";
+import DatePreview from "date-preview";
 
 class Report extends React.Component {
   state = {
     loading: true,
-    changes: [],
+    changes: []
   };
 
   loadData = async () => {
@@ -13,13 +13,13 @@ class Report extends React.Component {
 
     const [consultants, changes] = await Promise.all([
       $models.Consultant.findAll({
-        where: { active: true },
+        where: { active: true }
       }),
       $models.RosterChange.findAll({
         where: {},
-        include: [{ as: 'project' }, { as: 'probability' }],
-        limit: 300,
-      }),
+        include: [{ as: "project" }, { as: "probability" }],
+        limit: 300
+      })
     ]);
 
     const consultantMap = new Map();
@@ -28,7 +28,7 @@ class Report extends React.Component {
     this.setState({
       consultantMap,
       loading: false,
-      changes: changes.sort((a, b) => b.id - a.id),
+      changes: changes.sort((a, b) => b.id - a.id)
     });
   };
 
@@ -43,11 +43,11 @@ class Report extends React.Component {
       consultantNames = consultant && consultant.name;
     } else if (change.includedConsultantIds) {
       const names = [];
-      change.includedConsultantIds.split(', ').forEach(id => {
+      change.includedConsultantIds.split(", ").forEach(id => {
         const includedConsultant = this.state.consultantMap.get(id);
         if (includedConsultant) names.push(includedConsultant.name);
       });
-      consultantNames = names.join(', ');
+      consultantNames = names.join(", ");
     }
 
     if (!consultantNames) consultantNames = change.consultant; // legacy records
@@ -60,7 +60,7 @@ class Report extends React.Component {
               Schedules from {change.startDate} to {change.endDate} were deleted
               for the following consultants:
             </Text>
-            <View style={{ margin: '8px 0' }}>
+            <View style={{ margin: 8 }}>
               <Text>{consultantNames}</Text>
             </View>
           </Cell>
@@ -84,7 +84,7 @@ class Report extends React.Component {
         </Cell>
         <Text>including:</Text>
         <DatePreview datesString={change.includedDates} />
-        <Cell style={{ flexDirection: 'row' }}>
+        <Cell style={{ flexDirection: "row" }}>
           <Text>on {change.project && change.project.name} </Text>
           <Text>
             (probability: {change.probability && change.probability.name})
@@ -102,7 +102,7 @@ class Report extends React.Component {
   render() {
     if (this.state.loading)
       return (
-        <View>
+        <View style={{ margin: 16 }}>
           <Text>Loading...</Text>
         </View>
       );
