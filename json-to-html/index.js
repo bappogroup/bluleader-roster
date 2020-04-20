@@ -7,7 +7,7 @@ import {
   Button,
   Text,
   Separator,
-  ActivityIndicator
+  ActivityIndicator,
 } from "bappo-components";
 
 const _table_ = document.createElement("table"),
@@ -96,7 +96,7 @@ function addAllColumnHeaders(header, table) {
 function JsonToHtml({ header, rows, onRequestClose, isLoading }) {
   if (isLoading)
     return (
-      <Modal visible onRequestClose={onRequestClose}>
+      <Modal visible onRequestClose={onRequestClose} hideHeader>
         <ActivityIndicator style={{ margin: 32 }} />
       </Modal>
     );
@@ -118,7 +118,7 @@ function JsonToHtml({ header, rows, onRequestClose, isLoading }) {
             overflow: "auto",
             flex: 1,
             width: "100%",
-            alignSelf: "flex-start"
+            alignSelf: "flex-start",
           }}
         />
         <Separator style={{ marginTop: 0 }} />
