@@ -10,30 +10,31 @@ import {
   Overlay,
   Dropdown,
   SelectField,
-  Separator
+  Separator,
 } from "bappo-components";
-import { AutoSizer, MultiGrid } from "react-virtualized";
+
 import { setUserPreferences, getUserPreferences } from "user-preferences";
 import {
   dateFormat,
   datesToArray,
-  projectAssignmentsToOptions
+  projectAssignmentsToOptions,
 } from "roster-utils";
 import SingleRoster from "single-roster";
 import RosterEntryForm from "roster-entry-form";
 import JsonToHtml from "json-to-html";
 import MassUpdateModal from "./MassUpdateModal";
 import FiltersModal from "./FiltersModal";
+import BappoGrid from "bappo-grid";
 
 const sortModeOptions = [
   {
     label: "Name",
-    value: "name"
+    value: "name",
   },
   {
     label: "Consultant Type",
-    value: "consultantType"
-  }
+    value: "consultantType",
+  },
 ];
 
 class Roster extends React.Component {
@@ -46,7 +47,7 @@ class Roster extends React.Component {
     commonProjects: [], // Superset of leave projects
     leaveProjects: [],
     probabilityOptions: [],
-    probabilityMap: {} // id-to-object map
+    probabilityMap: {}, // id-to-object map
   };
 
   constructor(props) {
@@ -57,7 +58,7 @@ class Roster extends React.Component {
       allRowsLoaded: false,
 
       singleConsultantPopup: {
-        show: false
+        show: false,
       },
 
       costCenter: null,
@@ -72,10 +73,8 @@ class Roster extends React.Component {
         state: null,
         weeks: "12",
         startDate: moment().startOf("week"),
-        endDate: moment()
-          .startOf("week")
-          .add(12, "weeks"),
-        consultantType: null
+        endDate: moment().startOf("week").add(12, "weeks"),
+        consultantType: null,
       },
       filterProject: null,
 
@@ -93,12 +92,12 @@ class Roster extends React.Component {
       entryForm: {
         show: false,
         projectOptions: [],
-        title: ""
+        title: "",
       },
 
       showMassUpdateModal: false,
       showFiltersModal: false,
-      showShareModal: false
+      showShareModal: false,
     };
   }
 
@@ -115,7 +114,7 @@ class Roster extends React.Component {
       includeCrossTeamConsultants,
       project_id,
       project_ids,
-      state
+      state,
     } = prefs;
     includeCrossTeamConsultants =
       filterBy === "costCenter" &&
@@ -136,7 +135,7 @@ class Roster extends React.Component {
       project_ids:
         filterBy === "multipleProjects" && project_ids
           ? project_ids.split(" ")
-          : []
+          : [],
     };
     await this.setState({ filters });
     this.initialize();
@@ -171,7 +170,7 @@ class Roster extends React.Component {
       startDate,
       endDate,
       state,
-      consultantType
+      consultantType,
     } = filters;
     const { $models } = this.props;
 
@@ -186,22 +185,21 @@ class Roster extends React.Component {
         formattedDate: date.format(labelFormat),
         weekday: date.format("ddd"),
         isWeekend: date.day() === 6 || date.day() === 0,
-        date
+        date,
       };
     });
-    dateRow.unshift("");
 
     // Fetch Projects and Probabilities (and Cost Center if specified)
     const promises = [
       $models.Project.findAll({
         where: {
           projectType: {
-            $in: ["4", "5", "6", "7"]
+            $in: ["4", "5", "6", "7"],
           },
-          active: true
-        }
+          active: true,
+        },
       }),
-      $models.Probability.findAll({})
+      $models.Probability.findAll({}),
     ];
 
     // Fetch data based on filterBy type
@@ -209,8 +207,8 @@ class Roster extends React.Component {
       active: true,
       endDate: {
         // endDate should be null or later than roster start date
-        $or: [{ $eq: null }, { $gte: moment(startDate).format(dateFormat) }]
-      }
+        $or: [{ $eq: null }, { $gte: moment(startDate).format(dateFormat) }],
+      },
     };
     if (state) consultantQuery.state = state;
     if (consultantType) consultantQuery.consultantType = consultantType;
@@ -219,26 +217,26 @@ class Roster extends React.Component {
       // Filter by project
       case "project":
       case "multipleProjects": {
-        $models.Project.findById(filters.project_id).then(filterProject =>
+        $models.Project.findById(filters.project_id).then((filterProject) =>
           this.setState({ filterProject })
         );
 
-        const fetchConsultantsInProject = async project_id => {
+        const fetchConsultantsInProject = async (project_id) => {
           const projectIdQuery =
             filterBy === "project"
               ? project_id
               : {
-                  $in: project_ids
+                  $in: project_ids,
                 };
           const assignments = await $models.ProjectAssignment.findAll({
             where: {
-              project_id: projectIdQuery
+              project_id: projectIdQuery,
             },
-            include: [{ as: "consultant" }]
+            include: [{ as: "consultant" }],
           });
           const consultants = assignments
-            .map(a => a.consultant)
-            .filter(consultant => {
+            .map((a) => a.consultant)
+            .filter((consultant) => {
               if (!consultant.active) return false;
               if (
                 consultant.endDate &&
@@ -264,11 +262,11 @@ class Roster extends React.Component {
       case "multipleCostCenters": {
         if (costCenter_ids && costCenter_ids.length > 0)
           consultantQuery.costCenter_id = {
-            $in: costCenter_ids
+            $in: costCenter_ids,
           };
         promises.push(
           $models.Consultant.findAll({
-            where: consultantQuery
+            where: consultantQuery,
           })
         );
         break;
@@ -278,14 +276,14 @@ class Roster extends React.Component {
 
         promises.push(
           $models.Consultant.findAll({
-            where: consultantQuery
+            where: consultantQuery,
           })
         );
 
         if (costCenter_id) {
           promises.push(
             $models.CostCenter.findById(costCenter_id, {
-              include: [{ as: "profitCentre" }]
+              include: [{ as: "profitCentre" }],
             })
           );
         }
@@ -300,43 +298,44 @@ class Roster extends React.Component {
       commonProjects,
       probabilities,
       consultants,
-      costCenter
+      costCenter,
     ] = await Promise.all(promises);
 
     // Get Probability options
     this.data.probabilityOptions = probabilities.reverse().map((p, index) => ({
       value: p.id,
       label: p.name,
-      pos: index
+      pos: index,
     }));
     const probabilityMap = {};
-    probabilities.forEach(pro => (probabilityMap[pro.id] = pro));
+    probabilities.forEach((pro) => (probabilityMap[pro.id] = pro));
     this.data.probabilityMap = probabilityMap;
 
     // If "cross team" and a cost center is selected - extend external consultants to the list
     if (includeCrossTeamConsultants && costCenter) {
       const projects = await $models.Project.findAll({
-        where: { profitCentre_id: costCenter.profitCentre_id, active: true }
+        where: { profitCentre_id: costCenter.profitCentre_id, active: true },
       });
-      const projectIds = projects.map(p => p.id);
+      const projectIds = projects.map((p) => p.id);
       const projectAssignments = await $models.ProjectAssignment.findAll({
         where: {
-          project_id: { $in: projectIds }
+          project_id: { $in: projectIds },
         },
-        include: [{ as: "consultant" }]
+        include: [{ as: "consultant" }],
       });
-      const otherConsultants = projectAssignments.map(pa => pa.consultant);
+      let otherConsultants = projectAssignments.map((pa) => pa.consultant);
+      otherConsultants = otherConsultants.filter((c) => c.active);
 
       const consultantMap = {};
-      consultants.forEach(c => (consultantMap[c.id] = c));
-      otherConsultants.forEach(c => {
+      consultants.forEach((c) => (consultantMap[c.id] = c));
+      otherConsultants.forEach((c) => {
         if (!consultantMap[c.id]) consultantMap[c.id] = c;
       });
       consultants = Object.values(consultantMap);
 
       if (consultantType)
         consultants = consultants.filter(
-          consultant => consultant.consultantType === consultantType
+          (consultant) => consultant.consultantType === consultantType
         );
     }
 
@@ -349,13 +348,13 @@ class Roster extends React.Component {
         costCenter,
         consultants: sortedConsultants,
         consultantIdToEntriesMap: {},
-        consultantOffset: 0
+        consultantOffset: 0,
       },
       () => this.loadData()
     );
 
     // Save common & leave projects in this.data
-    const leaveProjects = commonProjects.filter(p =>
+    const leaveProjects = commonProjects.filter((p) =>
       ["4", "5", "6"].includes(p.projectType)
     );
     this.data.commonProjects = commonProjects;
@@ -371,7 +370,7 @@ class Roster extends React.Component {
       consultants,
       consultantOffset,
       projectAssignments,
-      consultantIdToEntriesMap
+      consultantIdToEntriesMap,
     } = this.state;
     const { startDate, endDate } = filters;
     const { RosterEntry, ProjectAssignment } = this.props.$models;
@@ -386,8 +385,8 @@ class Roster extends React.Component {
     // Get new consultants and filter already fetched consultants
     const newConsultants = consultants
       .slice(consultantOffset, newConsultantOffset)
-      .filter(consultant => !consultantIdToEntriesMap[consultant.id]);
-    const newConsultantIds = newConsultants.map(c => c.id);
+      .filter((consultant) => !consultantIdToEntriesMap[consultant.id]);
+    const newConsultantIds = newConsultants.map((c) => c.id);
 
     const promises = [];
 
@@ -396,10 +395,10 @@ class Roster extends React.Component {
       ProjectAssignment.findAll({
         where: {
           consultant_id: {
-            $in: newConsultantIds
-          }
+            $in: newConsultantIds,
+          },
         },
-        include: [{ as: "project" }]
+        include: [{ as: "project" }],
       })
     );
 
@@ -410,13 +409,13 @@ class Roster extends React.Component {
           date: {
             $between: [
               moment(startDate).format(dateFormat),
-              moment(endDate).format(dateFormat)
-            ]
+              moment(endDate).format(dateFormat),
+            ],
           },
           consultant_id: {
-            $in: newConsultantIds
-          }
-        }
+            $in: newConsultantIds,
+          },
+        },
       })
     );
 
@@ -429,21 +428,23 @@ class Roster extends React.Component {
         projects[pa.project_id] = pa.project;
       }
     }
-    this.data.commonProjects.forEach(pj => (projects[pj.id] = pj));
+    this.data.commonProjects.forEach((pj) => (projects[pj.id] = pj));
 
     // attach projects to roster entries
-    const rosterEntries = _rosterEntries.map(re => {
+    const rosterEntries = _rosterEntries.map((re) => {
       re.project = projects[re.project_id];
       return re;
     });
 
     // Put fetched roster entries into updatedEntryMap
-    newConsultants.forEach(consultant => (updatedEntryMap[consultant.id] = []));
-    rosterEntries.forEach(entry => {
+    newConsultants.forEach(
+      (consultant) => (updatedEntryMap[consultant.id] = [])
+    );
+    rosterEntries.forEach((entry) => {
       // populate probability
       const populatedEntry = {
         ...entry,
-        probability: this.data.probabilityMap[entry.probability_id]
+        probability: this.data.probabilityMap[entry.probability_id],
       };
 
       const entryIndex = moment(entry.date).diff(startDate, "days");
@@ -451,7 +452,7 @@ class Roster extends React.Component {
     });
 
     const newProjectAssignments = allProjectAssignments.filter(
-      pa => pa.project && pa.project._deletedAt === null
+      (pa) => pa.project && pa.project._deletedAt === null
     );
 
     this.setState(
@@ -460,12 +461,10 @@ class Roster extends React.Component {
         initializing: false,
         consultantIdToEntriesMap: updatedEntryMap,
         projectAssignments: projectAssignments.concat(newProjectAssignments),
-        consultantOffset: newConsultantOffset
+        consultantOffset: newConsultantOffset,
       },
       () => {
         // Fetch data of next batch of consultants if needed
-        this.gridRef.recomputeGridSize();
-
         // Keep fetching all data
         const { consultantOffset, consultants } = this.state;
         if (consultantOffset < consultants.length) this.loadData();
@@ -477,7 +476,7 @@ class Roster extends React.Component {
   /**
    * Sort consultants based on this.state.sortMode
    */
-  getSortedConsultants = consultants => {
+  getSortedConsultants = (consultants) => {
     const sortedConsultants = consultants.slice();
 
     switch (this.state.sortMode) {
@@ -498,16 +497,15 @@ class Roster extends React.Component {
     return sortedConsultants;
   };
 
-  handleSortModeChange = async sortMode => {
+  handleSortModeChange = async (sortMode) => {
     await this.setState({ sortMode });
     const consultants = this.getSortedConsultants(this.state.consultants);
     this.setState({ consultants });
-    this.gridRef.recomputeGridSize();
   };
 
-  getConsultantAssignments = consultantId => {
+  getConsultantAssignments = (consultantId) => {
     const hisProjectAssignments = this.state.projectAssignments.filter(
-      pa => pa.consultant_id === consultantId
+      (pa) => pa.consultant_id === consultantId
     );
 
     return projectAssignmentsToOptions(
@@ -516,65 +514,82 @@ class Roster extends React.Component {
     );
   };
 
-  setDisplayMode = displayMode =>
-    this.setState({ displayMode }, () => this.gridRef.recomputeGridSize());
+  setDisplayMode = (displayMode) => this.setState({ displayMode });
 
-  cellRenderer = ({ columnIndex, key, rowIndex, style }) => {
-    const { dateRow, consultants, consultantIdToEntriesMap } = this.state;
+  headerRenderer = ({ columnIndex }) => {
+    const { dateRow } = this.state;
+    const key = `date-${columnIndex}`;
 
-    const consultant = consultants[rowIndex - 1];
     const date = dateRow[columnIndex];
-    let backgroundColor = "#f8f8f8"; // Defaults to gray for weekdays
-    let label = "";
+    if (!date) return null;
 
-    if (rowIndex === 0) {
-      // Render date label cell
+    let color = "black";
+    if (date.isWeekend) color = "lightgrey";
+    return (
+      <Label key={key} color={color}>
+        <CenteredText>{date.weekday}</CenteredText>
+        <CenteredText style={{ fontSize: 10 }}>
+          {date.formattedDate}
+        </CenteredText>
+      </Label>
+    );
+  };
 
-      let color = "black";
-      if (date.isWeekend) color = "lightgrey";
-      return (
-        <Label key={key} style={style} color={color}>
-          <div>{date.weekday}</div>
-          <div>{date.formattedDate}</div>
-        </Label>
-      );
-    } else if (columnIndex === 0) {
-      // Change background color to white if external consultant
-      backgroundColor = "#fafafa";
-      if (
-        this.state.costCenter &&
-        consultant.costCenter_id !== this.state.costCenter.id
-      )
-        backgroundColor = "white";
+  labelRenderer = ({ rowIndex }) => {
+    const { consultants } = this.state;
+    const key = `row${rowIndex}`;
+    const consultant = consultants[rowIndex];
 
-      return (
-        <ClickLabel
-          key={key}
-          style={{
-            ...style,
-            alignItems: "flex-start",
-            marginLeft: 16
-          }}
-          backgroundColor={backgroundColor}
-          onClick={() => this.handleClickConsultant(consultant)}
-        >
-          {consultant.name}
-        </ClickLabel>
-      );
+    if (!consultant) return null;
+
+    let backgroundColor = "transparent";
+    if (
+      this.state.costCenter &&
+      consultant.costCenter_id !== this.state.costCenter.id
+    ) {
+      backgroundColor = "white";
     }
+
+    return (
+      <ClickLabel
+        key={key}
+        style={{
+          alignItems: "flex-start",
+          marginLeft: 16,
+          paddingLeft: 16,
+        }}
+        backgroundColor={backgroundColor}
+        onClick={() => this.handleClickConsultant(consultant)}
+      >
+        {consultant.name}
+      </ClickLabel>
+    );
+  };
+
+  cellRenderer = ({ columnIndex, rowIndex }) => {
+    const { dateRow, consultants, consultantIdToEntriesMap } = this.state;
+    const key = `${columnIndex}-${rowIndex}`;
+    const style = {};
+
+    const consultant = consultants[rowIndex];
+    const date = dateRow[columnIndex];
+    let backgroundColor = "white"; // Defaults to gray for weekdays
+    let label = "";
+    let labels = {};
+
+    if (!consultant) return null;
 
     // Render roster entry cell
     const entries = consultantIdToEntriesMap[consultant.id];
-    const entry = entries && entries[columnIndex - 1];
+    const entry = entries && entries[columnIndex];
 
     if (entry) {
       backgroundColor = this.getBackgroundColorByEntry(entry);
-
-      label = this.getProjectLabelByEntry(entry);
+      labels = this.getProjectLabelByEntry(entry);
     }
 
     // Apply weekend cell style
-    if (date.isWeekend) backgroundColor = "white";
+    if (date.isWeekend) backgroundColor = "#eee";
 
     return (
       <Cell
@@ -583,51 +598,65 @@ class Roster extends React.Component {
         backgroundColor={backgroundColor}
         onPress={() => this.openEntryForm(rowIndex, columnIndex, entry)}
       >
-        <CenteredText>{label}</CenteredText>
+        <CenteredText style={{ fontSize: 11 }}>{labels.label1}</CenteredText>
+        <CenteredText style={{ fontSize: 10 }}>{labels.label2}</CenteredText>
       </Cell>
     );
   };
 
-  getProjectLabelByEntry = entry => {
+  getProjectLabelByEntry = (entry) => {
     let label = "";
     if (entry.project) {
       label =
         this.state.displayMode === "large"
           ? entry.project.name
           : entry.project.key || entry.project.name;
+    } else {
+      return {
+        label: "",
+        label1: "",
+        label2: "",
+      };
     }
+
+    let [label1, label2] = label.trim().replace("-", " ").split(/\s+/);
+    label1 = label1 || "";
+    label2 = label2 || "";
+
     // If a project is deleted, entry.project is null
-    if (this.state.displayMode === "small" && label.length > 0)
-      label = label.slice(0, 5);
-    return label;
+    if (this.state.displayMode === "small") {
+      label1 = label1.slice(0, 4);
+      label2 = label2.slice(0, 4);
+    }
+    return { label, label1, label2 };
   };
 
-  getBackgroundColorByEntry = entry => {
+  getBackgroundColorByEntry = (entry) => {
     const backgroundColor =
       (entry.project && entry.project.backgroundColour) ||
       (entry.probability && entry.probability.backgroundColor);
     return backgroundColor;
   };
 
-  handleClickConsultant = consultant => {
+  handleClickConsultant = (consultant) => {
     this.setState({
       singleConsultantPopup: {
         show: true,
-        consultant
-      }
+        consultant,
+      },
     });
   };
 
   openEntryForm = async (rowIndex, columnIndex, entry) => {
     const { consultants, consultantIdToEntriesMap, dateRow } = this.state;
-    const consultant = consultants[rowIndex - 1];
+    const consultant = consultants[rowIndex];
     const date = dateRow[columnIndex].date.format(dateFormat);
     const projectOptions = this.getConsultantAssignments(consultant.id);
 
     // All roster entries of this consultant
     const rosterEntries = consultantIdToEntriesMap[consultant.id];
     const dateToExistingEntryMap = new Map();
-    rosterEntries.forEach(entry => {
+    rosterEntries.forEach((entry) => {
       if (entry && entry.date) {
         dateToExistingEntryMap.set(entry.date, entry);
       }
@@ -641,15 +670,15 @@ class Roster extends React.Component {
         initialValues: {
           ...entry,
           startDate: date,
-          endDate: date
+          endDate: date,
         },
         consultant,
-        dateToExistingEntryMap
-      }
+        dateToExistingEntryMap,
+      },
     });
   };
 
-  reloadConsultantData = async consultant_id => {
+  reloadConsultantData = async (consultant_id) => {
     const { filters, consultants, consultantIdToEntriesMap } = this.state;
     const { startDate, endDate } = filters;
 
@@ -658,45 +687,43 @@ class Roster extends React.Component {
         date: {
           $between: [
             moment(startDate).format(dateFormat),
-            moment(endDate).format(dateFormat)
-          ]
+            moment(endDate).format(dateFormat),
+          ],
         },
-        consultant_id
+        consultant_id,
       },
-      include: [{ as: "project" }, { as: "probability" }]
+      include: [{ as: "project" }, { as: "probability" }],
     });
 
     // Put roster entries in updatedEntryMap
     const updatedEntryMap = { ...consultantIdToEntriesMap };
     updatedEntryMap[consultant_id] = [];
-    rosterEntries.forEach(entry => {
+    rosterEntries.forEach((entry) => {
       const entryIndex = moment(entry.date).diff(startDate, "days");
       updatedEntryMap[consultant_id][entryIndex] = entry;
     });
 
     // Reload the row in the table
-    const rowIndex = consultants.findIndex(c => c.id === consultant_id) + 1;
+    const rowIndex = consultants.findIndex((c) => c.id === consultant_id) + 1;
 
-    this.setState(
-      { consultantIdToEntriesMap: updatedEntryMap, initializing: false },
-      () => this.gridRef.recomputeGridSize({ rowIndex })
-    );
+    this.setState({
+      consultantIdToEntriesMap: updatedEntryMap,
+      initializing: false,
+    });
   };
 
-  columnWidthGetter = ({ index }) => {
-    const columnWidth =
-      this.state.displayMode === "small"
-        ? this.CELL_DIMENSION
-        : this.CELL_DIMENSION_LARGE;
-    return index === 0 ? this.CONSULTANT_CELL_WIDTH : columnWidth;
+  columnWidthGetter = () => {
+    return this.state.displayMode === "small"
+      ? this.CELL_DIMENSION
+      : this.CELL_DIMENSION_LARGE;
   };
 
   closeEntryForm = () =>
     this.setState(({ entryForm }) => ({
       entryForm: {
         ...entryForm,
-        show: false
-      }
+        show: false,
+      },
     }));
 
   renderSingleRoster = () => {
@@ -730,7 +757,7 @@ class Roster extends React.Component {
       afterSubmit={this.refresh}
       preloadedData={{
         projects: this.data.commonProjects,
-        probabilityOptions: this.data.probabilityOptions
+        probabilityOptions: this.data.probabilityOptions,
       }}
     />
   );
@@ -743,13 +770,13 @@ class Roster extends React.Component {
       dateRow,
       consultantIdToEntriesMap,
       consultants,
-      sortMode
+      sortMode,
     } = this.state;
 
     const header = [
       {
-        text: ""
-      }
+        text: "",
+      },
     ];
     dateRow.forEach(({ date, isWeekend }) => {
       if (!date) return;
@@ -757,7 +784,7 @@ class Roster extends React.Component {
       const formattedDate = date.format("MMM D");
       header.push({
         text: formattedDate,
-        color: isWeekend ? "lightgrey" : "black"
+        color: isWeekend ? "lightgrey" : "black",
       });
     });
 
@@ -766,20 +793,20 @@ class Roster extends React.Component {
     Object.entries(consultantIdToEntriesMap).forEach(
       ([consultantId, entryArr]) => {
         // entryArr is roster entries row for one consultant
-        const consultant = consultants.find(c => c.id === consultantId);
+        const consultant = consultants.find((c) => c.id === consultantId);
         const row = {
           consultant: consultant, // temp property for sorting
           "": {
-            text: consultant.name
-          }
+            text: consultant.name,
+          },
         };
-        entryArr.forEach(rosterEntry => {
+        entryArr.forEach((rosterEntry) => {
           const formattedDate = moment(rosterEntry.date).format("MMM D");
           const projectLabel = this.getProjectLabelByEntry(rosterEntry);
           const backgroundColor = this.getBackgroundColorByEntry(rosterEntry);
           row[formattedDate] = {
-            text: projectLabel,
-            backgroundColor
+            text: projectLabel.label,
+            backgroundColor,
           };
         });
         rows.push(row);
@@ -804,11 +831,11 @@ class Roster extends React.Component {
       }
     }
 
-    rows.forEach(row => delete row.consultant);
+    rows.forEach((row) => delete row.consultant);
 
     return {
       header,
-      rows
+      rows,
     };
   };
 
@@ -834,7 +861,7 @@ class Roster extends React.Component {
     startDate,
     weeks,
     state,
-    consultantType
+    consultantType,
   }) => {
     const endDate = moment(startDate).add(weeks, "weeks");
     const costCenterIdStr = costCenter_ids && costCenter_ids.join(" ");
@@ -851,11 +878,11 @@ class Roster extends React.Component {
         weeks,
         endDate,
         state,
-        consultantType
+        consultantType,
       },
       projectAssignments: [],
       showFiltersModal: false,
-      isLoadingRows: false
+      isLoadingRows: false,
     });
 
     this.initialize();
@@ -867,17 +894,17 @@ class Roster extends React.Component {
       includeCrossTeamConsultants,
       project_id,
       project_ids: projectIdStr,
-      state
+      state,
     });
   };
 
-  handleCreateAssignment = async assignment => {
+  handleCreateAssignment = async (assignment) => {
     const { $models } = this.props;
     const existingAssignment = await $models.ProjectAssignment.findOne({
       where: {
         consultant_id: assignment.consultant_id,
-        project_id: assignment.project_id
-      }
+        project_id: assignment.project_id,
+      },
     });
 
     // Avoid duplication and create new assignment
@@ -887,7 +914,7 @@ class Roster extends React.Component {
       newAssignment.project = project;
       // Append to state
       this.setState(({ projectAssignments }) => ({
-        projectAssignments: [...projectAssignments, newAssignment]
+        projectAssignments: [...projectAssignments, newAssignment],
       }));
     }
   };
@@ -908,8 +935,9 @@ class Roster extends React.Component {
 
     switch (filters.filterBy) {
       case "costCenter":
-        title = `Roster for Cost Center: ${(costCenter && costCenter.name) ||
-          "all"}`;
+        title = `Roster for Cost Center: ${
+          (costCenter && costCenter.name) || "all"
+        }`;
         break;
       case "project":
         title = `Roster for Project: ${
@@ -943,11 +971,15 @@ class Roster extends React.Component {
       dateRow,
       consultants,
       entryForm,
-      sortMode
+      sortMode,
     } = this.state;
 
     if (initializing) {
-      return <ActivityIndicator style={{ flex: 1 }} />;
+      return (
+        <Container style={{ justifyContent: "center" }}>
+          <ActivityIndicator />
+        </Container>
+      );
     }
 
     return (
@@ -977,12 +1009,12 @@ class Roster extends React.Component {
               {
                 icon: "refresh",
                 label: "Refresh",
-                onPress: this.refresh
+                onPress: this.refresh,
               },
               {
                 icon: "share",
                 label: "Share as HTML",
-                onPress: () => this.setState({ showShareModal: true })
+                onPress: () => this.setState({ showShareModal: true }),
               },
               {
                 icon: "assignment-ind",
@@ -991,45 +1023,42 @@ class Roster extends React.Component {
                   this.props.$popup.form({
                     title: "New Assignment",
                     formKey: "ProjectAssignmentForm",
-                    onSubmit: this.handleCreateAssignment
-                  })
+                    onSubmit: this.handleCreateAssignment,
+                  }),
               },
               {
                 icon: "filter-9-plus",
                 label: "Mass Update",
-                onPress: () => this.setState({ showMassUpdateModal: true })
+                onPress: () => this.setState({ showMassUpdateModal: true }),
               },
               {
                 icon: "zoom-in",
                 label: "Cell Size: Large",
-                onPress: () => this.setDisplayMode("large")
+                onPress: () => this.setDisplayMode("large"),
               },
               {
                 icon: "zoom-out",
                 label: "Cell Size: Small",
-                onPress: () => this.setDisplayMode("small")
-              }
+                onPress: () => this.setDisplayMode("small"),
+              },
             ]}
             icon="menu"
           />
         </MenuContainer>
         <BodyContainer>
-          <AutoSizer>
-            {({ height, width }) => (
-              <MultiGrid
-                width={width}
-                height={height}
-                fixedColumnCount={1}
-                fixedRowCount={1}
-                cellRenderer={this.cellRenderer}
-                columnCount={dateRow.length}
-                columnWidth={this.columnWidthGetter}
-                rowCount={consultants.length + 1}
-                rowHeight={this.CELL_DIMENSION}
-                ref={ref => (this.gridRef = ref)}
-              />
-            )}
-          </AutoSizer>
+          <BappoGrid
+            renderCell={this.cellRenderer}
+            renderColumnHeader={this.headerRenderer}
+            renderRowLabel={this.labelRenderer}
+            columnCount={dateRow.length}
+            columnWidth={this.columnWidthGetter({ index: 1 })}
+            rowCount={consultants.length}
+            cellHeight={38}
+            cellWidth={this.columnWidthGetter()}
+            rowLabelWidth={160}
+            headerHeight={50}
+            buffer={0}
+          />
         </BodyContainer>
         {this.renderSingleRoster()}
         {entryForm.show && (
@@ -1042,7 +1071,7 @@ class Roster extends React.Component {
             projectOptions={entryForm.projectOptions}
             probabilityOptions={this.data.probabilityOptions}
             dateToExistingEntryMap={entryForm.dateToExistingEntryMap}
-            leaveProjectIds={this.data.leaveProjects.map(p => p.id)}
+            leaveProjectIds={this.data.leaveProjects.map((p) => p.id)}
             afterSubmit={async () => {
               await this.reloadConsultantData(entryForm.consultant.id);
               this.closeEntryForm();
@@ -1097,15 +1126,15 @@ const SelectFieldContainer = styled(View)`
   margin-right: 8px;
 `;
 
-const BodyContainer = styled.div`
+const BodyContainer = styled(View)`
   flex: 1;
   margin-right: 15px;
   margin-bottom: 15px;
 `;
 
 const baseStyle = `
-  margin-left: 2px;
-  margin-right: 2px;
+  margin: 1px;
+  margin: 1px;
   justify-content: center;
   align-items: center;
   box-sizing: border-box;
@@ -1113,26 +1142,29 @@ const baseStyle = `
 `;
 
 const Label = styled.div`
+  flex: 1;
   ${baseStyle};
   display: flex;
   flex-direction: column;
-  color: ${props => props.color || "black"};
+  color: ${(props) => props.color || "black"};
 `;
 
 const ClickLabel = styled(Label)`
+  cursor: pointer;
+  background-color: ${(props) => props.backgroundColor};
   &:hover {
-    cursor: pointer;
     opacity: 0.7;
   }
-  background-color: ${props => props.backgroundColor};
 `;
 
 const Cell = styled(TouchableView)`
-  ${baseStyle} background-color: ${props => props.backgroundColor};
-
-  border: 1px solid #eee;
-
-  ${props => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")};
+  flex: 1;
+  ${baseStyle};
+  background-color: ${(props) => props.backgroundColor};
+  ${(props) => (props.blur ? "filter: blur(3px); opacity: 0.5;" : "")}
+  &:hover {
+    opacity: 0.7;
+  }
 `;
 
 const CenteredText = styled(Text)`
